@@ -38,7 +38,7 @@ import (
 	//"math/rand"
 	//"net/http"
 	"os"
-	"./f12_marathon" //AEC I NEED TO SUB THIS INTO AN INTERFACE SO I CAN SUB IN ECS VERSION OF PACKAGE, WHOSE INTERFACE WILL BE IDENTICAL
+	//"github.com/force12io/force12-scheduler/f12_marathon" //AEC IN FUTURE I THINK WE'LL WANT TO PACKGE THIS
 )
 
 
@@ -101,8 +101,8 @@ func (d *Demand) handle() bool {
     // THe reason is that all the code we wrote to handle stopping before
     // starting etc.. is handled directly by Marathon so that code
     // from the old scheduler needs to go behind the scheduler interface
-    f12_marathon.StopStartNTasks(os.Getenv("CLIENT_TASK"), os.Getenv("CLIENT_FAMILY"), d.clientdemand, d.clientsrequested)
-    f12_marathon.StopStartNTasks(os.Getenv("SERVER_TASK"), os.Getenv("SERVER_FAMILY"), d.serverdemand, d.serversrequested)
+     StopStartNTasks(os.Getenv("CLIENT_TASK"), os.Getenv("CLIENT_FAMILY"), d.clientdemand, d.clientsrequested)
+     StopStartNTasks(os.Getenv("SERVER_TASK"), os.Getenv("SERVER_FAMILY"), d.serverdemand, d.serversrequested)
  
     return false
 }
@@ -123,11 +123,11 @@ func (d *Demand) update() bool {
     
     // Read the whole of the client item out of the DynamoDB
 	  var itemstr string
-    itemstr = f12_marathon.GetValuebyID(os.Getenv("CLIENT_ID"))
+    itemstr =  GetValuebyID(os.Getenv("CLIENT_ID"))
     //log.Printf("%v\n", itemstr)
      
     // Now extract the "container_count" value from our returned string
-    container_count := f12_marathon.Decode_ContainerCount(itemstr)
+    container_count :=  Decode_ContainerCount(itemstr)
     //log.Printf("container count %v\n", container_count)
     
     //Update our saved client demand
@@ -170,12 +170,12 @@ func main() {
     log.Println("This is a test log entry")
     
     // Initialise container types
-    f12_marathon.InitScheduler(os.Getenv("CLIENT_TASK"))
-    f12_marathon.InitScheduler(os.Getenv("SERVER_TASK"))
+     InitScheduler(os.Getenv("CLIENT_TASK"))
+     InitScheduler(os.Getenv("SERVER_TASK"))
     
     // Find out how many containers we currently have running and get their details
     // Note have decided to do this periodically as a reset as we are getting mysteriously out of whack on ECS
-    currentdemand.clientsrequested, currentdemand.serversrequested = f12_marathon.CountAllTasks()
+    currentdemand.clientsrequested, currentdemand.serversrequested =  CountAllTasks()
      
     //Now we can talk to the DB to check our client demand
     demandchangeflag = currentdemand.update()
@@ -186,7 +186,7 @@ func main() {
 		case demandchangeflag:
       demandchangeflag = false
       //make any changes dictated by this new demand level
-      currentdemand.clientsrequested, currentdemand.serversrequested = f12_marathon.CountAllTasks()
+      currentdemand.clientsrequested, currentdemand.serversrequested =  CountAllTasks()
       //To trace out turn _ = errFlag
 			_ = currentdemand.handle()
 		  //log.Println("demand change. result:", errflag)
