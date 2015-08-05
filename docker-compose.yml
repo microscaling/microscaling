@@ -1,0 +1,4 @@
+scheduler:
+  build: .
+  env_file:
+    - .env
