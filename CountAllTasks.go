@@ -7,5 +7,5 @@ package main
 // use this data. We do use it for ECS though so this function is provided for interface consistency.
 //
 func CountAllTasks() (int, int) {
-	return 0,0
+	return 0, 0
 }

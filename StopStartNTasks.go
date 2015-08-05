@@ -1,16 +1,17 @@
 package main
+
 import (
 	//"fmt"
 	//"time"
 	//"sync"
 	"log"
-	"strings"
 	"strconv"
+	"strings"
 	//"math/rand"
+	"bytes"
+	"io/ioutil"
 	"net/http"
 	"os"
-	"io/ioutil"
-	"bytes"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -23,53 +24,59 @@ import (
 //
 //
 func StopStartNTasks(app string, family string, demandcount int, currentcount int) {
-  // Submit a post request to Marathon to match the requested number of the requested app
-  // format looks like:
-  // PUT http://marathon.force12.io:8080/v2/apps/<app>
-  //  Request:
-  //  {
-  //    "instances": 8
-  //  }
-  var str string
-  str = os.Getenv("MARATHON_ADDRESS")
-  if str=="" {
-    str="http://marathon.force12.io:8080"
-  }
-  str += "/v2/apps/"
-  str += app
-  log.Println("Start/stop PUT: " + str)
-  
-  var jsonStr string
-  jsonStr = "{\"instances\":xxxxxxxxxx}"
-  jsonStr = strings.Replace(jsonStr, "xxxxxxxxxx", strconv.Itoa(demandcount), 1)
-  log.Println("Start/stop request: " + jsonStr)
-  
-  var query = []byte(jsonStr)
-  req, err1 := http.NewRequest("PUT", str, bytes.NewBuffer(query))
-  
-  if err1 != nil {
-    log.Println("NewRequest err")
-  }
-  //req.Header.Set("X-Custom-Header", "myvalue")
-  req.Header.Set("Content-Type", "application/json")
+	// Submit a post request to Marathon to match the requested number of the requested app
+	// format looks like:
+	// PUT http://marathon.force12.io:8080/v2/apps/<app>
+	//  Request:
+	//  {
+	//    "instances": 8
+	//  }
+	var str string
+	var port string
+	port = os.Getenv("MARATHON_PORT")
+	str = os.Getenv("MARATHON_ADDRESS")
+	str = str + port
+	if port == "" {
+		port = "8080"
+	}
+	if str == "" {
+		str = "http://marathon.force12.io:" + port
+	}
+	str += "/v2/apps/"
+	str += app
+	log.Println("Start/stop PUT: " + str)
 
-  client := &http.Client{}
-  resp1, err1 := client.Do(req)
+	var jsonStr string
+	jsonStr = "{\"instances\":xxxxxxxxxx}"
+	jsonStr = strings.Replace(jsonStr, "xxxxxxxxxx", strconv.Itoa(demandcount), 1)
+	log.Println("Start/stop request: " + jsonStr)
 
-  defer resp1.Body.Close()
-  if err1 != nil {
-    // handle error
-    log.Println("start/stop err")
-  } else {
-    body, err0 := ioutil.ReadAll(resp1.Body)
-    if err0 != nil {
-	    // handle error
-	    log.Println("start/stop read err")
-    } else {
-      s := string(body[:])
-      log.Println("start/stop json: " + s)
-    }
-  }
+	var query = []byte(jsonStr)
+	req, err1 := http.NewRequest("PUT", str, bytes.NewBuffer(query))
+
+	if err1 != nil {
+		log.Println("NewRequest err")
+	}
+	//req.Header.Set("X-Custom-Header", "myvalue")
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp1, err1 := client.Do(req)
+	if resp1 != nil {
+		defer resp1.Body.Close()
+	}
+	if err1 != nil || resp1 == nil {
+		// handle error
+		log.Println("start/stop err")
+	} else {
+		body, err0 := ioutil.ReadAll(resp1.Body)
+		if err0 != nil {
+			// handle error
+			log.Println("start/stop read err")
+		} else {
+			s := string(body[:])
+			log.Println("start/stop json: " + s)
+		}
+	}
 	return
 }
-
