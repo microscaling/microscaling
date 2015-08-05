@@ -3,4 +3,4 @@ MAINTAINER Ross Fairbanks "ross.fairbanks@gmail.com"
 
 ADD dynamo-config.json /etc/aws-config.json
 
-CMD ["go", "run", "force12.go"]
+CMD ["go", "run", "f12_scheduler.go"]
