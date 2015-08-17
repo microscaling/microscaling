@@ -2,7 +2,7 @@ package main
 
 import (
 	//"fmt"
-	//"time"
+	"time"
 	//"sync"
 	"log"
 	"strconv"
@@ -23,7 +23,7 @@ import (
 // what we tell it we need.
 //
 //
-func StopStartNTasks(app string, family string, demandcount int, currentcount int) {
+func StopStartNTasks(app string, family string, demandcount int, currentcount int, force bool) {
 	// Submit a post request to Marathon to match the requested number of the requested app
 	// format looks like:
 	// PUT http://marathon.force12.io:8080/v2/apps/<app>
@@ -44,21 +44,25 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 	}
 	str += "/v2/apps/"
 	str += app
+	
+	if force {
+	  str += "?force=true"
+	}
 	log.Println("Start/stop PUT: " + str)
 
 	var jsonStr string
 	jsonStr = "{\"instances\":xxxxxxxxxx}"
 	jsonStr = strings.Replace(jsonStr, "xxxxxxxxxx", strconv.Itoa(demandcount), 1)
 	log.Println("Start/stop request: " + jsonStr)
-
+	
+	//req.Header.Set("X-Custom-Header", "myvalue")
+	//req.Header.Set("Content-Type", "application/json")
 	var query = []byte(jsonStr)
 	req, err1 := http.NewRequest("PUT", str, bytes.NewBuffer(query))
 
 	if err1 != nil {
 		log.Println("NewRequest err")
 	}
-	//req.Header.Set("X-Custom-Header", "myvalue")
-	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	resp1, err1 := client.Do(req)
@@ -76,7 +80,29 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 		} else {
 			s := string(body[:])
 			log.Println("start/stop json: " + s)
-		}
+			// Check for an error in the response that looks like that
+      //    "message": "App is locked by one or more deployments. Override with the option '?force=true'. View details at '/v2/deployments/<DEPLOYMENT_ID>'.",
+      //    "deployments": [
+      //    {
+      //      "id": "823714e0-f36e-4401-bcb6-13cf5e05ca04"
+      //    }
+      //    ]
+      var json_prefix string = "App is locked"
+	    stringslice := strings.Split(s, json_prefix)
+
+	    if len(stringslice) >= 2 && force == false {
+	      // don't force if we have already tried forcing
+		    log.Println("App is locked, force it")
+		    var sleep time.Duration
+		    sleepcount, errenv := strconv.Atoi(os.Getenv("SLEEP_BEFORE_FORCE"))
+		    if errenv != nil {
+		      sleepcount = 50
+		    }
+			  sleep = time.Duration(sleepcount) * time.Millisecond
+			  time.Sleep(sleep)
+		    StopStartNTasks(app, family, demandcount, currentcount, true)
+		  }
+	  }
 	}
 	return
 }
