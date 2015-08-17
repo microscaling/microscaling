@@ -25,7 +25,7 @@ func GetValuebyID(key string) string {
 	// GET http://marathon.force12.io:8500/v1/kv/priority1-demand
   var demandvalue string = ""
   var str string
-  str = os.Getenv("MARATHON_ADDRESS")
+  str = os.Getenv("CONSUL_ADDRESS")
   if str=="" {
     str="http://marathon.force12.io:8500"
   }
