@@ -28,8 +28,8 @@ func GetValuebyID(key string) string {
 	var demandvalue string = ""
 	var str string
 	var port string
-	port = os.Getenv("MARATHON_CONSUL_PORT")
-	str = os.Getenv("MARATHON_ADDRESS")
+	port = os.Getenv("CONSUL_PORT")
+	str = os.Getenv("CONSUL_ADDRESS")
 	str = str + port
 	if port == "" {
 		port = "8500"
