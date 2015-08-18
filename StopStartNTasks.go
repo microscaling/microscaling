@@ -56,9 +56,9 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 	log.Println("Start/stop request: " + jsonStr)
 	
 	//req.Header.Set("X-Custom-Header", "myvalue")
-	//req.Header.Set("Content-Type", "application/json")
 	var query = []byte(jsonStr)
 	req, err1 := http.NewRequest("PUT", str, bytes.NewBuffer(query))
+	req.Header.Set("Content-Type", "application/json")
 
 	if err1 != nil {
 		log.Println("NewRequest err")
