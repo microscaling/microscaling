@@ -1,8 +1,8 @@
-package main
+package marathon
 
 import (
 	//"fmt"
-	"time"
+	//"time"
 	//"sync"
 	"log"
 	"strconv"
@@ -23,7 +23,7 @@ import (
 // what we tell it we need.
 //
 //
-func StopStartNTasks(app string, family string, demandcount int, currentcount int, force bool) {
+func StopStartNTasks(app string, family string, demandcount int, currentcount int) {
 	// Submit a post request to Marathon to match the requested number of the requested app
 	// format looks like:
 	// PUT http://marathon.force12.io:8080/v2/apps/<app>
@@ -32,44 +32,33 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 	//    "instances": 8
 	//  }
 	var str string
-	var port string
-	port = os.Getenv("MARATHON_PORT")
 	str = os.Getenv("MARATHON_ADDRESS")
-	str = str + port
-	if port == "" {
-		port = "8080"
-	}
 	if str == "" {
-		str = "http://marathon.force12.io:" + port
+		str = "http://marathon.force12.io:8080"
 	}
 	str += "/v2/apps/"
 	str += app
-	
-	if force {
-	  str += "?force=true"
-	}
 	log.Println("Start/stop PUT: " + str)
 
 	var jsonStr string
 	jsonStr = "{\"instances\":xxxxxxxxxx}"
 	jsonStr = strings.Replace(jsonStr, "xxxxxxxxxx", strconv.Itoa(demandcount), 1)
 	log.Println("Start/stop request: " + jsonStr)
-	
-	//req.Header.Set("X-Custom-Header", "myvalue")
+
 	var query = []byte(jsonStr)
 	req, err1 := http.NewRequest("PUT", str, bytes.NewBuffer(query))
-	req.Header.Set("Content-Type", "application/json")
 
 	if err1 != nil {
 		log.Println("NewRequest err")
 	}
+	//req.Header.Set("X-Custom-Header", "myvalue")
+	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	resp1, err1 := client.Do(req)
-	if resp1 != nil {
-		defer resp1.Body.Close()
-	}
-	if err1 != nil || resp1 == nil {
+
+	defer resp1.Body.Close()
+	if err1 != nil {
 		// handle error
 		log.Println("start/stop err")
 	} else {
@@ -80,29 +69,7 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 		} else {
 			s := string(body[:])
 			log.Println("start/stop json: " + s)
-			// Check for an error in the response that looks like that
-      //    "message": "App is locked by one or more deployments. Override with the option '?force=true'. View details at '/v2/deployments/<DEPLOYMENT_ID>'.",
-      //    "deployments": [
-      //    {
-      //      "id": "823714e0-f36e-4401-bcb6-13cf5e05ca04"
-      //    }
-      //    ]
-      var json_prefix string = "App is locked"
-	    stringslice := strings.Split(s, json_prefix)
-
-	    if len(stringslice) >= 2 && force == false {
-	      // don't force if we have already tried forcing
-		    log.Println("App is locked, force it")
-		    var sleep time.Duration
-		    sleepcount, errenv := strconv.Atoi(os.Getenv("SLEEP_BEFORE_FORCE"))
-		    if errenv != nil {
-		      sleepcount = 50
-		    }
-			  sleep = time.Duration(sleepcount) * time.Millisecond
-			  time.Sleep(sleep)
-		    StopStartNTasks(app, family, demandcount, currentcount, true)
-		  }
-	  }
+		}
 	}
 	return
 }

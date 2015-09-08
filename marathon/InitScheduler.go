@@ -1,4 +1,4 @@
-package main
+package marathon
 
 import (
 	//"fmt"
@@ -24,27 +24,17 @@ import (
 func InitScheduler(app string) {
 	// Ask Marathon which apps are running
 	var str string
-	var port string
-	port = os.Getenv("MARATHON_PORT")
 	str = os.Getenv("MARATHON_ADDRESS")
-	str = str + port
-	if port == "" {
-		port = "8080"
-	}
 	if str == "" {
-		str = "http://marathon.force12.io:" + port
+		str = "http://marathon.force12.io:8080"
 	}
+
 	str += "/v2/apps"
 
-	log.Println("req: " + str)
 	resp, err := http.Get(str)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	log.Println("resp got ")
-	if err != nil || resp == nil {
+	defer resp.Body.Close()
+	if err != nil {
 		// handle error
-		log.Println("INVALID URL: " + str)
 	} else {
 		body, err0 := ioutil.ReadAll(resp.Body)
 		if err0 != nil {

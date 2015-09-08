@@ -1,4 +1,4 @@
-package main
+package marathon
 
 import (
 	//"fmt"
@@ -27,25 +27,17 @@ func GetValuebyID(key string) string {
 	// GET http://marathon.force12.io:8500/v1/kv/priority1-demand
 	var demandvalue string = ""
 	var str string
-	var port string
-	port = os.Getenv("CONSUL_PORT")
 	str = os.Getenv("CONSUL_ADDRESS")
-	str = str + port
-	if port == "" {
-		port = "8500"
-	}
 	if str == "" {
-		str = "http://marathon.force12.io:" + port
+		str = "http://marathon.force12.io:8500"
 	}
 
 	str += "/v1/kv/priority1-demand"
 
 	log.Println("GET demand: " + str)
 	resp, err := http.Get(str)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	if err != nil || resp == nil {
+	defer resp.Body.Close()
+	if err != nil {
 		// handle error
 		log.Println("GET demand failed ")
 	} else {
