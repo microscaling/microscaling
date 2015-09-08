@@ -2,13 +2,15 @@ package marathon
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
-	"strings"
 )
+
+type startStopPayload struct {
+	Instances int `json:"instances"`
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // StopStartNTasks
@@ -27,45 +29,46 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 	//  {
 	//    "instances": 8
 	//  }
-	var str string
-	str = os.Getenv("MARATHON_ADDRESS")
-	if str == "" {
-		str = "http://marathon.force12.io:8080"
+	url := getBaseMarathonUrl() + "/" + app
+	log.Println("Start/stop PUT: " + url)
+
+	payload := startStopPayload{
+		Instances: demandcount,
 	}
-	str += "/v2/apps/"
-	str += app
-	log.Println("Start/stop PUT: " + str)
+	w := &bytes.Buffer{}
+	encoder := json.NewEncoder(w)
+	err := encoder.Encode(&payload)
+	if err != nil {
+		log.Printf("Failed to encode json. %v")
+		return
+	}
 
-	var jsonStr string
-	jsonStr = "{\"instances\":xxxxxxxxxx}"
-	jsonStr = strings.Replace(jsonStr, "xxxxxxxxxx", strconv.Itoa(demandcount), 1)
-	log.Println("Start/stop request: " + jsonStr)
+	req, err := http.NewRequest("PUT", url, w)
 
-	var query = []byte(jsonStr)
-	req, err1 := http.NewRequest("PUT", str, bytes.NewBuffer(query))
-
-	if err1 != nil {
-		log.Println("NewRequest err")
+	if err != nil {
+		log.Println("NewRequest err %v", err)
 	}
 	//req.Header.Set("X-Custom-Header", "myvalue")
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp1, err1 := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
+	defer resp.Body.Close()
 
-	defer resp1.Body.Close()
-	if err1 != nil {
+	if err != nil {
 		// handle error
-		log.Println("start/stop err")
-	} else {
-		body, err0 := ioutil.ReadAll(resp1.Body)
-		if err0 != nil {
-			// handle error
-			log.Println("start/stop read err")
-		} else {
-			s := string(body[:])
-			log.Println("start/stop json: " + s)
-		}
+		log.Println("start/stop err %v", err)
+		return
 	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+		log.Printf("start/stop read err %v", err)
+		return
+	}
+
+	s := string(body)
+	log.Printf("start/stop json: %s", s)
+
 	return
 }
