@@ -111,7 +111,6 @@ func InitScheduler(appId string) {
 	//]
 	//}
 	//
-	// Rather than crack the json I'm going to be v lazy and just search for the right string
 	haveApp := false
 	for _, app := range payload.Apps {
 		if app.Id == appId {

@@ -1,17 +1,9 @@
 package marathon
 
 import (
-	//"fmt"
-	//"time"
-	//"sync"
-	"log"
-	//"strings"
-	//"strconv"
-	//"math/rand"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"os"
-	//"bytes"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -25,31 +17,23 @@ import (
 func GetValuebyID(key string) string {
 	// Code to get value from Consul
 	// GET http://marathon.force12.io:8500/v1/kv/priority1-demand
-	var demandvalue string = ""
-	var str string
-	str = os.Getenv("CONSUL_ADDRESS")
-	if str == "" {
-		str = "http://marathon.force12.io:8500"
-	}
+	url := getBaseConsulUrl() + "/v1/kv/priority1-demand"
 
-	str += "/v1/kv/priority1-demand"
-
-	log.Println("GET demand: " + str)
-	resp, err := http.Get(str)
+	log.Println("GET demand: " + url)
+	resp, err := http.Get(url)
 	defer resp.Body.Close()
 	if err != nil {
 		// handle error
-		log.Println("GET demand failed ")
-	} else {
-		body, err0 := ioutil.ReadAll(resp.Body)
-		if err0 != nil {
-			// handle error
-			log.Println("GET demand failed read body ")
-		} else {
-			s := string(body[:])
-			log.Println("demand json: " + s)
-			demandvalue = s
-		}
+		log.Printf("GET demand failed %v", err)
+		return ""
 	}
-	return demandvalue
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+		log.Printf("GET demand failed read body %v", err)
+		return ""
+	}
+	s := string(body)
+	log.Println("demand json: " + s)
+	return s
 }
