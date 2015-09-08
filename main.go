@@ -126,7 +126,7 @@ func (d *Demand) update() bool {
 	//log.Printf("%v\n", itemstr)
 
 	// Now extract the "container_count" value from our returned string
-	container_count := marathon.Decode_ContainerCount(itemstr)
+	container_count := marathon.DecodeContainerCount(itemstr)
 	//log.Printf("container count %v\n", container_count)
 
 	//Update our saved client demand

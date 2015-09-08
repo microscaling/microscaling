@@ -1,17 +1,12 @@
 package marathon
 
 import (
-	//"fmt"
-	//"time"
-	//"sync"
-	"log"
-	"strings"
-	//"strconv"
-	//"math/rand"
 	"bytes"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////

@@ -1,18 +1,10 @@
 package marathon
 
 import (
-	//"fmt"
-	//"time"
-	//"sync"
 	"encoding/base64"
 	"log"
 	"strconv"
 	"strings"
-	//"math/rand"
-	//"net/http"
-	//"os"
-	//"io/ioutil"
-	//"bytes"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -36,7 +28,7 @@ import (
 //]
 //
 //
-func Decode_ContainerCount(encoded string) int {
+func DecodeContainerCount(encoded string) int {
 	// decode json returned from Consul KV store
 	var demand int = 0
 	var json_prefix string = "Value\":\""
