@@ -30,7 +30,7 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 	//    "instances": 8
 	//  }
 	url := getBaseMarathonUrl() + "/" + app
-	log.Println("Start/stop PUT: " + url)
+	log.Printf("Start/stop PUT: %s", url)
 
 	payload := startStopPayload{
 		Instances: demandcount,
@@ -46,7 +46,7 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 	req, err := http.NewRequest("PUT", url, w)
 
 	if err != nil {
-		log.Println("NewRequest err %v", err)
+		log.Printf("NewRequest err %v", err)
 	}
 	//req.Header.Set("X-Custom-Header", "myvalue")
 	req.Header.Set("Content-Type", "application/json")
@@ -56,7 +56,7 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 
 	if err != nil {
 		// handle error
-		log.Println("start/stop err %v", err)
+		log.Printf("start/stop err %v", err)
 		return
 	}
 
