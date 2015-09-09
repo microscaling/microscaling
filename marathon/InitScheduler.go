@@ -3,6 +3,7 @@ package marathon
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -30,14 +31,10 @@ type container struct {
 	Docker docker `json:"docker"`
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// InitScheduler
+// InitScheduler ensures our app is started on the cluster.
 //
 // appId - string identifier of a container
-// Init the Marathon scheduler. For us that means checking whether the supplied app exists on the cluster
-// and starting it if not
-//
-func InitScheduler(appId string) {
+func InitScheduler(appId string) error {
 	// Ask Marathon which apps are running
 	url := getBaseMarathonUrl()
 
@@ -45,15 +42,14 @@ func InitScheduler(appId string) {
 	defer resp.Body.Close()
 	if err != nil {
 		// handle error
-		return
+		return err
 	}
 
 	payload := apps{}
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&payload)
 	if err != nil {
-		log.Printf("Failed to decode json response. %v", err)
-		return
+		return fmt.Errorf("Failed to decode json response. %v", err)
 	}
 
 	//Now find out whether both our supplied app is running. If note we need to create one
@@ -157,18 +153,18 @@ func InitScheduler(appId string) {
 		encoder := json.NewEncoder(w)
 		err := encoder.Encode(&app)
 		if err != nil {
-			log.Printf("Failed to encode json. %v", err)
-			return
+			return fmt.Errorf("Failed to encode json. %v", err)
 		}
 
 		resp, err := http.Post(url, "application/json", w)
 		if err != nil {
 			// handle error
-			log.Printf("Failed to create app, err %v", err)
+			return fmt.Errorf("Failed to create app, err %v", err)
 		}
 		resp.Body.Close()
 
 		// TODO: check status codes!
 
 	}
+	return nil
 }

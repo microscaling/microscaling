@@ -169,8 +169,16 @@ func main() {
 	log.Println("This is a test log entry")
 
 	// Initialise container types
-	marathon.InitScheduler(os.Getenv("CLIENT_TASK"))
-	marathon.InitScheduler(os.Getenv("SERVER_TASK"))
+	err := marathon.InitScheduler(os.Getenv("CLIENT_TASK"))
+	if err != nil {
+		log.Printf("Failed to start client task. %v", err)
+		return
+	}
+	err = marathon.InitScheduler(os.Getenv("SERVER_TASK"))
+	if err != nil {
+		log.Printf("Failed to start server task. %v", err)
+		return
+	}
 
 	// Find out how many containers we currently have running and get their details
 	// Note have decided to do this periodically as a reset as we are getting mysteriously out of whack on ECS
