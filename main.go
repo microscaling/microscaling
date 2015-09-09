@@ -29,16 +29,11 @@ Note - this version of Force12 starts and stops containers on a Mesos cluser usi
 package main
 
 import (
-	//"fmt"
-	"time"
-	//"sync"
 	"log"
-	//"strings"
-	//"strconv"
-	//"math/rand"
-	//"net/http"
-	"bitbucket.org/force12io/force12-scheduler/marathon"
 	"os"
+	"time"
+
+	"bitbucket.org/force12io/force12-scheduler/marathon"
 )
 
 //CONSTANTS
@@ -50,6 +45,8 @@ const const_maxcontainers int = 9
 
 //EXPORTED STRUCTS
 type Demand struct {
+	sched *marathon.MarathonScheduler
+
 	//  mu  sync.Mutex   // plan ahead for concurrency on this potentially shared resource, this is go after all
 	clientdemand     int // indicates number of clients demanded (from dynamo table in prototype)
 	serverdemand     int // indicates server demand (deduced in prototype)
@@ -100,8 +97,8 @@ func (d *Demand) handle() bool {
 	// THe reason is that all the code we wrote to handle stopping before
 	// starting etc.. is handled directly by Marathon so that code
 	// from the old scheduler needs to go behind the scheduler interface
-	marathon.StopStartNTasks(os.Getenv("CLIENT_TASK"), os.Getenv("CLIENT_FAMILY"), d.clientdemand, d.clientsrequested)
-	marathon.StopStartNTasks(os.Getenv("SERVER_TASK"), os.Getenv("SERVER_FAMILY"), d.serverdemand, d.serversrequested)
+	d.sched.StopStartNTasks(os.Getenv("CLIENT_TASK"), os.Getenv("CLIENT_FAMILY"), d.clientdemand, d.clientsrequested)
+	d.sched.StopStartNTasks(os.Getenv("SERVER_TASK"), os.Getenv("SERVER_FAMILY"), d.serverdemand, d.serversrequested)
 
 	return false
 }
@@ -120,18 +117,9 @@ func (d *Demand) update() bool {
 	//log.Println("demand update check.")
 	var demandchange bool = false
 
-	// Read the whole of the client item out of the DynamoDB
-	value, err := marathon.GetValuebyID(os.Getenv("CLIENT_ID"))
+	container_count, err := d.sched.GetContainerCount(os.Getenv("CLIENT_ID"))
 	if err != nil {
-		log.Printf("Failed to get the client container count. %v", err)
-		return false
-	}
-	//log.Printf("%v\n", value)
-
-	// Now extract the "container_count" value from our returned string
-	container_count, err := marathon.DecodeContainerCount(value)
-	if err != nil {
-		log.Printf("Failed to decode container count. %v", err)
+		log.Printf("Failed to get container count. %v", err)
 		return false
 	}
 	//log.Printf("container count %v\n", container_count)
@@ -161,7 +149,9 @@ func main() {
 	// to override old values. Queued history is of no importance here.
 	//
 	// Also for simplicity this first release is concurrency free (single threaded)
-	var currentdemand Demand
+	currentdemand := Demand{
+		sched: marathon.NewMarathonScheduler(),
+	}
 	currentdemand.set(const_clientdemandstart, const_serverdemandstart)
 	//var errflag bool = false
 	var demandchangeflag bool
@@ -176,12 +166,12 @@ func main() {
 	log.Println("This is a test log entry")
 
 	// Initialise container types
-	err := marathon.InitScheduler(os.Getenv("CLIENT_TASK"))
+	err := currentdemand.sched.InitScheduler(os.Getenv("CLIENT_TASK"))
 	if err != nil {
 		log.Printf("Failed to start client task. %v", err)
 		return
 	}
-	err = marathon.InitScheduler(os.Getenv("SERVER_TASK"))
+	err = currentdemand.sched.InitScheduler(os.Getenv("SERVER_TASK"))
 	if err != nil {
 		log.Printf("Failed to start server task. %v", err)
 		return
@@ -189,7 +179,7 @@ func main() {
 
 	// Find out how many containers we currently have running and get their details
 	// Note have decided to do this periodically as a reset as we are getting mysteriously out of whack on ECS
-	currentdemand.clientsrequested, currentdemand.serversrequested, err = marathon.CountAllTasks()
+	currentdemand.clientsrequested, currentdemand.serversrequested, err = currentdemand.sched.CountAllTasks()
 	if err != nil {
 		log.Printf("Failed to count tasks. %v", err)
 	}
@@ -203,7 +193,7 @@ func main() {
 		case demandchangeflag:
 			demandchangeflag = false
 			//make any changes dictated by this new demand level
-			currentdemand.clientsrequested, currentdemand.serversrequested, err = marathon.CountAllTasks()
+			currentdemand.clientsrequested, currentdemand.serversrequested, err = currentdemand.sched.CountAllTasks()
 			if err != nil {
 				log.Printf("Failed to count tasks. %v", err)
 			}

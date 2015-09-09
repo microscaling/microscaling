@@ -21,7 +21,7 @@ type startStopPayload struct {
 // what we tell it we need.
 //
 //
-func StopStartNTasks(app string, family string, demandcount int, currentcount int) {
+func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcount int, currentcount int) {
 	// Submit a post request to Marathon to match the requested number of the requested app
 	// format looks like:
 	// PUT http://marathon.force12.io:8080/v2/apps/<app>
@@ -29,7 +29,7 @@ func StopStartNTasks(app string, family string, demandcount int, currentcount in
 	//  {
 	//    "instances": 8
 	//  }
-	url := getBaseMarathonUrl() + "/" + app
+	url := m.baseMarathonUrl + "/" + app
 	log.Printf("Start/stop PUT: %s", url)
 
 	payload := startStopPayload{

@@ -28,12 +28,12 @@ type consulKey struct {
 //
 // input unique ID (Key) of target item (actually not used, it's hardcoded for now)
 // output string representation of the stored value
-func GetValuebyID(key string) (string, error) {
+func (m *MarathonScheduler) GetValuebyID(key string) (string, error) {
 	// Code to get value from Consul
 	// GET http://marathon.force12.io:8500/v1/kv/priority1-demand
 
 	// TODO: NOTE THAT KEY IS NOT USED !!!!
-	url := getBaseConsulUrl() + "/v1/kv/priority1-demand"
+	url := m.baseConsulUrl + "/v1/kv/priority1-demand"
 
 	log.Println("GET demand: " + url)
 	resp, err := http.Get(url)

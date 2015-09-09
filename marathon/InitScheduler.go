@@ -34,11 +34,9 @@ type container struct {
 // InitScheduler ensures our app is started on the cluster.
 //
 // appId - string identifier of a container
-func InitScheduler(appId string) error {
+func (m *MarathonScheduler) InitScheduler(appId string) error {
 	// Ask Marathon which apps are running
-	url := getBaseMarathonUrl()
-
-	resp, err := http.Get(url)
+	resp, err := http.Get(m.baseMarathonUrl)
 	defer resp.Body.Close()
 	if err != nil {
 		// handle error
@@ -156,7 +154,7 @@ func InitScheduler(appId string) error {
 			return fmt.Errorf("Failed to encode json. %v", err)
 		}
 
-		resp, err := http.Post(url, "application/json", w)
+		resp, err := http.Post(m.baseMarathonUrl, "application/json", w)
 		if err != nil {
 			// handle error
 			return fmt.Errorf("Failed to create app, err %v", err)

@@ -5,7 +5,9 @@ import (
 )
 
 func TestDecodeContainerCount(t *testing.T) {
-	count, err := DecodeContainerCount("OQ==")
+	m := NewMarathonScheduler()
+
+	count, err := m.DecodeContainerCount("OQ==")
 	if err != nil {
 		t.Fatalf("Error returned. %v", err)
 	}
