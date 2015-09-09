@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"bitbucket.org/force12io/force12-scheduler/marathon"
+	"bitbucket.org/force12io/force12-scheduler/scheduler"
 )
 
 //CONSTANTS
@@ -45,7 +46,7 @@ const const_maxcontainers int = 9
 
 //EXPORTED STRUCTS
 type Demand struct {
-	sched *marathon.MarathonScheduler
+	sched scheduler.Scheduler
 
 	//  mu  sync.Mutex   // plan ahead for concurrency on this potentially shared resource, this is go after all
 	clientdemand     int // indicates number of clients demanded (from dynamo table in prototype)

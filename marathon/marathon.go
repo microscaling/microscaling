@@ -2,12 +2,17 @@ package marathon
 
 import (
 	"os"
+
+	"bitbucket.org/force12io/force12-scheduler/scheduler"
 )
 
 type MarathonScheduler struct {
 	baseMarathonUrl string
 	baseConsulUrl   string
 }
+
+// compile-time assert that we implement the right interface
+var _ scheduler.Scheduler = (*MarathonScheduler)(nil)
 
 func NewMarathonScheduler() *MarathonScheduler {
 	return &MarathonScheduler{
