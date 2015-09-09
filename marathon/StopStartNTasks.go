@@ -3,6 +3,7 @@ package marathon
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -21,7 +22,7 @@ type startStopPayload struct {
 // what we tell it we need.
 //
 //
-func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcount int, currentcount int) {
+func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcount int, currentcount int) error {
 	// Submit a post request to Marathon to match the requested number of the requested app
 	// format looks like:
 	// PUT http://marathon.force12.io:8080/v2/apps/<app>
@@ -39,14 +40,13 @@ func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcou
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(&payload)
 	if err != nil {
-		log.Printf("Failed to encode json. %v")
-		return
+		return fmt.Errorf("Failed to encode json. %v", err)
 	}
 
 	req, err := http.NewRequest("PUT", url, w)
 
 	if err != nil {
-		log.Printf("NewRequest err %v", err)
+		return fmt.Errorf("Failed to build PUT request err %v", err)
 	}
 	//req.Header.Set("X-Custom-Header", "myvalue")
 	req.Header.Set("Content-Type", "application/json")
@@ -56,19 +56,22 @@ func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcou
 
 	if err != nil {
 		// handle error
-		log.Printf("start/stop err %v", err)
-		return
+		return fmt.Errorf("start/stop err %v", err)
+	}
+
+	if resp.StatusCode > 299 {
+		return fmt.Errorf("error response from marathon. %s", resp.Status)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		// handle error
-		log.Printf("start/stop read err %v", err)
-		return
+		return fmt.Errorf("start/stop read err %v", err)
 	}
 
+	// We do nothing with this body
 	s := string(body)
 	log.Printf("start/stop json: %s", s)
 
-	return
+	return nil
 }

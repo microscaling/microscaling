@@ -39,9 +39,13 @@ func (m *MarathonScheduler) GetValuebyID(key string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		// handle error
-		return "", fmt.Errorf("GET demand failed %v", err)
+		return "", fmt.Errorf("GET value by ID failed %v", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("GET value by ID failed %s", resp.Status)
+	}
 
 	// The key values are returned as an array
 	keyData := []consulKey{}
