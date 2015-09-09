@@ -43,6 +43,10 @@ func (m *MarathonScheduler) InitScheduler(appId string) error {
 		return err
 	}
 
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Error response from marathon, %d %s", resp.StatusCode, resp.Status)
+	}
+
 	payload := apps{}
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&payload)
@@ -161,7 +165,9 @@ func (m *MarathonScheduler) InitScheduler(appId string) error {
 		}
 		resp.Body.Close()
 
-		// TODO: check status codes!
+		if resp.StatusCode > 299 {
+			return fmt.Errorf("Error response from marathon, %d %s", resp.StatusCode, resp.Status)
+		}
 
 	}
 	return nil
