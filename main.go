@@ -121,12 +121,19 @@ func (d *Demand) update() bool {
 	var demandchange bool = false
 
 	// Read the whole of the client item out of the DynamoDB
-	var itemstr string
-	itemstr = marathon.GetValuebyID(os.Getenv("CLIENT_ID"))
-	//log.Printf("%v\n", itemstr)
+	value, err := marathon.GetValuebyID(os.Getenv("CLIENT_ID"))
+	if err != nil {
+		log.Printf("Failed to get the client container count. %v", err)
+		return false
+	}
+	//log.Printf("%v\n", value)
 
 	// Now extract the "container_count" value from our returned string
-	container_count := marathon.DecodeContainerCount(itemstr)
+	container_count, err := marathon.DecodeContainerCount(value)
+	if err != nil {
+		log.Printf("Failed to decode container count. %v", err)
+		return false
+	}
 	//log.Printf("container count %v\n", container_count)
 
 	//Update our saved client demand
@@ -182,7 +189,10 @@ func main() {
 
 	// Find out how many containers we currently have running and get their details
 	// Note have decided to do this periodically as a reset as we are getting mysteriously out of whack on ECS
-	currentdemand.clientsrequested, currentdemand.serversrequested = marathon.CountAllTasks()
+	currentdemand.clientsrequested, currentdemand.serversrequested, err = marathon.CountAllTasks()
+	if err != nil {
+		log.Printf("Failed to count tasks. %v", err)
+	}
 
 	//Now we can talk to the DB to check our client demand
 	demandchangeflag = currentdemand.update()
@@ -193,7 +203,10 @@ func main() {
 		case demandchangeflag:
 			demandchangeflag = false
 			//make any changes dictated by this new demand level
-			currentdemand.clientsrequested, currentdemand.serversrequested = marathon.CountAllTasks()
+			currentdemand.clientsrequested, currentdemand.serversrequested, err = marathon.CountAllTasks()
+			if err != nil {
+				log.Printf("Failed to count tasks. %v", err)
+			}
 			//To trace out turn _ = errFlag
 			_ = currentdemand.handle()
 			//log.Println("demand change. result:", errflag)
