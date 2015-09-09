@@ -76,6 +76,5 @@ func TestStartStop(t *testing.T) {
 		} else if test.expErr {
 			t.Fatalf("expected an error")
 		}
-
 	}
 }

@@ -97,8 +97,14 @@ func (d *Demand) handle() bool {
 	// THe reason is that all the code we wrote to handle stopping before
 	// starting etc.. is handled directly by Marathon so that code
 	// from the old scheduler needs to go behind the scheduler interface
-	d.sched.StopStartNTasks(os.Getenv("CLIENT_TASK"), os.Getenv("CLIENT_FAMILY"), d.clientdemand, d.clientsrequested)
+	err := d.sched.StopStartNTasks(os.Getenv("CLIENT_TASK"), os.Getenv("CLIENT_FAMILY"), d.clientdemand, d.clientsrequested)
+	if err != nil {
+		log.Printf("Failed to start client tasks. %v", err)
+	}
 	d.sched.StopStartNTasks(os.Getenv("SERVER_TASK"), os.Getenv("SERVER_FAMILY"), d.serverdemand, d.serversrequested)
+	if err != nil {
+		log.Printf("Failed to start server tasks. %v", err)
+	}
 
 	return false
 }
