@@ -124,7 +124,7 @@ func (d *Demand) update() bool {
 	//log.Println("demand update check.")
 	var demandchange bool = false
 
-	container_count, err := d.sched.GetContainerCount(os.Getenv("CLIENT_ID"))
+	container_count, err := d.sched.GetContainerCount("priority1-demand")
 	if err != nil {
 		log.Printf("Failed to get container count. %v", err)
 		return false
