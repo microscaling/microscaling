@@ -2,6 +2,7 @@
 package rng
 
 import (
+  "bitbucket.org/force12io/force12-scheduler/demand"
   "log"
   "math/rand"
 )
@@ -9,14 +10,28 @@ import (
 const maximum int = 9 // Demand can vary between 0 and maximum
 const delta int = 3 // Current value can only go up or down by a maximum of delta
 
+type RandomDemand struct {
+  current_demand int
+}
 
-func RandomDemand(current_demand int) (int, error) {
+// check that we implement the right interface
+var _ demand.Input = (*RandomDemand)(nil)
+
+func NewRandomDemandGenerator() *RandomDemand {
+  return &RandomDemand {
+    current_demand: 0,
+  }
+}
+
+// We ignore the container type when we're generating demand randomly 
+func (rng *RandomDemand) GetDemand(containerType string) (int, error) {
+
   // Random value between +/- delta is the same as 
   // (random value between 0 and 2*delta) - delta
   // noting that if r = rand.Intn(n) then 0 <= r < n 
 
   r := rand.Intn((2 * delta) + 1)
-  demand := current_demand + r - delta
+  demand := rng.current_demand + r - delta
   if demand > maximum {
     demand = maximum
   }
@@ -26,5 +41,6 @@ func RandomDemand(current_demand int) (int, error) {
   }
 
   log.Printf("Random demand %d", demand)
+  rng.current_demand = demand
   return demand, nil
 }
