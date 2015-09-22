@@ -1,4 +1,4 @@
-package marathon
+package consul
 
 import (
 	"fmt"
@@ -33,10 +33,10 @@ func TestGetValueById(t *testing.T) {
 	}))
 	defer server.Close()
 
-	m := NewMarathonScheduler()
-	m.baseConsulUrl = server.URL
+	d := NewDemandFromConsul()
+	d.baseConsulUrl = server.URL
 
-	value, err := m.GetValuebyID("hat")
+	value, err := d.GetValuebyID("priority1-demand")
 	if err != nil {
 		t.Fatalf("GetValuebyID returned an error %v", err)
 	}

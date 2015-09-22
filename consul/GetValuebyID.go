@@ -1,4 +1,4 @@
-package marathon
+package consul
 
 import (
 	"encoding/json"
@@ -26,14 +26,13 @@ type consulKey struct {
 
 // GetValuebyID gets the contents of an item in the Consul KV store, as identified by the item's unique ID Key
 //
-// input unique ID (Key) of target item (actually not used, it's hardcoded for now)
+// input unique ID (Key) of target item 
 // output string representation of the stored value
-func (m *MarathonScheduler) GetValuebyID(key string) (string, error) {
+func (d *DemandFromConsul) GetValuebyID(key string) (string, error) {
 	// Code to get value from Consul
 	// GET http://marathon.force12.io:8500/v1/kv/priority1-demand
 
-	// TODO: NOTE THAT KEY IS NOT USED !!!!
-	url := m.baseConsulUrl + "/v1/kv/priority1-demand"
+	url := d.baseConsulUrl + "/v1/kv/" + key // TODO! Move /v1/kv/ somewhere more sensible
 
 	log.Println("GET demand: " + url)
 	resp, err := http.Get(url)
