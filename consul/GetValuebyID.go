@@ -26,7 +26,7 @@ type consulKey struct {
 
 // GetValuebyID gets the contents of an item in the Consul KV store, as identified by the item's unique ID Key
 //
-// input unique ID (Key) of target item 
+// input unique ID (Key) of target item
 // output string representation of the stored value
 func (d *DemandFromConsul) GetValuebyID(key string) (string, error) {
 	// Code to get value from Consul

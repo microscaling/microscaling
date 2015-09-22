@@ -21,15 +21,15 @@ func TestGetValueById(t *testing.T) {
 		h := w.Header()
 		h.Set("Content-Type", "application/json")
 		fmt.Fprintln(w, `[
-   {
-       "CreateIndex": 8,
-       "ModifyIndex": 15,
-       "LockIndex": 0,
-       "Key": "priority1-demand",
-       "Flags": 0,
-       "Value": "myvalue"
-   }
-]`)
+	   		{
+			   "CreateIndex": 8,
+			   "ModifyIndex": 15,
+			   "LockIndex": 0,
+			   "Key": "priority1-demand",
+			   "Flags": 0,
+			   "Value": "myvalue"
+		   	}
+		]`)
 	}))
 	defer server.Close()
 

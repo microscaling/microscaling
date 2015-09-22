@@ -1,12 +1,13 @@
 package consul
 
 import (
-  "bitbucket.org/force12io/force12-scheduler/demand"
 	"encoding/base64"
 	"fmt"
 	"log"
-	"os"	
+	"os"
 	"strconv"
+
+	"bitbucket.org/force12io/force12-scheduler/demand"
 )
 
 type DemandFromConsul struct {
@@ -17,9 +18,9 @@ type DemandFromConsul struct {
 var _ demand.Input = (*DemandFromConsul)(nil)
 
 func NewDemandFromConsul() *DemandFromConsul {
-  return &DemandFromConsul{
-  	baseConsulUrl: getBaseConsulUrl(),
-  }
+	return &DemandFromConsul{
+		baseConsulUrl: getBaseConsulUrl(),
+	}
 }
 
 func getBaseConsulUrl() string {
