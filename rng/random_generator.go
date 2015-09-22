@@ -11,7 +11,7 @@ const maximum int = 9 // Demand can vary between 0 and maximum
 const delta int = 3   // Current value can only go up or down by a maximum of delta
 
 type RandomDemand struct {
-	current_demand int
+	currentDemand int
 }
 
 // check that we implement the demand interface
@@ -19,7 +19,7 @@ var _ demand.Input = (*RandomDemand)(nil)
 
 func NewRandomDemandGenerator() *RandomDemand {
 	return &RandomDemand{
-		current_demand: 0,
+		currentDemand: 0,
 	}
 }
 
@@ -31,7 +31,7 @@ func (rng *RandomDemand) GetDemand(containerType string) (int, error) {
 	// noting that if r = rand.Intn(n) then 0 <= r < n
 
 	r := rand.Intn((2 * delta) + 1)
-	demand := rng.current_demand + r - delta
+	demand := rng.currentDemand + r - delta
 	if demand > maximum {
 		demand = maximum
 	}
@@ -41,6 +41,6 @@ func (rng *RandomDemand) GetDemand(containerType string) (int, error) {
 	}
 
 	log.Printf("Random demand %d", demand)
-	rng.current_demand = demand
+	rng.currentDemand = demand
 	return demand, nil
 }

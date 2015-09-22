@@ -10,7 +10,7 @@ func TestRandomDemand(t *testing.T) {
 	rng := NewRandomDemandGenerator()
 
 	for i := 0; i < 20; i++ {
-		old_demand := rng.current_demand
+		old_demand := rng.currentDemand
 		demand, _ := rng.GetDemand("anything")
 
 		if demand > maximum {
