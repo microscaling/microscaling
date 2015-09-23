@@ -157,7 +157,7 @@ func main() {
 	//
 	// Also for simplicity this first release is concurrency free (single threaded)
 	currentdemand := Demand{
-		sched: marathon.NewMarathonScheduler(),
+		sched: marathon.NewScheduler(),
 	}
 	currentdemand.set(const_clientdemandstart, const_serverdemandstart)
 	//var errflag bool = false

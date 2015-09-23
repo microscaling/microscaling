@@ -33,7 +33,7 @@ func TestGetValueById(t *testing.T) {
 	}))
 	defer server.Close()
 
-	d := NewDemandFromConsul()
+	d := NewDemandModel()
 	d.baseConsulUrl = server.URL
 
 	value, err := d.GetValuebyID("priority1-demand")

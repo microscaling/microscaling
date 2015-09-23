@@ -7,7 +7,7 @@ import (
 
 func TestRandomDemand(t *testing.T) {
 
-	rng := NewRandomDemandGenerator()
+	rng := NewDemandModel()
 
 	for i := 0; i < 20; i++ {
 		old_demand := rng.currentDemand

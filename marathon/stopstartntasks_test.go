@@ -64,7 +64,7 @@ func TestStartStop(t *testing.T) {
 		}))
 		defer server.Close()
 
-		m := NewMarathonScheduler()
+		m := NewScheduler()
 		m.baseMarathonUrl = server.URL
 
 		err := m.StopStartNTasks(test.app, test.family, test.demandcount, test.currentcount)

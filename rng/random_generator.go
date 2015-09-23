@@ -17,7 +17,7 @@ type RandomDemand struct {
 // check that we implement the demand interface
 var _ demand.Input = (*RandomDemand)(nil)
 
-func NewRandomDemandGenerator() *RandomDemand {
+func NewDemandModel() *RandomDemand {
 	return &RandomDemand{
 		currentDemand: 0,
 	}

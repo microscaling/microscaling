@@ -32,7 +32,7 @@ func TestDecodeContainerCount(t *testing.T) {
 	}))
 	defer server.Close()
 
-	d := NewDemandFromConsul()
+	d := NewDemandModel()
 	d.baseConsulUrl = server.URL
 
 	count, err := d.GetDemand("priority1-demand")

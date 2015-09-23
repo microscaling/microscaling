@@ -17,7 +17,7 @@ type DemandFromConsul struct {
 // check that we implement the demand interface
 var _ demand.Input = (*DemandFromConsul)(nil)
 
-func NewDemandFromConsul() *DemandFromConsul {
+func NewDemandModel() *DemandFromConsul {
 	return &DemandFromConsul{
 		baseConsulUrl: getBaseConsulUrl(),
 	}

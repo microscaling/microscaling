@@ -142,7 +142,7 @@ func TestInitScheduler(t *testing.T) {
 		}))
 		defer server.Close()
 
-		m := NewMarathonScheduler()
+		m := NewScheduler()
 		m.baseMarathonUrl = server.URL
 
 		err := m.InitScheduler(test.appId)
