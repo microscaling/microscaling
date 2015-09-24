@@ -207,7 +207,6 @@ func main() {
 		sched: marathon.NewScheduler(),
 	}
 	currentdemand.set(const_p1demandstart, const_p2demandstart)
-	//var errflag bool = false
 	var demandchangeflag bool
 	//uncomment code below to output logs to file, but there's nothing clever in here to limit file size
 	//f, err := os.OpenFile("testlogfile", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
@@ -231,17 +230,12 @@ func main() {
 		return
 	}
 
-	// Find out how many containers we currently have running and get their details
-	// Note have decided to do this periodically as a reset as we are getting mysteriously out of whack on ECS
-	currentdemand.p1requested, currentdemand.p2requested, err = currentdemand.sched.CountAllTasks()
-	if err != nil {
-		log.Printf("Failed to count tasks. %v", err)
-	}
-
 	//Now we can talk to the DB to check our client demand
 	demandchangeflag = currentdemand.update()
 	demandchangeflag = true
 	var sleepcount float64 = 0
+	var sleep time.Duration
+	sleep = const_sleep * time.Millisecond
 
 	for {
 		switch {
@@ -259,8 +253,6 @@ func main() {
 
 		default:
 			//log.Println("    .")
-			var sleep time.Duration
-			sleep = const_sleep * time.Millisecond
 			time.Sleep(sleep)
 			//Update currentdemand with latest client and server demand, if changed, set flag
 			demandchangeflag = currentdemand.update()
