@@ -99,11 +99,6 @@ func (d *Demand) get() (int, int) {
 // change, including potentially nothing.
 func (d *Demand) handle() error {
 	var err error
-	// AEC NOTE THIS FUNCTION NEEDS TO BE HEAVILY REWRITTEN TO HANDLE ECS
-	// WHEN WE PORT THAT OVER TO THE SAME STRUCTURE.
-	// THe reason is that all the code we wrote to handle stopping before
-	// starting etc.. is handled directly by Marathon so that code
-	// from the old scheduler needs to go behind the scheduler interface
 	// TODO!! We shouldn't get these from the environment every time
 	err = d.sched.StopStartNTasks(os.Getenv("F12_PRIORITY1_TASK"), os.Getenv("F12_PRIORITY1_FAMILY"), d.p1demand, d.p1requested)
 	if err != nil {
