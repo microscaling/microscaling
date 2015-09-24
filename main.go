@@ -92,9 +92,7 @@ func (d *Demand) get() (int, int) {
 // handle processes a change in demand
 // Note that handle will make any judgment on what to do with a demand
 // change, including potentially nothing.
-func (d *Demand) handle() bool {
-	log.Println("Handle demand change.")
-
+func (d *Demand) handle() error {
 	var err error
 	// AEC NOTE THIS FUNCTION NEEDS TO BE HEAVILY REWRITTEN TO HANDLE ECS
 	// WHEN WE PORT THAT OVER TO THE SAME STRUCTURE.
@@ -110,7 +108,7 @@ func (d *Demand) handle() bool {
 		log.Printf("Failed to start Priority2 tasks. %v", err)
 	}
 
-	return false
+	return err
 }
 
 // update checks for changes in demand, returning true if demand changed
@@ -254,9 +252,10 @@ func main() {
 			if err != nil {
 				log.Printf("Failed to count tasks. %v", err)
 			}
-			//To trace out turn _ = errFlag
-			_ = currentdemand.handle()
-			//log.Println("demand change. result:", errflag)
+			err = currentdemand.handle()
+			if err != nil {
+				log.Printf("Failed to handle demand change. %v", err)
+			}
 
 		default:
 			//log.Println("    .")
