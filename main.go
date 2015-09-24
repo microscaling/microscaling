@@ -104,11 +104,12 @@ func (d *Demand) handle() error {
 	// THe reason is that all the code we wrote to handle stopping before
 	// starting etc.. is handled directly by Marathon so that code
 	// from the old scheduler needs to go behind the scheduler interface
-	err = d.sched.StopStartNTasks(os.Getenv("CLIENT_TASK"), os.Getenv("CLIENT_FAMILY"), d.p1demand, d.p1requested)
+	// TODO!! We shouldn't get these from the environment every time
+	err = d.sched.StopStartNTasks(os.Getenv("F12_PRIORITY1_TASK"), os.Getenv("F12_PRIORITY1_FAMILY"), d.p1demand, d.p1requested)
 	if err != nil {
 		log.Printf("Failed to start Priority1 tasks. %v", err)
 	}
-	d.sched.StopStartNTasks(os.Getenv("SERVER_TASK"), os.Getenv("SERVER_FAMILY"), d.p2demand, d.p2requested)
+	d.sched.StopStartNTasks(os.Getenv("F12_PRIORITY2_TASK"), os.Getenv("F12_PRIORITY2_FAMILY"), d.p2demand, d.p2requested)
 	if err != nil {
 		log.Printf("Failed to start Priority2 tasks. %v", err)
 	}
@@ -221,6 +222,12 @@ func main() {
 	// TODO! Make it so you can send in settings on the command line
 	var demandModelType string = getEnvOrDefault("F12_DEMAND_MODEL", "RNG")
 	var schedulerType string = getEnvOrDefault("F12_SCHEDULER", "COMPOSE")
+	var sendstate string = getEnvOrDefault("F12_SEND_STATE_TO_API", "true")
+	var p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", "priority1-demand")
+	var p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", "priority2-demand")
+	// TODO!! FInd out what CLIENT/SERVER_FAMILY should default to
+	var p1FamilyName = os.Getenv("F12_PRIORITY1_FAMILY")
+	var p2FamilyName = os.Getenv("F12_PRIORITY2_FAMILY")
 
 	var di demand.Input
 	var s scheduler.Scheduler
@@ -256,7 +263,6 @@ func main() {
 		sched: s,
 	}
 	currentdemand.set(const_p1demandstart, const_p2demandstart)
-	var demandchangeflag bool
 	//uncomment code below to output logs to file, but there's nothing clever in here to limit file size
 	//f, err := os.OpenFile("testlogfile", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
 	//if err != nil {
@@ -268,12 +274,13 @@ func main() {
 	log.Println("This is a test log entry")
 
 	// Initialise container types
-	err := currentdemand.sched.InitScheduler(os.Getenv("CLIENT_TASK"))
+	err = currentdemand.sched.InitScheduler(p1TaskName)
 	if err != nil {
 		log.Printf("Failed to start P1 task. %v", err)
 		return
 	}
-	err = currentdemand.sched.InitScheduler(os.Getenv("SERVER_TASK"))
+
+	err = currentdemand.sched.InitScheduler(p2TaskName)
 	if err != nil {
 		log.Printf("Failed to start P2 task. %v", err)
 		return
@@ -291,11 +298,12 @@ func main() {
 		//Update currentdemand with latest client and server demand, if changed, set flag
 		demandchangeflag = currentdemand.update()
 		if demandchangeflag {
-			//make any changes dictated by this new demand level
+			// See how many tasks we should have already
 			currentdemand.p1requested, currentdemand.p2requested, err = currentdemand.sched.CountAllTasks()
 			if err != nil {
 				log.Printf("Failed to count tasks. %v", err)
 			}
+			//make any changes dictated by the new demand level
 			err = currentdemand.handle()
 			if err != nil {
 				log.Printf("Failed to handle demand change. %v", err)
@@ -308,7 +316,7 @@ func main() {
 			sleepcount = 0
 
 			//Periodically send state to the API if required
-			if os.Getenv("SENDSTATETO_API") == "true" {
+			if sendstate == "true" {
 				err = sendStateToAPI(&currentdemand)
 				if err != nil {
 					log.Printf("Failed to send state. %v", err)
