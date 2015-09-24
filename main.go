@@ -37,7 +37,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"time"
@@ -122,7 +121,7 @@ func (d *Demand) handle() error {
 // significant. handle() will determine that.
 func (d *Demand) update() bool {
 	//log.Println("demand update check.")
-	var demandchange bool = false
+	var demandchange bool
 
 	container_count, err := d.sched.GetContainerCount("priority1-demand")
 	if err != nil {
@@ -240,8 +239,8 @@ func main() {
 		log.Println("Random demand generation")
 		di = rng.NewDemandModel()
 	default:
-		err = fmt.Errorf("Bad value for F12_DEMAND_MODEL: %s", demandModelType)
-		return err
+		log.Printf("Bad value for F12_DEMAND_MODEL: %s", demandModelType)
+		return
 	}
 
 	switch schedulerType {
@@ -252,15 +251,12 @@ func main() {
 		log.Println("Scheduling with Docker compose")
 		s = compose.NewScheduler()
 	default:
-		err = fmt.Errorf("Bad value for F12_SCHEDULER: %s", schedulerType)
-		return err
+		log.Printf("Bad value for F12_SCHEDULER: %s", schedulerType)
+		return
 	}
 
-	// TODO!! Remove this - it's just to get things compiling
-	log.Println(di)
-
 	currentdemand := Demand{
-		sched: s,
+		input: di,
 	}
 	currentdemand.set(const_p1demandstart, const_p2demandstart)
 
