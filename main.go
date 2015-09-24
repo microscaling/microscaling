@@ -29,13 +29,25 @@ Note - this version of Force12 starts and stops containers on a Mesos cluser usi
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"log"
+	"math"
 	"os"
 	"time"
+	"fmt"
+	"net/http"
 
 	"bitbucket.org/force12io/force12-scheduler/marathon"
 	"bitbucket.org/force12io/force12-scheduler/scheduler"
 )
+
+type sendStatePayload struct {
+  CreatedAt int64  `json:"createdAt"`
+  Priority1Requested  int `json:"priority1Requested"`
+  Priority1Running  int `json:"priority1Running"`
+  Priority2Running  int `json:"priority2Running"`
+}
 
 //CONSTANTS
 const const_sleep = 100     //milliseconds
@@ -145,6 +157,66 @@ func (d *Demand) update() bool {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
+// sendStateToAPI
+//
+// Called periodically to check for current state of cluster (or single node) and send that
+// state to the f12 API
+func sendStateToAPI(currentdemand *Demand) error {
+  count1, count2, err := currentdemand.sched.CountAllTasks()
+  if err != nil {
+		return fmt.Errorf("Failed to get state err %v", err)
+	}
+	
+  // Submit a PUT request to the API
+  // Note the magic hardcoded string is the user ID, we need to pass this in in some way. ENV VAR?
+	url := getBaseF12APIUrl() + "/metrics/" + "5k5gk"
+	log.Printf("API PUT: %s", url)
+	
+	payload := sendStatePayload{
+    CreatedAt: time.Now().Unix(),
+    Priority1Requested: currentdemand.clientdemand,
+    Priority1Running: count1,
+    Priority2Running: count2,
+  }
+  
+	w := &bytes.Buffer{}
+	encoder := json.NewEncoder(w)
+	err = encoder.Encode(&payload)
+	if err != nil {
+		return fmt.Errorf("Failed to encode API json. %v", err)
+	}
+
+	req, err := http.NewRequest("PUT", url, w)
+
+	if err != nil {
+		return fmt.Errorf("Failed to build API PUT request err %v", err)
+	}
+	//req.Header.Set("X-Custom-Header", "myvalue")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	defer resp.Body.Close()
+
+	if err != nil {
+		// handle error
+		return fmt.Errorf("API state err %v", err)
+	}
+
+	if resp.StatusCode > 204 {
+		return fmt.Errorf("error response from API. %s", resp.Status)
+	}
+	return err
+}
+
+func getBaseF12APIUrl() string {
+	baseUrl := os.Getenv("API_ADDRESS")
+	if baseUrl == "" {
+		baseUrl = "https://force12-windtunnel.herokuapp.com"
+	}
+	return baseUrl
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
 // MAIN
 //
 func main() {
@@ -194,7 +266,8 @@ func main() {
 	//Now we can talk to the DB to check our client demand
 	demandchangeflag = currentdemand.update()
 	demandchangeflag = true
-
+  var sleepcount float64 = 0
+	
 	for {
 		switch {
 		case demandchangeflag:
@@ -207,6 +280,7 @@ func main() {
 			//To trace out turn _ = errFlag
 			_ = currentdemand.handle()
 			//log.Println("demand change. result:", errflag)
+			
 
 		default:
 			//log.Println("    .")
@@ -215,6 +289,19 @@ func main() {
 			time.Sleep(sleep)
 			//Update currentdemand with latest client and server demand, if changed, set flag
 			demandchangeflag = currentdemand.update()
+			
+			sleepcount++
+			
+			//Periodically send state to the API if required
+			if os.Getenv("SENDSTATETO_API") == "true" {
+			  _, frac := math.Modf(math.Mod(sleepcount, 5))
+			  if frac == 0 {
+			    err = sendStateToAPI(&currentdemand)
+			    if err != nil {
+		  		  log.Printf("Failed to send state. %v", err)
+		  	  }
+			  }
+			}
 		}
 	}
 }
