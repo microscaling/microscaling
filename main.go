@@ -52,44 +52,43 @@ type sendStatePayload struct {
 //CONSTANTS
 const const_sleep = 100     //milliseconds
 const const_stopsleep = 250 //milliseconds pause between stopping and restarting containers
-const const_clientdemandstart int = 5
-const const_serverdemandstart int = 4
+const const_p1demandstart int = 5
+const const_p2demandstart int = 4
 const const_maxcontainers int = 9
 
 //EXPORTED STRUCTS
 type Demand struct {
 	sched scheduler.Scheduler
 
-	//  mu  sync.Mutex   // plan ahead for concurrency on this potentially shared resource, this is go after all
-	clientdemand     int // indicates number of clients demanded (from dynamo table in prototype)
-	serverdemand     int // indicates server demand (deduced in prototype)
-	clientsrequested int // indicates how many clients we've tried to kick off.
-	serversrequested int // indicates how many servers we've tried to kick off.
+	p1demand    int // number of Priority 1 tasks demanded
+	p2demand    int
+	p1requested int // indicates how many P1 tasks we've tried to kick off.
+	p2requested int
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // set
 // Setter, returns what was there (client, server)
 // if provided value is -1 don't update, demand will always be between 0 and const_maxcontainers
-func (d *Demand) set(client, server int) (int, int) {
+func (d *Demand) set(p1, p2 int) (int, int) {
 	//d.mu.Lock()
-	serverold := d.serverdemand
-	clientold := d.clientdemand
-	if server != -1 {
-		d.serverdemand = server
+	p1old := d.p1demand
+	p2old := d.p2demand
+	if p2 != -1 {
+		d.p2demand = p2
 	}
-	if client != -1 {
-		d.clientdemand = client
+	if p1 != -1 {
+		d.p1demand = p1
 	}
 	//d.mu.Unlock()
-	return clientold, serverold
+	return p1old, p2old
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // get
 // Getter, returns client, server AEC - Combine this with the set to reduce code
 func (d *Demand) get() (int, int) {
-	return d.clientdemand, d.serverdemand
+	return d.p1demand, d.p2demand
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -105,18 +104,19 @@ func (d *Demand) get() (int, int) {
 func (d *Demand) handle() bool {
 	log.Println("Handle demand change.")
 
+	var err error
 	// AEC NOTE THIS FUNCTION NEEDS TO BE HEAVILY REWRITTEN TO HANDLE ECS
 	// WHEN WE PORT THAT OVER TO THE SAME STRUCTURE.
 	// THe reason is that all the code we wrote to handle stopping before
 	// starting etc.. is handled directly by Marathon so that code
 	// from the old scheduler needs to go behind the scheduler interface
-	err := d.sched.StopStartNTasks(os.Getenv("CLIENT_TASK"), os.Getenv("CLIENT_FAMILY"), d.clientdemand, d.clientsrequested)
+	err = d.sched.StopStartNTasks(os.Getenv("CLIENT_TASK"), os.Getenv("CLIENT_FAMILY"), d.p1demand, d.p1requested)
 	if err != nil {
-		log.Printf("Failed to start client tasks. %v", err)
+		log.Printf("Failed to start Priority1 tasks. %v", err)
 	}
-	d.sched.StopStartNTasks(os.Getenv("SERVER_TASK"), os.Getenv("SERVER_FAMILY"), d.serverdemand, d.serversrequested)
+	d.sched.StopStartNTasks(os.Getenv("SERVER_TASK"), os.Getenv("SERVER_FAMILY"), d.p2demand, d.p2requested)
 	if err != nil {
-		log.Printf("Failed to start server tasks. %v", err)
+		log.Printf("Failed to start Priority2 tasks. %v", err)
 	}
 
 	return false
@@ -143,14 +143,14 @@ func (d *Demand) update() bool {
 	}
 	//log.Printf("container count %v\n", container_count)
 
-	//Update our saved client demand
-	oldcli, _ := d.set(container_count, const_maxcontainers-container_count)
+	//Update our saved p1 demand
+	oldP1, _ := d.set(container_count, const_maxcontainers-container_count)
 
 	//Has the demand changed?
-	demandchange = (container_count != oldcli)
+	demandchange = (container_count != oldP1)
 
 	if demandchange {
-		log.Println("demandchange from, to ", oldcli, container_count)
+		log.Println("demandchange from, to ", oldP1, container_count)
 	}
 
 	return demandchange
@@ -231,7 +231,7 @@ func main() {
 	currentdemand := Demand{
 		sched: marathon.NewScheduler(),
 	}
-	currentdemand.set(const_clientdemandstart, const_serverdemandstart)
+	currentdemand.set(const_p1demandstart, const_p2demandstart)
 	//var errflag bool = false
 	var demandchangeflag bool
 	//uncomment code below to output logs to file, but there's nothing clever in here to limit file size
@@ -247,18 +247,18 @@ func main() {
 	// Initialise container types
 	err := currentdemand.sched.InitScheduler(os.Getenv("CLIENT_TASK"))
 	if err != nil {
-		log.Printf("Failed to start client task. %v", err)
+		log.Printf("Failed to start P1 task. %v", err)
 		return
 	}
 	err = currentdemand.sched.InitScheduler(os.Getenv("SERVER_TASK"))
 	if err != nil {
-		log.Printf("Failed to start server task. %v", err)
+		log.Printf("Failed to start P2 task. %v", err)
 		return
 	}
 
 	// Find out how many containers we currently have running and get their details
 	// Note have decided to do this periodically as a reset as we are getting mysteriously out of whack on ECS
-	currentdemand.clientsrequested, currentdemand.serversrequested, err = currentdemand.sched.CountAllTasks()
+	currentdemand.p1requested, currentdemand.p2requested, err = currentdemand.sched.CountAllTasks()
 	if err != nil {
 		log.Printf("Failed to count tasks. %v", err)
 	}
@@ -273,7 +273,7 @@ func main() {
 		case demandchangeflag:
 			demandchangeflag = false
 			//make any changes dictated by this new demand level
-			currentdemand.clientsrequested, currentdemand.serversrequested, err = currentdemand.sched.CountAllTasks()
+			currentdemand.p1requested, currentdemand.p2requested, err = currentdemand.sched.CountAllTasks()
 			if err != nil {
 				log.Printf("Failed to count tasks. %v", err)
 			}
