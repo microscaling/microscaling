@@ -64,8 +64,14 @@ const const_p1demandstart int = 5
 const const_p2demandstart int = 4
 const const_maxcontainers int = 9
 
+var p1TaskName string
+var p2TaskName string
+var p1FamilyName string
+var p2FamilyName string
+
 type Demand struct {
 	sched scheduler.Scheduler
+	input demand.Input
 
 	p1demand    int // number of Priority 1 tasks demanded
 	p2demand    int
@@ -99,12 +105,11 @@ func (d *Demand) get() (int, int) {
 // change, including potentially nothing.
 func (d *Demand) handle() error {
 	var err error
-	// TODO!! We shouldn't get these from the environment every time
-	err = d.sched.StopStartNTasks(os.Getenv("F12_PRIORITY1_TASK"), os.Getenv("F12_PRIORITY1_FAMILY"), d.p1demand, d.p1requested)
+	err = d.sched.StopStartNTasks(p1TaskName, p1FamilyName, d.p1demand, d.p1requested)
 	if err != nil {
 		log.Printf("Failed to start Priority1 tasks. %v", err)
 	}
-	d.sched.StopStartNTasks(os.Getenv("F12_PRIORITY2_TASK"), os.Getenv("F12_PRIORITY2_FAMILY"), d.p2demand, d.p2requested)
+	d.sched.StopStartNTasks(p2TaskName, p2FamilyName, d.p2demand, d.p2requested)
 	if err != nil {
 		log.Printf("Failed to start Priority2 tasks. %v", err)
 	}
@@ -218,11 +223,11 @@ func main() {
 	var demandModelType string = getEnvOrDefault("F12_DEMAND_MODEL", "RNG")
 	var schedulerType string = getEnvOrDefault("F12_SCHEDULER", "COMPOSE")
 	var sendstate string = getEnvOrDefault("F12_SEND_STATE_TO_API", "true")
-	var p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", "priority1-demand")
-	var p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", "priority2-demand")
+	p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", "priority1-demand")
+	p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", "priority2-demand")
 	// TODO!! FInd out what CLIENT/SERVER_FAMILY should default to
-	var p1FamilyName = os.Getenv("F12_PRIORITY1_FAMILY")
-	var p2FamilyName = os.Getenv("F12_PRIORITY2_FAMILY")
+	p1FamilyName = os.Getenv("F12_PRIORITY1_FAMILY")
+	p2FamilyName = os.Getenv("F12_PRIORITY2_FAMILY")
 
 	var di demand.Input
 	var s scheduler.Scheduler
