@@ -1,31 +1,35 @@
-/*
-Force12.io is a package that monitors demand for resource in a system and then scales and repurposes
-containers, based on agreed "quality of service" contracts, to best handle that demand within the constraints of your existing VM or physical infrastructure (for v1).
-
-Force12 is defined to optimize the use of existing physical and VM resources instantly. VMs cannot be scaled in real time (it takes several minutes) and new physical machines take even longer. However, containers can be started or stopped at sub second speeds, allowing your infrastructure to adapt itself in real time to meet system demands.
-
-Force12 is aimed at effectively using the resources you have right now - your existing VMs or physical servers - by using them as optimally as possible.
-
-The Force12 approach is analogous to the way that a router dynamically optimises the use of a physical network. A router is limited by the capacity of the lines physically connected to it. Adding additional capacity is a physical process and takes time. Routers therefore make decisions in real time about which packets will be prioritized on a particular line based on the packet's priority (defined by a "quality of service" contract).
-
-For example, at times of high bandwidth usage a router might prioritize VOIP traffic over web browsing in real time.
-
-Containers allow Force12 to make similar "instant" judgements on service prioritisation within your existing infrastructure. Routers make very simplistic
-judgments because they have limited time and cpu and they act at a per packet level. Force12 has the capability of making far more
-sophisticated judgements, although even fairly simple ones will still provide a significant new service.
-
-This prototype is a bare bones implementation of Force12.io that recognises only 1 demand types
-randomised demand for a priority 1 service (the current value stored in Consul's key value store) aka "client". WHen this minimum demand has been met then a P2 service will
-be run (aka "server).
-
-These demand type examples have been chosen purely for simplicity of demonstration. In the future more demand types
-will be offered
-
-V1 - Force12.io reacts to increased demand by starting/stopping containers on the slaves already in play.
-
-Note - this version of Force12 starts and stops containers on a Mesos cluser using Marathon as the scheduler
-*/
-
+// Force12.io is a package that monitors demand for resource in a system and then scales and repurposes
+// containers, based on agreed "quality of service" contracts, to best handle that demand within the constraints of your existing VM
+// or physical infrastructure (for v1).
+//
+// Force12 is defined to optimize the use of existing physical and VM resources instantly. VMs cannot be scaled in real time (it takes
+// several minutes) and new physical machines take even longer. However, containers can be started or stopped at sub second speeds,
+// allowing your infrastructure to adapt itself in real time to meet system demands.
+//
+// Force12 is aimed at effectively using the resources you have right now - your existing VMs or physical servers - by using them as
+// optimally as possible.
+//
+// The Force12 approach is analogous to the way that a router dynamically optimises the use of a physical network. A router is limited
+// by the capacity of the lines physically connected to it. Adding additional capacity is a physical process and takes time. Routers
+// therefore make decisions in real time about which packets will be prioritized on a particular line based on the packet's priority
+// (defined by a "quality of service" contract).
+//
+// For example, at times of high bandwidth usage a router might prioritize VOIP traffic over web browsing in real time.
+//
+// Containers allow Force12 to make similar "instant" judgements on service prioritisation within your existing infrastructure. Routers
+// make very simplistic judgments because they have limited time and cpu and they act at a per packet level. Force12 has the capability
+// of making far more sophisticated judgements, although even fairly simple ones will still provide a significant new service.
+//
+// This prototype is a bare bones implementation of Force12.io that recognises only 1 demand type:
+// randomised demand for a priority 1 service. Resources are allocated to meet this demand for priority 1, and spare resource can
+// be used for a priority 2 service.
+//
+// These demand type examples have been chosen purely for simplicity of demonstration. In the future more demand types
+// will be offered
+//
+// V1 - Force12.io reacts to increased demand by starting/stopping containers on the slaves already in play.
+//
+// This version of Force12 starts and stops containers on a Mesos cluser using Marathon as the scheduler
 package main
 
 import (
@@ -49,14 +53,12 @@ type sendStatePayload struct {
 	Priority2Running   int   `json:"priority2Running"`
 }
 
-//CONSTANTS
 const const_sleep = 100     //milliseconds
 const const_stopsleep = 250 //milliseconds pause between stopping and restarting containers
 const const_p1demandstart int = 5
 const const_p2demandstart int = 4
 const const_maxcontainers int = 9
 
-//EXPORTED STRUCTS
 type Demand struct {
 	sched scheduler.Scheduler
 
@@ -66,9 +68,7 @@ type Demand struct {
 	p2requested int
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// set
-// Setter, returns what was there (client, server)
+// set returns values that were there (p1, p2)
 // if provided value is -1 don't update, demand will always be between 0 and const_maxcontainers
 func (d *Demand) set(p1, p2 int) (int, int) {
 	//d.mu.Lock()
@@ -84,23 +84,14 @@ func (d *Demand) set(p1, p2 int) (int, int) {
 	return p1old, p2old
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// get
-// Getter, returns client, server AEC - Combine this with the set to reduce code
+// get returns client, server AEC - Combine this with the set to reduce code
 func (d *Demand) get() (int, int) {
 	return d.p1demand, d.p2demand
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// handle
-//
-// Called in response to a change in demand to process it.
-//
-// output err - true if success (AEC currently assumes success).
-//
+// handle processes a change in demand
 // Note that handle will make any judgment on what to do with a demand
 // change, including potentially nothing.
-//
 func (d *Demand) handle() bool {
 	log.Println("Handle demand change.")
 
@@ -122,16 +113,9 @@ func (d *Demand) handle() bool {
 	return false
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// update
-//
-// Called periodically to check for changes in demand and update accordingly.
-//
-// output changed? - true if demand changed
-//
-// Note that this routine will return any change. It makes no judgement on whether that change is
+// update checks for changes in demand, returning true if demand changed
+// Note that this function makes no judgement on whether a demand change is
 // significant. handle() will determine that.
-//
 func (d *Demand) update() bool {
 	//log.Println("demand update check.")
 	var demandchange bool = false
@@ -156,10 +140,7 @@ func (d *Demand) update() bool {
 	return demandchange
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// sendStateToAPI
-//
-// Called periodically to check for current state of cluster (or single node) and send that
+// sendStateToAPI checks the current state of cluster (or single node) and sends that
 // state to the f12 API
 func sendStateToAPI(currentdemand *Demand) error {
 	count1, count2, err := currentdemand.sched.CountAllTasks()
@@ -216,18 +197,14 @@ func getBaseF12APIUrl() string {
 	return baseUrl
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// MAIN
+// For the simple prototype, Force12.io sits in a loop checking for demand changes every X milliseconds
+// In phase 2 we'll add a reactive mode where appropriate.
 //
+// Note - we don't route messages from demandcheckers to demandhandlers using channels because we want new values
+// to override old values. Queued history is of no importance here.
+//
+// Also for simplicity this first release is concurrency free (single threaded)
 func main() {
-	////////////////////////////////////////////////////////////////////////////////////////
-	// For the simple prototype, Force12.io sits in a loop checking for demand changes every X milliseconds
-	// In phase 2 we'll add a reactive mode where appropriate.
-	//
-	// Note - we don't route messages from demandcheckers to demandhandlers using channels because we want new values
-	// to override old values. Queued history is of no importance here.
-	//
-	// Also for simplicity this first release is concurrency free (single threaded)
 	currentdemand := Demand{
 		sched: marathon.NewScheduler(),
 	}

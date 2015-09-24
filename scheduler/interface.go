@@ -1,3 +1,4 @@
+// scheduler defines the interface for scheduling models
 package scheduler
 
 type Scheduler interface {

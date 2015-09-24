@@ -1,3 +1,4 @@
+// The demand package defined the interface for demand models
 package demand
 
 type Input interface {

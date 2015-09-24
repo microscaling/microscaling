@@ -1,12 +1,15 @@
-// Generate a random demand metric for high priority containers
+// rng generates a random demand metric for high priority containers
 package rng
 
 import (
-	"bitbucket.org/force12io/force12-scheduler/demand"
+	"fmt"
 	"log"
 	"math/rand"
+
+	"bitbucket.org/force12io/force12-scheduler/demand"
 )
 
+// TODO! The maximum should not be defined here
 const maximum int = 9 // Demand can vary between 0 and maximum
 const delta int = 3   // Current value can only go up or down by a maximum of delta
 
@@ -17,6 +20,7 @@ type RandomDemand struct {
 // check that we implement the demand interface
 var _ demand.Input = (*RandomDemand)(nil)
 
+// NewDemandModel created a new RNG demand model
 func NewDemandModel() *RandomDemand {
 	return &RandomDemand{
 		currentDemand: 0,
