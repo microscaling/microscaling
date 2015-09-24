@@ -13,15 +13,9 @@ type startStopPayload struct {
 	Instances int `json:"instances"`
 }
 
-////////////////////////////////////////////////////////////////////////////////////////
-// StopStartNTasks
-//
-// This function calls the Marathon API to create the number of app instances (containers)
-// we want. For consistency with the ECS API we take the current count, but actually
-// we don't use it as Marathon will just work out how many to start and stop based on
-// what we tell it we need.
-//
-//
+// StopStartNTasks calls the Marathon API to create the number of app instances (containers)
+// we want. For Marathon we don't need the current count (as we do for ECS API)
+// as Marathon will just work out how many to start and stop based on what we tell it we need.
 func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcount int, currentcount int) error {
 	// Submit a post request to Marathon to match the requested number of the requested app
 	// format looks like:
@@ -44,18 +38,16 @@ func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcou
 	}
 
 	req, err := http.NewRequest("PUT", url, w)
-
 	if err != nil {
 		return fmt.Errorf("Failed to build PUT request err %v", err)
 	}
-	//req.Header.Set("X-Custom-Header", "myvalue")
+
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	defer resp.Body.Close()
 
 	if err != nil {
-		// handle error
 		return fmt.Errorf("start/stop err %v", err)
 	}
 
@@ -65,7 +57,6 @@ func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcou
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		// handle error
 		return fmt.Errorf("start/stop read err %v", err)
 	}
 

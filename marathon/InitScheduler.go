@@ -160,7 +160,6 @@ func (m *MarathonScheduler) InitScheduler(appId string) error {
 
 		resp, err := http.Post(m.baseMarathonUrl, "application/json", w)
 		if err != nil {
-			// handle error
 			return fmt.Errorf("Failed to create app, err %v", err)
 		}
 		resp.Body.Close()
