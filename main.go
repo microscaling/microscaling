@@ -123,21 +123,22 @@ func (d *Demand) update() bool {
 	//log.Println("demand update check.")
 	var demandchange bool
 
-	container_count, err := d.sched.GetContainerCount("priority1-demand")
+	newP1Demand, err := d.input.GetDemand("priority1-demand")
 	if err != nil {
-		log.Printf("Failed to get container count. %v", err)
+		log.Printf("Failed to get new demand. %v", err)
 		return false
 	}
 	//log.Printf("container count %v\n", container_count)
+	newP2Demand := const_maxcontainers - newP1Demand
 
-	//Update our saved p1 demand
-	oldP1, _ := d.set(container_count, const_maxcontainers-container_count)
+	//Update our saved demand
+	oldP1Demand, oldP2Demand := d.set(newP1Demand, newP2Demand)
 
 	//Has the demand changed?
-	demandchange = (container_count != oldP1)
+	demandchange = (newP1Demand != oldP1Demand) || (newP2Demand != oldP2Demand)
 
 	if demandchange {
-		log.Println("demandchange from, to ", oldP1, container_count)
+		log.Printf("P1 demand changed from %d to %d", oldP1Demand, newP1Demand)
 	}
 
 	return demandchange
