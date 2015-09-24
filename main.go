@@ -42,7 +42,11 @@ import (
 	"os"
 	"time"
 
+	"bitbucket.org/force12io/force12-scheduler/compose"
+	"bitbucket.org/force12io/force12-scheduler/consul"
+	"bitbucket.org/force12io/force12-scheduler/demand"
 	"bitbucket.org/force12io/force12-scheduler/marathon"
+	"bitbucket.org/force12io/force12-scheduler/rng"
 	"bitbucket.org/force12io/force12-scheduler/scheduler"
 )
 
@@ -53,9 +57,9 @@ type sendStatePayload struct {
 	Priority2Running   int   `json:"priority2Running"`
 }
 
-const const_sleep = 100     //milliseconds
+const const_sleep = 100          //milliseconds
 const const_sendstate_sleeps = 5 // number of sleeps before we send state on the API
-const const_stopsleep = 250 //milliseconds pause between stopping and restarting containers
+const const_stopsleep = 250      //milliseconds pause between stopping and restarting containers
 const const_p1demandstart int = 5
 const const_p2demandstart int = 4
 const const_maxcontainers int = 9
@@ -196,6 +200,15 @@ func getBaseF12APIUrl() string {
 	return baseUrl
 }
 
+func getEnvOrDefault(name string, defaultValue string) string {
+	v := os.Getenv(name)
+	if v == "" {
+		v = defaultValue
+	}
+
+	return v
+}
+
 // For the simple prototype, Force12.io sits in a loop checking for demand changes every X milliseconds
 // In phase 2 we'll add a reactive mode where appropriate.
 //
@@ -204,8 +217,43 @@ func getBaseF12APIUrl() string {
 //
 // Also for simplicity this first release is concurrency free (single threaded)
 func main() {
+	var err error
+	// TODO! Make it so you can send in settings on the command line
+	var demandModelType string = getEnvOrDefault("F12_DEMAND_MODEL", "RNG")
+	var schedulerType string = getEnvOrDefault("F12_SCHEDULER", "COMPOSE")
+
+	var di demand.Input
+	var s scheduler.Scheduler
+
+	switch demandModelType {
+	case "CONSUL":
+		log.Println("Getting demand metric from Consul")
+		di = consul.NewDemandModel()
+	case "RNG":
+		log.Println("Random demand generation")
+		di = rng.NewDemandModel()
+	default:
+		err = fmt.Errorf("Bad value for F12_DEMAND_MODEL: %s", demandModelType)
+		return err
+	}
+
+	switch schedulerType {
+	case "MESOS":
+		log.Println("Scheduling with Mesos / Marathon")
+		s = marathon.NewScheduler()
+	case "COMPOSE":
+		log.Println("Scheduling with Docker compose")
+		s = compose.NewScheduler()
+	default:
+		err = fmt.Errorf("Bad value for F12_SCHEDULER: %s", schedulerType)
+		return err
+	}
+
+	// TODO!! Remove this - it's just to get things compiling
+	log.Println(di)
+
 	currentdemand := Demand{
-		sched: marathon.NewScheduler(),
+		sched: s,
 	}
 	currentdemand.set(const_p1demandstart, const_p2demandstart)
 	var demandchangeflag bool
