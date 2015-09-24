@@ -54,6 +54,7 @@ type sendStatePayload struct {
 }
 
 const const_sleep = 100     //milliseconds
+const const_sendstate_sleeps = 5 // number of sleeps before we send state on the API
 const const_stopsleep = 250 //milliseconds pause between stopping and restarting containers
 const const_p1demandstart int = 5
 const const_p2demandstart int = 4
@@ -230,11 +231,11 @@ func main() {
 		return
 	}
 
-	//Now we can talk to the DB to check our client demand
+	var demandchangeflag bool
 	demandchangeflag = currentdemand.update()
 	demandchangeflag = true
 
-	var sleepcount float64 = 0
+	var sleepcount int = 0
 	var sleep time.Duration
 	sleep = const_sleep * time.Millisecond
 
@@ -253,19 +254,19 @@ func main() {
 			}
 		}
 
-		// Sleep for a while
 		time.Sleep(sleep)
 		sleepcount++
+		if sleepcount == const_sendstate_sleeps {
+			sleepcount = 0
 
-		//Periodically send state to the API if required
-		if os.Getenv("SENDSTATETO_API") == "true" {
-			_, frac := math.Modf(math.Mod(sleepcount, 5))
-			if frac == 0 {
+			//Periodically send state to the API if required
+			if os.Getenv("SENDSTATETO_API") == "true" {
 				err = sendStateToAPI(&currentdemand)
 				if err != nil {
 					log.Printf("Failed to send state. %v", err)
 				}
 			}
 		}
+
 	}
 }
