@@ -31,22 +31,22 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math"
+	"net/http"
 	"os"
 	"time"
-	"fmt"
-	"net/http"
 
 	"bitbucket.org/force12io/force12-scheduler/marathon"
 	"bitbucket.org/force12io/force12-scheduler/scheduler"
 )
 
 type sendStatePayload struct {
-  CreatedAt int64  `json:"createdAt"`
-  Priority1Requested  int `json:"priority1Requested"`
-  Priority1Running  int `json:"priority1Running"`
-  Priority2Running  int `json:"priority2Running"`
+	CreatedAt          int64 `json:"createdAt"`
+	Priority1Requested int   `json:"priority1Requested"`
+	Priority1Running   int   `json:"priority1Running"`
+	Priority2Running   int   `json:"priority2Running"`
 }
 
 //CONSTANTS
@@ -162,23 +162,23 @@ func (d *Demand) update() bool {
 // Called periodically to check for current state of cluster (or single node) and send that
 // state to the f12 API
 func sendStateToAPI(currentdemand *Demand) error {
-  count1, count2, err := currentdemand.sched.CountAllTasks()
-  if err != nil {
+	count1, count2, err := currentdemand.sched.CountAllTasks()
+	if err != nil {
 		return fmt.Errorf("Failed to get state err %v", err)
 	}
-	
-  // Submit a PUT request to the API
-  // Note the magic hardcoded string is the user ID, we need to pass this in in some way. ENV VAR?
+
+	// Submit a PUT request to the API
+	// Note the magic hardcoded string is the user ID, we need to pass this in in some way. ENV VAR?
 	url := getBaseF12APIUrl() + "/metrics/" + "5k5gk"
 	log.Printf("API PUT: %s", url)
-	
+
 	payload := sendStatePayload{
-    CreatedAt: time.Now().Unix(),
-    Priority1Requested: currentdemand.clientdemand,
-    Priority1Running: count1,
-    Priority2Running: count2,
-  }
-  
+		CreatedAt:          time.Now().Unix(),
+		Priority1Requested: currentdemand.p1demand,
+		Priority1Running:   count1,
+		Priority2Running:   count2,
+	}
+
 	w := &bytes.Buffer{}
 	encoder := json.NewEncoder(w)
 	err = encoder.Encode(&payload)
@@ -266,8 +266,8 @@ func main() {
 	//Now we can talk to the DB to check our client demand
 	demandchangeflag = currentdemand.update()
 	demandchangeflag = true
-  var sleepcount float64 = 0
-	
+	var sleepcount float64 = 0
+
 	for {
 		switch {
 		case demandchangeflag:
@@ -280,7 +280,6 @@ func main() {
 			//To trace out turn _ = errFlag
 			_ = currentdemand.handle()
 			//log.Println("demand change. result:", errflag)
-			
 
 		default:
 			//log.Println("    .")
@@ -289,18 +288,18 @@ func main() {
 			time.Sleep(sleep)
 			//Update currentdemand with latest client and server demand, if changed, set flag
 			demandchangeflag = currentdemand.update()
-			
+
 			sleepcount++
-			
+
 			//Periodically send state to the API if required
 			if os.Getenv("SENDSTATETO_API") == "true" {
-			  _, frac := math.Modf(math.Mod(sleepcount, 5))
-			  if frac == 0 {
-			    err = sendStateToAPI(&currentdemand)
-			    if err != nil {
-		  		  log.Printf("Failed to send state. %v", err)
-		  	  }
-			  }
+				_, frac := math.Modf(math.Mod(sleepcount, 5))
+				if frac == 0 {
+					err = sendStateToAPI(&currentdemand)
+					if err != nil {
+						log.Printf("Failed to send state. %v", err)
+					}
+				}
 			}
 		}
 	}
