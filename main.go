@@ -69,9 +69,6 @@ var p1FamilyName string
 var p2FamilyName string
 
 type Demand struct {
-	sched scheduler.Scheduler
-	input demand.Input
-
 	p1demand    int // number of Priority 1 tasks demanded
 	p2demand    int
 	p1requested int // indicates how many P1 tasks we've tried to kick off.
@@ -102,13 +99,13 @@ func (d *Demand) get() (int, int) {
 // handle processes a change in demand
 // Note that handle will make any judgment on what to do with a demand
 // change, including potentially nothing.
-func (d *Demand) handle() error {
+func handleDemandChange(s scheduler.Scheduler, d Demand) error {
 	var err error
-	err = d.sched.StopStartNTasks(p1TaskName, p1FamilyName, d.p1demand, d.p1requested)
+	err = s.StopStartNTasks(p1TaskName, p1FamilyName, d.p1demand, d.p1requested)
 	if err != nil {
 		log.Printf("Failed to start Priority1 tasks. %v", err)
 	}
-	d.sched.StopStartNTasks(p2TaskName, p2FamilyName, d.p2demand, d.p2requested)
+	s.StopStartNTasks(p2TaskName, p2FamilyName, d.p2demand, d.p2requested)
 	if err != nil {
 		log.Printf("Failed to start Priority2 tasks. %v", err)
 	}
@@ -119,11 +116,11 @@ func (d *Demand) handle() error {
 // update checks for changes in demand, returning true if demand changed
 // Note that this function makes no judgement on whether a demand change is
 // significant. handle() will determine that.
-func (d *Demand) update() bool {
+func (d *Demand) update(input demand.Input) bool {
 	//log.Println("demand update check.")
 	var demandchange bool
 
-	newP1Demand, err := d.input.GetDemand("priority1-demand")
+	newP1Demand, err := input.GetDemand("priority1-demand")
 	if err != nil {
 		log.Printf("Failed to get new demand. %v", err)
 		return false
@@ -146,8 +143,8 @@ func (d *Demand) update() bool {
 
 // sendStateToAPI checks the current state of cluster (or single node) and sends that
 // state to the f12 API
-func sendStateToAPI(currentdemand *Demand) error {
-	count1, count2, err := currentdemand.sched.CountAllTasks()
+func sendStateToAPI(currentdemand *Demand, sched scheduler.Scheduler) error {
+	count1, count2, err := sched.CountAllTasks()
 	if err != nil {
 		return fmt.Errorf("Failed to get state err %v", err)
 	}
@@ -256,26 +253,24 @@ func main() {
 		return
 	}
 
-	currentdemand := Demand{
-		input: di,
-	}
+	currentdemand := Demand{}
 	currentdemand.set(const_p1demandstart, const_p2demandstart)
 
 	// Initialise container types
-	err = currentdemand.sched.InitScheduler(p1TaskName)
+	err = s.InitScheduler(p1TaskName)
 	if err != nil {
 		log.Printf("Failed to start P1 task. %v", err)
 		return
 	}
 
-	err = currentdemand.sched.InitScheduler(p2TaskName)
+	err = s.InitScheduler(p2TaskName)
 	if err != nil {
 		log.Printf("Failed to start P2 task. %v", err)
 		return
 	}
 
 	var demandchangeflag bool
-	demandchangeflag = currentdemand.update()
+	demandchangeflag = currentdemand.update(di)
 	demandchangeflag = true
 
 	var sleepcount int = 0
@@ -284,15 +279,15 @@ func main() {
 
 	for {
 		//Update currentdemand with latest client and server demand, if changed, set flag
-		demandchangeflag = currentdemand.update()
+		demandchangeflag = currentdemand.update(di)
 		if demandchangeflag {
 			// See how many tasks we should have already
-			currentdemand.p1requested, currentdemand.p2requested, err = currentdemand.sched.CountAllTasks()
+			currentdemand.p1requested, currentdemand.p2requested, err = s.CountAllTasks()
 			if err != nil {
-				log.Printf("Failed to count tasks. %v", err)
+				log.Printf("Failed to count tasks. %v\n", err)
 			}
 			//make any changes dictated by the new demand level
-			err = currentdemand.handle()
+			err = handleDemandChange(s, currentdemand)
 			if err != nil {
 				log.Printf("Failed to handle demand change. %v", err)
 			}
@@ -305,12 +300,11 @@ func main() {
 
 			//Periodically send state to the API if required
 			if sendstate == "true" {
-				err = sendStateToAPI(&currentdemand)
+				err = sendStateToAPI(&currentdemand, s)
 				if err != nil {
 					log.Printf("Failed to send state. %v", err)
 				}
 			}
 		}
-
 	}
 }
