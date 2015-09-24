@@ -233,14 +233,15 @@ func main() {
 	//Now we can talk to the DB to check our client demand
 	demandchangeflag = currentdemand.update()
 	demandchangeflag = true
+
 	var sleepcount float64 = 0
 	var sleep time.Duration
 	sleep = const_sleep * time.Millisecond
 
 	for {
-		switch {
-		case demandchangeflag:
-			demandchangeflag = false
+		//Update currentdemand with latest client and server demand, if changed, set flag
+		demandchangeflag = currentdemand.update()
+		if demandchangeflag {
 			//make any changes dictated by this new demand level
 			currentdemand.p1requested, currentdemand.p2requested, err = currentdemand.sched.CountAllTasks()
 			if err != nil {
@@ -250,23 +251,19 @@ func main() {
 			if err != nil {
 				log.Printf("Failed to handle demand change. %v", err)
 			}
+		}
 
-		default:
-			//log.Println("    .")
-			time.Sleep(sleep)
-			//Update currentdemand with latest client and server demand, if changed, set flag
-			demandchangeflag = currentdemand.update()
+		// Sleep for a while
+		time.Sleep(sleep)
+		sleepcount++
 
-			sleepcount++
-
-			//Periodically send state to the API if required
-			if os.Getenv("SENDSTATETO_API") == "true" {
-				_, frac := math.Modf(math.Mod(sleepcount, 5))
-				if frac == 0 {
-					err = sendStateToAPI(&currentdemand)
-					if err != nil {
-						log.Printf("Failed to send state. %v", err)
-					}
+		//Periodically send state to the API if required
+		if os.Getenv("SENDSTATETO_API") == "true" {
+			_, frac := math.Modf(math.Mod(sleepcount, 5))
+			if frac == 0 {
+				err = sendStateToAPI(&currentdemand)
+				if err != nil {
+					log.Printf("Failed to send state. %v", err)
 				}
 			}
 		}
