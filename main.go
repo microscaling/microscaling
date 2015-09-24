@@ -69,6 +69,7 @@ var p1FamilyName string
 var p2FamilyName string
 
 type Demand struct {
+	// TODO! This could be a map of tasks
 	p1demand    int // number of Priority 1 tasks demanded
 	p2demand    int
 	p1requested int // indicates how many P1 tasks we've tried to kick off.
@@ -99,8 +100,21 @@ func (d *Demand) get() (int, int) {
 // handle processes a change in demand
 // Note that handle will make any judgment on what to do with a demand
 // change, including potentially nothing.
-func handleDemandChange(s scheduler.Scheduler, d Demand) error {
+func handleDemandChange(s scheduler.Scheduler, d *Demand) error {
 	var err error
+
+	// See how many tasks are running already
+	// TODO! At the moment this is looking at how many we've asked for. Need to consider how we handle the difference
+	// between what we have asked for and what is really running
+	d.p1requested, d.p2requested, err = s.CountAllTasks()
+	if err != nil {
+		log.Printf("Failed to count tasks. %v\n", err)
+	}
+
+	// This is where we could decide whether this is a significant enough
+	// demand change to do anything
+
+	// Ask the scheduler to make the changes
 	err = s.StopStartNTasks(p1TaskName, p1FamilyName, d.p1demand, d.p1requested)
 	if err != nil {
 		log.Printf("Failed to start Priority1 tasks. %v", err)
@@ -253,9 +267,6 @@ func main() {
 		return
 	}
 
-	currentdemand := Demand{}
-	currentdemand.set(const_p1demandstart, const_p2demandstart)
-
 	// Initialise container types
 	err = s.InitScheduler(p1TaskName)
 	if err != nil {
@@ -269,25 +280,21 @@ func main() {
 		return
 	}
 
-	var demandchangeflag bool
-	demandchangeflag = currentdemand.update(di)
-	demandchangeflag = true
+	// Initial demand
+	currentdemand := Demand{
+		p1demand: const_p1demandstart,
+		p2demand: const_p2demandstart,
+	}
 
+	var demandchangeflag bool = true // The first time through the loop, our demand has definitely changed
 	var sleepcount int = 0
-	var sleep time.Duration
-	sleep = const_sleep * time.Millisecond
+	var sleep time.Duration = const_sleep * time.Millisecond
 
+	// Loop, continually checking for changes in demand that need to be scheduled
 	for {
-		//Update currentdemand with latest client and server demand, if changed, set flag
-		demandchangeflag = currentdemand.update(di)
 		if demandchangeflag {
-			// See how many tasks we should have already
-			currentdemand.p1requested, currentdemand.p2requested, err = s.CountAllTasks()
-			if err != nil {
-				log.Printf("Failed to count tasks. %v\n", err)
-			}
 			//make any changes dictated by the new demand level
-			err = handleDemandChange(s, currentdemand)
+			err = handleDemandChange(s, &currentdemand)
 			if err != nil {
 				log.Printf("Failed to handle demand change. %v", err)
 			}
@@ -306,5 +313,8 @@ func main() {
 				}
 			}
 		}
+
+		// After we've slept, see if the demand has changed before we restart the loop
+		demandchangeflag = currentdemand.update(di)
 	}
 }
