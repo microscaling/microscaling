@@ -263,15 +263,6 @@ func main() {
 		sched: s,
 	}
 	currentdemand.set(const_p1demandstart, const_p2demandstart)
-	//uncomment code below to output logs to file, but there's nothing clever in here to limit file size
-	//f, err := os.OpenFile("testlogfile", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
-	//if err != nil {
-	//   panic(err)
-	//}
-	//defer f.Close()
-
-	//log.SetOutput(f)
-	log.Println("This is a test log entry")
 
 	// Initialise container types
 	err = currentdemand.sched.InitScheduler(p1TaskName)
