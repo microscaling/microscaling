@@ -222,11 +222,11 @@ func main() {
 	var demandModelType string = getEnvOrDefault("F12_DEMAND_MODEL", "RNG")
 	var schedulerType string = getEnvOrDefault("F12_SCHEDULER", "COMPOSE")
 	var sendstate string = getEnvOrDefault("F12_SEND_STATE_TO_API", "true")
-	p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", "priority1-demand")
-	p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", "priority2-demand")
+	p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", p1TaskName)
+	p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", p2TaskName)
 	// TODO!! FInd out what CLIENT/SERVER_FAMILY should default to
-	p1FamilyName = os.Getenv("F12_PRIORITY1_FAMILY")
-	p2FamilyName = os.Getenv("F12_PRIORITY2_FAMILY")
+	p1FamilyName = getEnvOrDefault("F12_PRIORITY1_FAMILY", p1FamilyName)
+	p2FamilyName = getEnvOrDefault("F12_PRIORITY2_FAMILY", p2FamilyName)
 
 	var di demand.Input
 	var s scheduler.Scheduler
