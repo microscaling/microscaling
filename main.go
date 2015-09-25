@@ -63,10 +63,10 @@ const const_p1demandstart int = 5
 const const_p2demandstart int = 4
 const const_maxcontainers int = 9
 
-var p1TaskName string
-var p2TaskName string
-var p1FamilyName string
-var p2FamilyName string
+var p1TaskName string = "priority1"
+var p2TaskName string = "priority2"
+var p1FamilyName string = "p1-family"
+var p2FamilyName string = "p2-family"
 
 type Demand struct {
 	// TODO! This could be a map of tasks
@@ -76,16 +76,21 @@ type Demand struct {
 	p2requested int
 }
 
+var tasks map[string]demand.Task
+
 // handle processes a change in demand
 // Note that handle will make any judgment on what to do with a demand
 // change, including potentially nothing.
-func handleDemandChange(s scheduler.Scheduler, d *Demand) error {
+func handleDemandChange(s scheduler.Scheduler) error {
 	var err error
 
 	// See how many tasks are running already
 	// TODO! At the moment this is looking at how many we've asked for. Need to consider how we handle the difference
 	// between what we have asked for and what is really running
-	d.p1requested, d.p2requested, err = s.CountAllTasks()
+	p1 := tasks[p1TaskName]
+	p2 := tasks[p2TaskName]
+
+	p1.Requested, p2.Requested, err = s.CountAllTasks()
 	if err != nil {
 		log.Printf("Failed to count tasks. %v\n", err)
 	}
@@ -94,13 +99,12 @@ func handleDemandChange(s scheduler.Scheduler, d *Demand) error {
 	// demand change to do anything
 
 	// Ask the scheduler to make the changes
-	err = s.StopStartNTasks(p1TaskName, p1FamilyName, d.p1demand, d.p1requested)
-	if err != nil {
-		log.Printf("Failed to start Priority1 tasks. %v", err)
-	}
-	s.StopStartNTasks(p2TaskName, p2FamilyName, d.p2demand, d.p2requested)
-	if err != nil {
-		log.Printf("Failed to start Priority2 tasks. %v", err)
+	for name, task := range tasks {
+		err = s.StopStartNTasks(name, task.FamilyName, task.Demand, task.Requested)
+		if err != nil {
+			log.Printf("Failed to start Priority1 tasks. %v", err)
+			break
+		}
 	}
 
 	return err
@@ -109,38 +113,41 @@ func handleDemandChange(s scheduler.Scheduler, d *Demand) error {
 // update checks for changes in demand, returning true if demand changed
 // Note that this function makes no judgement on whether a demand change is
 // significant. handle() will determine that.
-func (d *Demand) update(input demand.Input) bool {
+func update(input demand.Input) (bool, error) {
 	//log.Println("demand update check.")
 	var demandchange bool
+	var err error = nil
 
-	newP1Demand, err := input.GetDemand("priority1-demand")
+	var p1 demand.Task = tasks[p1TaskName]
+	var p2 demand.Task = tasks[p2TaskName]
+
+	// Save the old demand
+	oldP1Demand := p1.Demand
+	oldP2Demand := p2.Demand
+
+	p1.Demand, err = input.GetDemand(p1TaskName)
 	if err != nil {
 		log.Printf("Failed to get new demand. %v", err)
-		return false
+		return false, err
 	}
 	//log.Printf("container count %v\n", container_count)
-	newP2Demand := const_maxcontainers - newP1Demand
-
-	//Update our saved demand
-	oldP1Demand := d.p1demand
-	oldP2Demand := d.p2demand
-
-	d.p1demand = newP1Demand
-	d.p2demand = newP2Demand
+	p2.Demand = const_maxcontainers - p1.Demand
 
 	//Has the demand changed?
-	demandchange = (newP1Demand != oldP1Demand) || (newP2Demand != oldP2Demand)
+	demandchange = (p1.Demand != oldP1Demand) || (p2.Demand != oldP2Demand)
 
 	if demandchange {
-		log.Printf("P1 demand changed from %d to %d", oldP1Demand, newP1Demand)
+		log.Printf("P1 demand changed from %d to %d", oldP1Demand, p1.Demand)
 	}
 
-	return demandchange
+	return demandchange, err
 }
 
 // sendStateToAPI checks the current state of cluster (or single node) and sends that
 // state to the f12 API
-func sendStateToAPI(currentdemand *Demand, sched scheduler.Scheduler) error {
+func sendStateToAPI(sched scheduler.Scheduler) error {
+	p1 := tasks[p1TaskName]
+
 	count1, count2, err := sched.CountAllTasks()
 	if err != nil {
 		return fmt.Errorf("Failed to get state err %v", err)
@@ -153,7 +160,7 @@ func sendStateToAPI(currentdemand *Demand, sched scheduler.Scheduler) error {
 
 	payload := sendStatePayload{
 		CreatedAt:          time.Now().Unix(),
-		Priority1Requested: currentdemand.p1demand,
+		Priority1Requested: p1.Demand,
 		Priority1Running:   count1,
 		Priority2Running:   count2,
 	}
@@ -170,14 +177,12 @@ func sendStateToAPI(currentdemand *Demand, sched scheduler.Scheduler) error {
 	if err != nil {
 		return fmt.Errorf("Failed to build API PUT request err %v", err)
 	}
-	//req.Header.Set("X-Custom-Header", "myvalue")
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	defer resp.Body.Close()
 
 	if err != nil {
-		// handle error
 		return fmt.Errorf("API state err %v", err)
 	}
 
@@ -253,23 +258,28 @@ func main() {
 		return
 	}
 
-	// Initialise container types
-	err = s.InitScheduler(p1TaskName)
-	if err != nil {
-		log.Printf("Failed to start P1 task. %v", err)
-		return
+	// Initialise task types
+	tasks = make(map[string]demand.Task)
+
+	tasks[p1TaskName] = demand.Task{
+		FamilyName: p1FamilyName,
+		Demand:     const_p1demandstart,
+		Requested:  0,
 	}
 
-	err = s.InitScheduler(p2TaskName)
-	if err != nil {
-		log.Printf("Failed to start P2 task. %v", err)
-		return
+	tasks[p2TaskName] = demand.Task{
+		FamilyName: p2FamilyName,
+		Demand:     const_p2demandstart,
+		Requested:  0,
 	}
 
-	// Initial demand
-	currentdemand := Demand{
-		p1demand: const_p1demandstart,
-		p2demand: const_p2demandstart,
+	// Let the scheduler know about these task types. For the moment the actual container information is hard-coded
+	for name, _ := range tasks {
+		err = s.InitScheduler(name)
+		if err != nil {
+			log.Printf("Failed to start task %s: %v", name, err)
+			return
+		}
 	}
 
 	var demandchangeflag bool = true // The first time through the loop, our demand has definitely changed
@@ -277,10 +287,11 @@ func main() {
 	var sleep time.Duration = const_sleep * time.Millisecond
 
 	// Loop, continually checking for changes in demand that need to be scheduled
+	// At the moment we plough on regardless in the face of errors, simply logging them out
 	for {
 		if demandchangeflag {
 			//make any changes dictated by the new demand level
-			err = handleDemandChange(s, &currentdemand)
+			err = handleDemandChange(s)
 			if err != nil {
 				log.Printf("Failed to handle demand change. %v", err)
 			}
@@ -293,7 +304,7 @@ func main() {
 
 			//Periodically send state to the API if required
 			if sendstate == "true" {
-				err = sendStateToAPI(&currentdemand, s)
+				err = sendStateToAPI(s)
 				if err != nil {
 					log.Printf("Failed to send state. %v", err)
 				}
@@ -301,6 +312,9 @@ func main() {
 		}
 
 		// After we've slept, see if the demand has changed before we restart the loop
-		demandchangeflag = currentdemand.update(di)
+		demandchangeflag, err = update(di)
+		if err != nil {
+			log.Printf("Failed to update demand. %v", err)
+		}
 	}
 }
