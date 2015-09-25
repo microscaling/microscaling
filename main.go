@@ -262,6 +262,9 @@ func main() {
 	case "COMPOSE":
 		log.Println("Scheduling with Docker compose")
 		s = compose.NewScheduler()
+	case "ECS":
+		log.Println("Scheduling with ECS not yet supported")
+		return
 	default:
 		log.Printf("Bad value for F12_SCHEDULER: %s", schedulerType)
 		return
