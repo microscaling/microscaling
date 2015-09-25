@@ -76,27 +76,6 @@ type Demand struct {
 	p2requested int
 }
 
-// set returns values that were there (p1, p2)
-// if provided value is -1 don't update, demand will always be between 0 and const_maxcontainers
-func (d *Demand) set(p1, p2 int) (int, int) {
-	//d.mu.Lock()
-	p1old := d.p1demand
-	p2old := d.p2demand
-	if p2 != -1 {
-		d.p2demand = p2
-	}
-	if p1 != -1 {
-		d.p1demand = p1
-	}
-	//d.mu.Unlock()
-	return p1old, p2old
-}
-
-// get returns client, server AEC - Combine this with the set to reduce code
-func (d *Demand) get() (int, int) {
-	return d.p1demand, d.p2demand
-}
-
 // handle processes a change in demand
 // Note that handle will make any judgment on what to do with a demand
 // change, including potentially nothing.
@@ -143,7 +122,11 @@ func (d *Demand) update(input demand.Input) bool {
 	newP2Demand := const_maxcontainers - newP1Demand
 
 	//Update our saved demand
-	oldP1Demand, oldP2Demand := d.set(newP1Demand, newP2Demand)
+	oldP1Demand := d.p1demand
+	oldP2Demand := d.p2demand
+
+	d.p1demand = newP1Demand
+	d.p2demand = newP2Demand
 
 	//Has the demand changed?
 	demandchange = (newP1Demand != oldP1Demand) || (newP2Demand != oldP2Demand)
