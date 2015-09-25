@@ -29,9 +29,3 @@ func getBaseMarathonUrl() string {
 	}
 	return baseUrl + "/v2/apps"
 }
-
-func (m *MarathonScheduler) GetContainerCount(key string) (int, error) {
-	// TODO! This is just reflecting back what we had demanded. We need to separate out the demand input from
-	// finding out what's actually running
-	return m.demandFromConsul.GetDemand(key)
-}

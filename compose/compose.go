@@ -19,10 +19,6 @@ func (c *ComposeScheduler) InitScheduler(appId string) error {
 	return nil
 }
 
-func (c *ComposeScheduler) GetContainerCount(key string) (int, error) {
-	return 0, nil
-}
-
 func (c *ComposeScheduler) StopStartNTasks(appId string, family string, demandcount int, currentcount int) error {
 	return nil
 }
