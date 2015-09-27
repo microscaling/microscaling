@@ -93,7 +93,7 @@ func handleDemandChange(input demand.Input, s scheduler.Scheduler) error {
 	if demandChanged {
 		// Ask the scheduler to make the changes
 		for name, task := range tasks {
-			err = s.StopStartNTasks(name, task.FamilyName, task.Demand, task.Requested)
+			err = s.StopStartNTasks(name, task.FamilyName, task.Demand, &task.Requested)
 			if err != nil {
 				log.Printf("Failed to start %s tasks. %v", name, err)
 				break
@@ -128,8 +128,14 @@ func update(input demand.Input) (bool, error) {
 	//Has the demand changed?
 	demandchange = (p1.Demand != oldP1Demand) || (p2.Demand != oldP2Demand)
 
+	// Update tsaks map
+	tasks[p1TaskName] = p1
+	tasks[p2TaskName] = p2
+
 	// This is where we could decide whether this is a significant enough
 	// demand change to do anything
+
+	log.Println(tasks)
 
 	return demandchange, err
 }
