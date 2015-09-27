@@ -47,6 +47,7 @@ import (
 	"bitbucket.org/force12io/force12-scheduler/marathon"
 	"bitbucket.org/force12io/force12-scheduler/rng"
 	"bitbucket.org/force12io/force12-scheduler/scheduler"
+	"bitbucket.org/force12io/force12-scheduler/toy_scheduler"
 )
 
 type sendStatePayload struct {
@@ -250,15 +251,18 @@ func main() {
 	}
 
 	switch schedulerType {
-	case "MESOS":
-		log.Println("Scheduling with Mesos / Marathon")
-		s = marathon.NewScheduler()
 	case "COMPOSE":
 		log.Println("Scheduling with Docker compose")
 		s = compose.NewScheduler()
 	case "ECS":
 		log.Println("Scheduling with ECS not yet supported")
 		return
+	case "MESOS":
+		log.Println("Scheduling with Mesos / Marathon")
+		s = marathon.NewScheduler()
+	case "TOY":
+		log.Println("Scheduling with toy scheduler")
+		s = toy_scheduler.NewScheduler()
 	default:
 		log.Printf("Bad value for F12_SCHEDULER: %s", schedulerType)
 		return
