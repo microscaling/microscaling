@@ -79,31 +79,25 @@ type Demand struct {
 
 var tasks map[string]demand.Task
 
-// handle processes a change in demand
-// Note that handle will make any judgment on what to do with a demand
-// change, including potentially nothing.
-func handleDemandChange(s scheduler.Scheduler) error {
-	var err error
+// handleDemandChange checks the new demand
+func handleDemandChange(input demand.Input, s scheduler.Scheduler) error {
+	var err error = nil
+	var demandChanged bool
 
-	// See how many tasks are running already
-	// TODO! At the moment this is looking at how many we've asked for. Need to consider how we handle the difference
-	// between what we have asked for and what is really running
-	p1 := tasks[p1TaskName]
-
-	p1.Requested, _, err = s.CountTaskInstances(p1TaskName, p1)
+	demandChanged, err = update(input)
 	if err != nil {
-		log.Printf("Failed to count tasks. %v\n", err)
+		log.Printf("Failed to get new demand. %v", err)
+		return err
 	}
 
-	// This is where we could decide whether this is a significant enough
-	// demand change to do anything
-
-	// Ask the scheduler to make the changes
-	for name, task := range tasks {
-		err = s.StopStartNTasks(name, task.FamilyName, task.Demand, task.Requested)
-		if err != nil {
-			log.Printf("Failed to start Priority1 tasks. %v", err)
-			break
+	if demandChanged {
+		// Ask the scheduler to make the changes
+		for name, task := range tasks {
+			err = s.StopStartNTasks(name, task.FamilyName, task.Demand, task.Requested)
+			if err != nil {
+				log.Printf("Failed to start %s tasks. %v", name, err)
+				break
+			}
 		}
 	}
 
@@ -111,13 +105,11 @@ func handleDemandChange(s scheduler.Scheduler) error {
 }
 
 // update checks for changes in demand, returning true if demand changed
-// Note that this function makes no judgement on whether a demand change is
-// significant. handle() will determine that.
 func update(input demand.Input) (bool, error) {
-	//log.Println("demand update check.")
-	var demandchange bool
 	var err error = nil
+	var demandchange bool
 
+	// TODO! Make this less tied to the p1 / p2 simple model
 	var p1 demand.Task = tasks[p1TaskName]
 	var p2 demand.Task = tasks[p2TaskName]
 
@@ -127,7 +119,7 @@ func update(input demand.Input) (bool, error) {
 
 	p1.Demand, err = input.GetDemand(p1TaskName)
 	if err != nil {
-		log.Printf("Failed to get new demand. %v", err)
+		log.Printf("Failed to get new demand for task %s. %v", p1TaskName, err)
 		return false, err
 	}
 	//log.Printf("container count %v\n", container_count)
@@ -136,9 +128,8 @@ func update(input demand.Input) (bool, error) {
 	//Has the demand changed?
 	demandchange = (p1.Demand != oldP1Demand) || (p2.Demand != oldP2Demand)
 
-	if demandchange {
-		log.Printf("P1 demand changed from %d to %d", oldP1Demand, p1.Demand)
-	}
+	// This is where we could decide whether this is a significant enough
+	// demand change to do anything
 
 	return demandchange, err
 }
@@ -149,7 +140,6 @@ func sendStateToAPI(sched scheduler.Scheduler) error {
 	p1 := tasks[p1TaskName]
 	p2 := tasks[p2TaskName]
 
-	// TODO! Do we need to do this again?
 	p1running, _, err := sched.CountTaskInstances(p1TaskName, p1)
 	if err != nil {
 		return fmt.Errorf("Failed to count p1 tasks %v", err)
@@ -161,10 +151,11 @@ func sendStateToAPI(sched scheduler.Scheduler) error {
 	}
 
 	// Submit a PUT request to the API
-	// Note the magic hardcoded string is the user ID, we need to pass this in in some way. ENV VAR?
+	// TODO! the magic hardcoded string is the user ID, we need to pass this in in some way. ENV VAR?
 	url := getBaseF12APIUrl() + "/metrics/" + "5k5gk"
 	log.Printf("API PUT: %s", url)
 
+	// TODO! Make this less specific to P1 & P2 model
 	payload := sendStatePayload{
 		CreatedAt:          time.Now().Unix(),
 		Priority1Requested: p1.Demand,
@@ -293,19 +284,15 @@ func main() {
 		}
 	}
 
-	var demandchangeflag bool = true // The first time through the loop, our demand has definitely changed
 	var sleepcount int = 0
 	var sleep time.Duration = const_sleep * time.Millisecond
 
 	// Loop, continually checking for changes in demand that need to be scheduled
 	// At the moment we plough on regardless in the face of errors, simply logging them out
 	for {
-		if demandchangeflag {
-			//make any changes dictated by the new demand level
-			err = handleDemandChange(s)
-			if err != nil {
-				log.Printf("Failed to handle demand change. %v", err)
-			}
+		err = handleDemandChange(di, s)
+		if err != nil {
+			log.Printf("Failed to handle demand change. %v", err)
 		}
 
 		time.Sleep(sleep)
@@ -320,12 +307,6 @@ func main() {
 					log.Printf("Failed to send state. %v", err)
 				}
 			}
-		}
-
-		// After we've slept, see if the demand has changed before we restart the loop
-		demandchangeflag, err = update(di)
-		if err != nil {
-			log.Printf("Failed to update demand. %v", err)
 		}
 	}
 }
