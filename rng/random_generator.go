@@ -3,7 +3,7 @@ package rng
 
 import (
 	"fmt"
-	"log"
+	// "log"
 	"math/rand"
 
 	"bitbucket.org/force12io/force12-scheduler/demand"
@@ -35,7 +35,7 @@ func (rng *RandomDemand) GetDemand(taskType string) (int, error) {
 
 	switch taskType {
 	case "priority1": // TODO! Priority name shouldn't be hard-coded like this
-		log.Printf("P1 old demand %d", rng.currentP1Demand)
+		// log.Printf("P1 old demand %d", rng.currentP1Demand)
 
 		// Random value between +/- delta is the same as
 		// (random value between 0 and 2*delta) - delta
@@ -50,7 +50,7 @@ func (rng *RandomDemand) GetDemand(taskType string) (int, error) {
 			newDemand = 0
 		}
 
-		log.Printf("P1 random demand %d", newDemand)
+		// log.Printf("P1 random demand %d", newDemand)
 		rng.currentP1Demand = newDemand
 	default:
 		err = fmt.Errorf("Wrong task type passed to RNG: %s", taskType)
