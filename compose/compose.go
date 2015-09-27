@@ -2,6 +2,7 @@
 package compose
 
 import (
+	"bitbucket.org/force12io/force12-scheduler/demand"
 	"bitbucket.org/force12io/force12-scheduler/scheduler"
 )
 
@@ -23,6 +24,6 @@ func (c *ComposeScheduler) StopStartNTasks(appId string, family string, demandco
 	return nil
 }
 
-func (c *ComposeScheduler) CountAllTasks() (int, int, error) {
+func (c *ComposeScheduler) CountTaskInstances(taskName string, task demand.Task) (int, int, error) {
 	return 0, 0, nil
 }

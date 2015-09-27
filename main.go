@@ -88,9 +88,8 @@ func handleDemandChange(s scheduler.Scheduler) error {
 	// TODO! At the moment this is looking at how many we've asked for. Need to consider how we handle the difference
 	// between what we have asked for and what is really running
 	p1 := tasks[p1TaskName]
-	p2 := tasks[p2TaskName]
 
-	p1.Requested, p2.Requested, err = s.CountAllTasks()
+	p1.Requested, _, err = s.CountTaskInstances(p1TaskName, p1)
 	if err != nil {
 		log.Printf("Failed to count tasks. %v\n", err)
 	}
@@ -147,10 +146,17 @@ func update(input demand.Input) (bool, error) {
 // state to the f12 API
 func sendStateToAPI(sched scheduler.Scheduler) error {
 	p1 := tasks[p1TaskName]
+	p2 := tasks[p2TaskName]
 
-	count1, count2, err := sched.CountAllTasks()
+	// TODO! Do we need to do this again?
+	p1running, _, err := sched.CountTaskInstances(p1TaskName, p1)
 	if err != nil {
-		return fmt.Errorf("Failed to get state err %v", err)
+		return fmt.Errorf("Failed to count p1 tasks %v", err)
+	}
+
+	p2running, _, err := sched.CountTaskInstances(p2TaskName, p2)
+	if err != nil {
+		return fmt.Errorf("Failed to count p2 tasks %v", err)
 	}
 
 	// Submit a PUT request to the API
@@ -161,8 +167,8 @@ func sendStateToAPI(sched scheduler.Scheduler) error {
 	payload := sendStatePayload{
 		CreatedAt:          time.Now().Unix(),
 		Priority1Requested: p1.Demand,
-		Priority1Running:   count1,
-		Priority2Running:   count2,
+		Priority1Running:   p1running,
+		Priority2Running:   p2running,
 	}
 
 	w := &bytes.Buffer{}

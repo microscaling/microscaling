@@ -1,7 +1,10 @@
 package marathon
 
-// CountAllTasks does nothing for Marathon because we just don't
-// use this data. We do use it for ECS though so this function is provided for interface consistency.
-func (m *MarathonScheduler) CountAllTasks() (int, int, error) {
-	return 0, 0, nil
+import (
+	"bitbucket.org/force12io/force12-scheduler/demand"
+)
+
+// CountTaskInstances for Marathon simply reflects back the number of tasks of this type we have requested
+func (m *MarathonScheduler) CountTaskInstances(taskName string, task demand.Task) (int, int, error) {
+	return task.Requested, task.Requested, nil
 }
