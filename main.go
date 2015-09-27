@@ -228,7 +228,8 @@ func main() {
 	// TODO! Make it so you can send in settings on the command line
 	var demandModelType string = getEnvOrDefault("F12_DEMAND_MODEL", "RNG")
 	var schedulerType string = getEnvOrDefault("F12_SCHEDULER", "COMPOSE")
-	var sendstate string = getEnvOrDefault("F12_SEND_STATE_TO_API", "true")
+	var sendstateString string = getEnvOrDefault("F12_SEND_STATE_TO_API", "true")
+	var sendstate bool = (sendstateString == "true")
 	p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", p1TaskName)
 	p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", p2TaskName)
 	// TODO!! FInd out what CLIENT/SERVER_FAMILY should default to
@@ -313,7 +314,7 @@ func main() {
 			sleepcount = 0
 
 			//Periodically send state to the API if required
-			if sendstate == "true" {
+			if sendstate {
 				err = sendStateToAPI(s)
 				if err != nil {
 					log.Printf("Failed to send state. %v", err)
