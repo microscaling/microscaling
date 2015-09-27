@@ -35,6 +35,7 @@ func (rng *RandomDemand) GetDemand(taskType string) (int, error) {
 
 	switch taskType {
 	case "priority1": // TODO! Priority name shouldn't be hard-coded like this
+		log.Printf("P1 old demand %d", rng.currentP1Demand)
 
 		// Random value between +/- delta is the same as
 		// (random value between 0 and 2*delta) - delta
