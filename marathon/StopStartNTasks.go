@@ -16,7 +16,7 @@ type startStopPayload struct {
 // StopStartNTasks calls the Marathon API to create the number of app instances (containers)
 // we want. For Marathon we don't need the current count (as we do for ECS API)
 // as Marathon will just work out how many to start and stop based on what we tell it we need.
-func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcount int, currentcount int) error {
+func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcount int, currentcount *int) error {
 	// Submit a post request to Marathon to match the requested number of the requested app
 	// format looks like:
 	// PUT http://marathon.force12.io:8080/v2/apps/<app>
@@ -63,6 +63,9 @@ func (m *MarathonScheduler) StopStartNTasks(app string, family string, demandcou
 	// We do nothing with this body
 	s := string(body)
 	log.Printf("start/stop json: %s", s)
+
+	// Now we've asked for this many, update the currentcount
+	*currentcount = demandcount
 
 	return nil
 }

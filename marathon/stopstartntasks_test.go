@@ -2,6 +2,7 @@ package marathon
 
 import (
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -67,14 +68,26 @@ func TestStartStop(t *testing.T) {
 		m := NewScheduler()
 		m.baseMarathonUrl = server.URL
 
-		err := m.StopStartNTasks(test.app, test.family, test.demandcount, test.currentcount)
+		log.Println("before start/stop: current, demand", test.currentcount, test.demandcount)
+		err := m.StopStartNTasks(test.app, test.family, test.demandcount, &test.currentcount)
+		log.Println("after start/stop: current, demand", test.currentcount, test.demandcount)
 
 		if err != nil {
 			if !test.expErr {
 				t.Fatalf("Error. %v", err)
 			}
+
+			if test.currentcount == test.demandcount {
+				t.Fatalf("Currentcount should not have been updated because we expected an error for this test")
+			}
 		} else if test.expErr {
 			t.Fatalf("expected an error")
+		} else {
+			if test.currentcount != test.demandcount {
+				t.Fatalf("Currentcount should have been updated")
+			}
+
 		}
+
 	}
 }

@@ -38,8 +38,8 @@ func (t *ToyScheduler) InitScheduler(appId string) error {
 }
 
 // StopStartNTasks asks the scheduler to bring the number of running tasks up to demandcount.
-func (t *ToyScheduler) StopStartNTasks(appId string, family string, demandcount int, currentcount int) error {
-
+func (t *ToyScheduler) StopStartNTasks(appId string, family string, demandcount int, currentcount *int) error {
+	*currentcount = demandcount
 	return nil
 }
 

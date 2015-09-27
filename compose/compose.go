@@ -20,7 +20,9 @@ func (c *ComposeScheduler) InitScheduler(appId string) error {
 	return nil
 }
 
-func (c *ComposeScheduler) StopStartNTasks(appId string, family string, demandcount int, currentcount int) error {
+func (c *ComposeScheduler) StopStartNTasks(appId string, family string, demandcount int, currentcount *int) error {
+
+	*currentcount = demandcount
 	return nil
 }
 
