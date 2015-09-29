@@ -149,6 +149,7 @@ func main() {
 	var schedulerType string = getEnvOrDefault("F12_SCHEDULER", "COMPOSE")
 	var sendstateString string = getEnvOrDefault("F12_SEND_STATE_TO_API", "true")
 	var sendstate bool = (sendstateString == "true")
+	var userID string = getEnvOrDefault("F12_USER_ID", "5k5gk")
 	p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", p1TaskName)
 	p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", p2TaskName)
 	// TODO!! FInd out what CLIENT/SERVER_FAMILY should default to
@@ -230,8 +231,7 @@ func main() {
 
 			//Periodically send state to the API if required
 			if sendstate {
-				// TODO! User ID needs to be not hardcoded
-				err = api.SendState("5k5gk", s, tasks)
+				err = api.SendState(userID, s, tasks)
 				if err != nil {
 					log.Printf("Failed to send state. %v", err)
 				}
