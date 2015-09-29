@@ -35,14 +35,8 @@ var baseF12APIUrl string = getBaseF12APIUrl()
 func SendState(userID string, sched scheduler.Scheduler, tasks map[string]demand.Task) error {
 	var err error = nil
 
-	for name, task := range tasks {
-		t := task
-		t.Running, _, err = sched.CountTaskInstances(name, t)
-		if err != nil {
-			return fmt.Errorf("Failed to count %s tasks %v", name, err)
-		}
-		tasks[name] = t
-	}
+	// Find out how many isntances of each task are running
+	sched.CountAllTasks(tasks)
 
 	// Submit a PUT request to the API
 	url := baseF12APIUrl + "/metrics/" + userID

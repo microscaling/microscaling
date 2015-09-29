@@ -38,12 +38,16 @@ func (t *ToyScheduler) InitScheduler(appId string) error {
 }
 
 // StopStartNTasks asks the scheduler to bring the number of running tasks up to demandcount.
-func (t *ToyScheduler) StopStartNTasks(appId string, family string, demandcount int, currentcount *int) error {
-	*currentcount = demandcount
+func (t *ToyScheduler) StopStartNTasks(appId string, family string, demandcount int, requestedcount *int) error {
+	*requestedcount = demandcount
 	return nil
 }
 
-// CountTaskInstances for the Toy scheduler simply reflects back what has been requested
-func (t *ToyScheduler) CountTaskInstances(taskName string, task demand.Task) (int, int, error) {
-	return task.Requested, task.Requested, nil
+// CountAllTasks for the Toy scheduler simply reflects back what has been requested
+func (t *ToyScheduler) CountAllTasks(tasks map[string]demand.Task) error {
+	for name, task := range tasks {
+		task.Running = task.Requested
+		tasks[name] = task
+	}
+	return nil
 }
