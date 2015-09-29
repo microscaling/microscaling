@@ -33,14 +33,11 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"time"
 
+	"bitbucket.org/force12io/force12-scheduler/api"
 	"bitbucket.org/force12io/force12-scheduler/compose"
 	"bitbucket.org/force12io/force12-scheduler/consul"
 	"bitbucket.org/force12io/force12-scheduler/demand"
@@ -50,32 +47,17 @@ import (
 	"bitbucket.org/force12io/force12-scheduler/toy_scheduler"
 )
 
-type sendStatePayload struct {
-	CreatedAt          int64 `json:"createdAt"`
-	Priority1Requested int   `json:"priority1Requested"`
-	Priority1Running   int   `json:"priority1Running"`
-	Priority2Running   int   `json:"priority2Running"`
-}
-
-const const_sleep = 100          //milliseconds
-const const_sendstate_sleeps = 5 // number of sleeps before we send state on the API
-const const_stopsleep = 250      //milliseconds pause between stopping and restarting containers
-const const_p1demandstart int = 5
-const const_p2demandstart int = 4
+const const_sleep = 100           // milliseconds
+const const_sendstate_sleeps = 5  // number of sleeps before we send state on the API
+const const_stopsleep = 250       // milliseconds pause between stopping and restarting containers
+const const_p1demandstart int = 1 // The yaml file will automatically start one of each
+const const_p2demandstart int = 1
 const const_maxcontainers int = 9
 
 var p1TaskName string = "priority1"
 var p2TaskName string = "priority2"
 var p1FamilyName string = "p1-family"
 var p2FamilyName string = "p2-family"
-
-type Demand struct {
-	// TODO! This could be a map of tasks
-	p1demand    int // number of Priority 1 tasks demanded
-	p2demand    int
-	p1requested int // indicates how many P1 tasks we've tried to kick off.
-	p2requested int
-}
 
 var tasks map[string]demand.Task
 
@@ -142,70 +124,6 @@ func update(input demand.Input) (bool, error) {
 	log.Println(tasks)
 
 	return demandchange, err
-}
-
-// sendStateToAPI checks the current state of cluster (or single node) and sends that
-// state to the f12 API
-func sendStateToAPI(sched scheduler.Scheduler) error {
-	p1 := tasks[p1TaskName]
-	p2 := tasks[p2TaskName]
-
-	p1running, _, err := sched.CountTaskInstances(p1TaskName, p1)
-	if err != nil {
-		return fmt.Errorf("Failed to count p1 tasks %v", err)
-	}
-
-	p2running, _, err := sched.CountTaskInstances(p2TaskName, p2)
-	if err != nil {
-		return fmt.Errorf("Failed to count p2 tasks %v", err)
-	}
-
-	// Submit a PUT request to the API
-	// TODO! the magic hardcoded string is the user ID, we need to pass this in in some way. ENV VAR?
-	url := getBaseF12APIUrl() + "/metrics/" + "5k5gk"
-	log.Printf("API PUT: %s", url)
-
-	// TODO! Make this less specific to P1 & P2 model
-	payload := sendStatePayload{
-		CreatedAt:          time.Now().Unix(),
-		Priority1Requested: p1.Demand,
-		Priority1Running:   p1running,
-		Priority2Running:   p2running,
-	}
-
-	w := &bytes.Buffer{}
-	encoder := json.NewEncoder(w)
-	err = encoder.Encode(&payload)
-	if err != nil {
-		return fmt.Errorf("Failed to encode API json. %v", err)
-	}
-
-	req, err := http.NewRequest("PUT", url, w)
-
-	if err != nil {
-		return fmt.Errorf("Failed to build API PUT request err %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
-
-	if err != nil {
-		return fmt.Errorf("API state err %v", err)
-	}
-
-	if resp.StatusCode > 204 {
-		return fmt.Errorf("error response from API. %s", resp.Status)
-	}
-	return err
-}
-
-func getBaseF12APIUrl() string {
-	baseUrl := os.Getenv("F12_API_ADDRESS")
-	if baseUrl == "" {
-		baseUrl = "https://force12-windtunnel.herokuapp.com"
-	}
-	return baseUrl
 }
 
 func getEnvOrDefault(name string, defaultValue string) string {
@@ -312,7 +230,8 @@ func main() {
 
 			//Periodically send state to the API if required
 			if sendstate {
-				err = sendStateToAPI(s)
+				// TODO! User ID needs to be not hardcoded
+				err = api.SendState("5k5gk", s, tasks)
 				if err != nil {
 					log.Printf("Failed to send state. %v", err)
 				}
