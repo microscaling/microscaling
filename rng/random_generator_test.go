@@ -8,7 +8,9 @@ import (
 
 func TestRandomDemand(t *testing.T) {
 
-	rng := NewDemandModel()
+	maximum := 9
+	delta := 3
+	rng := NewDemandModel(delta, maximum)
 
 	for i := 0; i < 20; i++ {
 		old_demand := rng.currentP1Demand

@@ -35,6 +35,7 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"bitbucket.org/force12io/force12-scheduler/api"
@@ -52,12 +53,13 @@ const const_sendstate_sleeps = 5  // number of sleeps before we send state on th
 const const_stopsleep = 250       // milliseconds pause between stopping and restarting containers
 const const_p1demandstart int = 1 // The yaml file will automatically start one of each
 const const_p2demandstart int = 1
-const const_maxcontainers int = 9
 
 var p1TaskName string = "priority1"
 var p2TaskName string = "priority2"
 var p1FamilyName string = "p1-family"
 var p2FamilyName string = "p2-family"
+
+var maximumContainers int
 
 var tasks map[string]demand.Task
 
@@ -109,7 +111,7 @@ func update(input demand.Input) (bool, error) {
 		return false, err
 	}
 	//log.Printf("container count %v\n", container_count)
-	p2.Demand = const_maxcontainers - p1.Demand
+	p2.Demand = maximumContainers - p1.Demand
 
 	//Has the demand changed?
 	demandchange = (p1.Demand != oldP1Demand) || (p2.Demand != oldP2Demand)
@@ -150,11 +152,19 @@ func main() {
 	var sendstateString string = getEnvOrDefault("F12_SEND_STATE_TO_API", "true")
 	var sendstate bool = (sendstateString == "true")
 	var userID string = getEnvOrDefault("F12_USER_ID", "5k5gk")
+	var demandIntervalMs int
+	var demandDelta int
+	demandDelta, _ = strconv.Atoi(getEnvOrDefault("F12_DEMAND_DELTA", "3"))
+	demandIntervalMs, _ = strconv.Atoi(getEnvOrDefault("F12_DEMAND_CHANGE_INTERVAL_MS", "3000"))
+	var demandInterval time.Duration = time.Duration(demandIntervalMs) * time.Millisecond
+	maximumContainers, _ = strconv.Atoi(getEnvOrDefault("F12_MAXIMUM_CONTAINERS", "9"))
 	p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", p1TaskName)
 	p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", p2TaskName)
 	// TODO!! FInd out what CLIENT/SERVER_FAMILY should default to
 	p1FamilyName = getEnvOrDefault("F12_PRIORITY1_FAMILY", p1FamilyName)
 	p2FamilyName = getEnvOrDefault("F12_PRIORITY2_FAMILY", p2FamilyName)
+
+	log.Printf("Vary tasks %s and %s with delta %d up to max %d containers every %d s", p1TaskName, p2TaskName, demandDelta, maximumContainers, int(demandInterval.Seconds()))
 
 	var di demand.Input
 	var s scheduler.Scheduler
@@ -165,7 +175,7 @@ func main() {
 		di = consul.NewDemandModel()
 	case "RNG":
 		log.Println("Random demand generation")
-		di = rng.NewDemandModel()
+		di = rng.NewDemandModel(demandDelta, maximumContainers)
 	default:
 		log.Printf("Bad value for F12_DEMAND_MODEL: %s", demandModelType)
 		return
@@ -215,13 +225,18 @@ func main() {
 
 	var sleepcount int = 0
 	var sleep time.Duration = const_sleep * time.Millisecond
+	lastDemandUpdate := time.Now()
 
 	// Loop, continually checking for changes in demand that need to be scheduled
 	// At the moment we plough on regardless in the face of errors, simply logging them out
 	for {
-		err = handleDemandChange(di, s)
-		if err != nil {
-			log.Printf("Failed to handle demand change. %v", err)
+		// Don't change demand more often than defined by demandInterval
+		if time.Since(lastDemandUpdate) > demandInterval {
+			err = handleDemandChange(di, s)
+			if err != nil {
+				log.Printf("Failed to handle demand change. %v", err)
+			}
+			lastDemandUpdate = time.Now()
 		}
 
 		time.Sleep(sleep)

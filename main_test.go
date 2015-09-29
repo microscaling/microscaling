@@ -25,7 +25,7 @@ func TestDemandUpdate(t *testing.T) {
 		Requested:  0,
 	}
 
-	di := rng.NewDemandModel()
+	di := rng.NewDemandModel(4, 10)
 
 	demandchange, _ = update(di)
 	if !demandchange {
@@ -48,7 +48,7 @@ func TestHandleDemandChange(t *testing.T) {
 		Requested:  0,
 	}
 
-	di := rng.NewDemandModel()
+	di := rng.NewDemandModel(3, 9)
 	s := toy_scheduler.NewScheduler()
 
 	for i := 0; i < 5; i++ {
