@@ -1,4 +1,13 @@
-scheduler:
+# docker-compose.yml
+
+force12:
   build: .
-  env_file:
-    - .env
+  environment:
+    - F12_USER_ID=5k5gk
+    - DOCKER_HOST=tcp://docker:2375
+    - COMPOSE_FILE=/windtunnel-compose.yml
+  links:
+    - docker
+docker:
+  image: docker:1.7-dind
+  privileged: true
