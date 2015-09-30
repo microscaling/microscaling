@@ -22,7 +22,7 @@ type sendStatePayload struct {
 }
 
 func getBaseF12APIUrl() string {
-	baseUrl := os.Getenv("F12_API_ADDRESS")
+	baseUrl := os.Getenv("F12_METRICS_API_ADDRESS")
 	if baseUrl == "" {
 		baseUrl = "https://force12-windtunnel.herokuapp.com"
 	}

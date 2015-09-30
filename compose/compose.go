@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 
 	"bitbucket.org/force12io/force12-scheduler/demand"
@@ -23,7 +24,8 @@ type ComposeContainer struct {
 }
 
 func NewScheduler() *ComposeScheduler {
-	client, _ := docker.NewClient("unix:///var/run/docker.sock")
+	// client, _ := docker.NewClient("unix:///var/run/docker.sock")
+	client, _ := docker.NewClient(os.Getenv("DOCKER_HOST"))
 
 	return &ComposeScheduler{
 		client: client,
@@ -44,8 +46,8 @@ func (c *ComposeScheduler) StopStartNTasks(appId string, family string, demandco
 
 	var err error
 
-	params := fmt.Sprintf("scale %s=%d", appId, demandcount)
-	cmd := exec.Command("docker-compose", params)
+	param := fmt.Sprintf("%s=%d", appId, demandcount)
+	cmd := exec.Command("docker-compose", "scale", param)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err = cmd.Run()
