@@ -1,17 +1,13 @@
 FROM alpine:3.2
-MAINTAINER Ross Fairbanks "ross.fairbanks@gmail.com"
+MAINTAINER Ross Fairbanks "ross@force12.io"
 
-# We'll want this if we can move to alpine (well, maybe not the curl thing if we use python / pip instead)
-ENV BUILD_PACKAGES bash curl-dev python-dev build-base
-ENV PYTHON_PACKAGES python py-pip
+ENV BUILD_PACKAGES bash curl-dev
+ENV PYTHON_PACKAGES py-pip
 RUN apk update && \
     apk upgrade && \
     apk add $BUILD_PACKAGES && \
     apk add $PYTHON_PACKAGES && \
     rm -rf /var/cache/apk/*
-
-#RUN apt-get update && \
-#    apt-get -y install python-dev python-pip
 
 RUN pip install -U docker-compose==1.4.2
 
