@@ -9,11 +9,9 @@ type Scheduler interface {
 	// InitScheduler creates and starts the app identified by appId
 	InitScheduler(appId string) error
 
-	// StopStartNTasks changes the count of containers for the app from currentcount
-	// to demandcount
-	// TODO! This should probably task a *demand.Task rather than individual counts
-	StopStartNTasks(appId string, family string, demandcount int, currentcount *int) error
+	// StopStartNTasks changes the count of containers to match task.Demand
+	StopStartNTasks(appId string, task *demand.Task) error
 
-	// CountAllTasks tells us how many instances of each task are currently running
+	// CountAllTasks updates task.Running to tell us how many instances of each task are currently running
 	CountAllTasks(tasks map[string]demand.Task) error
 }

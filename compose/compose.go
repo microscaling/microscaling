@@ -24,7 +24,6 @@ type ComposeContainer struct {
 }
 
 func NewScheduler() *ComposeScheduler {
-	// client, _ := docker.NewClient("unix:///var/run/docker.sock")
 	client, _ := docker.NewClient(os.Getenv("DOCKER_HOST"))
 
 	return &ComposeScheduler{
@@ -40,13 +39,13 @@ func (c *ComposeScheduler) InitScheduler(appId string) error {
 	return nil
 }
 
-func (c *ComposeScheduler) StopStartNTasks(appId string, family string, demandcount int, currentcount *int) error {
+func (c *ComposeScheduler) StopStartNTasks(appId string, task *demand.Task) error {
 	// Shell out to Docker compose scale
 	// docker-compose scale web=2 worker=3
 
 	var err error
 
-	param := fmt.Sprintf("%s=%d", appId, demandcount)
+	param := fmt.Sprintf("%s=%d", appId, task.Demand)
 	cmd := exec.Command("docker-compose", "scale", param)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -56,7 +55,7 @@ func (c *ComposeScheduler) StopStartNTasks(appId string, family string, demandco
 		return err
 	}
 
-	*currentcount = demandcount
+	task.Requested = task.Demand
 
 	return err
 }

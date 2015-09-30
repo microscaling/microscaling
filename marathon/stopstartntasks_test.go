@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"bitbucket.org/force12io/force12-scheduler/demand"
 )
 
 func TestStartStop(t *testing.T) {
@@ -44,7 +46,7 @@ func TestStartStop(t *testing.T) {
 	for _, test := range tests {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path != test.expUrl {
-				t.Fatalf("Expected root path, have %s", r.URL.Path)
+				t.Fatalf("Expected %s, have %s", test.expUrl, r.URL.Path)
 			}
 
 			if r.Method != "PUT" {
@@ -68,26 +70,31 @@ func TestStartStop(t *testing.T) {
 		m := NewScheduler()
 		m.baseMarathonUrl = server.URL
 
-		log.Println("before start/stop: current, demand", test.currentcount, test.demandcount)
-		err := m.StopStartNTasks(test.app, test.family, test.demandcount, &test.currentcount)
-		log.Println("after start/stop: current, demand", test.currentcount, test.demandcount)
+		var task demand.Task = demand.Task{
+			FamilyName: test.family,
+			Running:    test.currentcount,
+			Demand:     test.demandcount,
+			Requested:  test.currentcount,
+		}
+
+		log.Printf("before start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
+		err := m.StopStartNTasks(test.app, &task)
+		log.Printf("after start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
 
 		if err != nil {
 			if !test.expErr {
 				t.Fatalf("Error. %v", err)
 			}
 
-			if test.currentcount == test.demandcount {
-				t.Fatalf("Currentcount should not have been updated because we expected an error for this test")
+			if task.Requested == task.Demand {
+				t.Fatalf("Requested count should not have been updated because we expected an error for this test")
 			}
 		} else if test.expErr {
 			t.Fatalf("expected an error")
 		} else {
-			if test.currentcount != test.demandcount {
-				t.Fatalf("Currentcount should have been updated")
+			if task.Requested != task.Demand {
+				t.Fatalf("Requested count should have been updated")
 			}
-
 		}
-
 	}
 }
