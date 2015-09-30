@@ -66,14 +66,31 @@ func (c *ComposeScheduler) CountAllTasks(tasks map[string]demand.Task) error {
 	// Docker Remote API https://docs.docker.com/reference/api/docker_remote_api_v1.20/
 	// get /containers/json
 	var err error
-
-	containers, err := c.client.ListContainers(docker.ListContainersOptions{All: true})
+	var containers []docker.APIContainers
+	containers, err = c.client.ListContainers(docker.ListContainersOptions{All: true})
 	if err != nil {
 		return fmt.Errorf("Failed to list containers: %v", err)
 	}
-	fmt.Println(containers)
 
-	// TODO!! Fill in the running counts for each of the tasks we know about
+	// Reset all the running counts to 0
+	for name, t := range tasks {
+		t.Running = 0
+		tasks[name] = t
+	}
 
+	var service_name string
+	var present bool
+
+	for i := range containers {
+		labels := containers[i].Labels
+		service_name, present = labels["com.docker.compose.service"]
+		if present {
+			t := tasks[service_name]
+			t.Running++
+			tasks[service_name] = t
+		}
+	}
+
+	fmt.Println(tasks)
 	return err
 }
