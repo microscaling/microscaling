@@ -3,7 +3,7 @@
 // or physical infrastructure (for v1).
 //
 // Force12 is defined to optimize the use of existing physical and VM resources instantly. VMs cannot be scaled in real time (it takes
-// several minutes) and new physical machines take even longer. However, containers can be started or stopped at sub second speeds,
+// several minutes) and new physical machines take even longer. However, containers can be started or stopped at sub-second speeds,
 // allowing your infrastructure to adapt itself in real time to meet system demands.
 //
 // Force12 is aimed at effectively using the resources you have right now - your existing VMs or physical servers - by using them as
@@ -26,10 +26,6 @@
 //
 // These demand type examples have been chosen purely for simplicity of demonstration. In the future more demand types
 // will be offered
-//
-// V1 - Force12.io reacts to increased demand by starting/stopping containers on the slaves already in play.
-//
-// This version of Force12 starts and stops containers on a Mesos cluser using Marathon as the scheduler
 package main
 
 import (
