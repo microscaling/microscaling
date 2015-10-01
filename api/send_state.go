@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"bitbucket.org/force12io/force12-scheduler/demand"
-	"bitbucket.org/force12io/force12-scheduler/scheduler"
 )
 
 // TODO! Make this less specific to P1 & P2 model so it returns json structure for arbitrary set of tasks
@@ -19,6 +18,7 @@ type sendStatePayload struct {
 	Priority1Requested int   `json:"priority1Requested"`
 	Priority1Running   int   `json:"priority1Running"`
 	Priority2Running   int   `json:"priority2Running"`
+	MaxContainers      int   `json:"maxContainers"`
 }
 
 func getBaseF12APIUrl() string {
@@ -31,12 +31,9 @@ func getBaseF12APIUrl() string {
 
 var baseF12APIUrl string = getBaseF12APIUrl()
 
-// sendState checks the current state of tasks and sends that state to the f12 API
-func SendState(userID string, sched scheduler.Scheduler, tasks map[string]demand.Task) error {
+// sendState sends the current state of tasks to the f12 API
+func SendState(userID string, tasks map[string]demand.Task, maxContainers int) error {
 	var err error = nil
-
-	// Find out how many isntances of each task are running
-	sched.CountAllTasks(tasks)
 
 	// Submit a PUT request to the API
 	url := baseF12APIUrl + "/metrics/" + userID
@@ -48,6 +45,7 @@ func SendState(userID string, sched scheduler.Scheduler, tasks map[string]demand
 		Priority1Requested: tasks["priority1"].Demand,
 		Priority1Running:   tasks["priority1"].Running,
 		Priority2Running:   tasks["priority2"].Running,
+		MaxContainers:      maxContainers,
 	}
 
 	w := &bytes.Buffer{}

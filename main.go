@@ -238,7 +238,11 @@ func main() {
 
 			//Periodically send state to the API if required
 			if sendstate {
-				err = api.SendState(userID, s, tasks)
+
+				// Find out how many isntances of each task are running
+				s.CountAllTasks(tasks)
+
+				err = api.SendState(userID, tasks, maximumContainers)
 				if err != nil {
 					log.Printf("Failed to send state. %v", err)
 				}
