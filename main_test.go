@@ -2,67 +2,87 @@ package main
 
 import (
 	"log"
+	"os"
+	"strconv"
 	"testing"
-
-	"bitbucket.org/force12io/force12-scheduler/demand"
-	"bitbucket.org/force12io/force12-scheduler/rng"
-	"bitbucket.org/force12io/force12-scheduler/toy_scheduler"
+	"time"
 )
 
-func TestDemandUpdate(t *testing.T) {
-	var demandchange bool
+func TestSettings(t *testing.T) {
+	var s settings
+	var testval int = 5000
+	var testid string = "hello"
+	os.Setenv("F12_DEMAND_CHANGE_INTERVAL_MS", strconv.Itoa(testval))
+	os.Setenv("F12_USER_ID", testid)
 
-	tasks = make(map[string]demand.Task)
-	tasks["priority1"] = demand.Task{
-		FamilyName: "p1family",
-		Demand:     const_p1demandstart,
-		Requested:  0,
+	s = get_settings()
+	if s.demandInterval != time.Duration(testval)*time.Millisecond {
+		t.Fatalf("Unexpected demandInterval ")
+	}
+	if s.userID != testid {
+		t.Fatalf("Unexpected userID")
 	}
 
-	tasks["priority2"] = demand.Task{
-		FamilyName: "p2family",
-		Demand:     const_p2demandstart,
-		Requested:  0,
+}
+
+func TestTasks(t *testing.T) {
+	tasks := get_tasks()
+	log.Println("Tasks: ", tasks)
+	if _, ok := tasks["priority1"]; !ok {
+		t.Fatalf("No priority1")
 	}
-
-	di := rng.NewDemandModel(4, 10)
-
-	demandchange, _ = update(di)
-	if !demandchange {
-		// Note this test relies on us not seeding random numbers. Not very nice but OK for our purposes.
-		t.Fatalf("Expected demand to have changed but it didn't")
+	if _, ok := tasks["priority2"]; !ok {
+		t.Fatalf("No priority2")
 	}
 }
 
-func TestHandleDemandChange(t *testing.T) {
-	tasks = make(map[string]demand.Task)
-	tasks["priority1"] = demand.Task{
-		FamilyName: "p1family",
-		Demand:     const_p1demandstart,
-		Requested:  0,
+func TestInitScheduler(t *testing.T) {
+	var err error
+
+	tests := []struct {
+		sched string
+		pass  bool
+	}{
+		{sched: "COMPOSE", pass: true},
+		{sched: "ECS", pass: false},
+		{sched: "TOY", pass: true},
+		{sched: "BLAH", pass: false},
 	}
 
-	tasks["priority2"] = demand.Task{
-		FamilyName: "p2family",
-		Demand:     const_p2demandstart,
-		Requested:  0,
-	}
-
-	// We might see our own task when we look at Docker, we shouldn't be scaling it!
-	tasks["force12"] = demand.Task{
-		FamilyName: "force12",
-		Demand:     1,
-		Requested:  1,
-	}
-
-	di := rng.NewDemandModel(3, 9)
-	s := toy_scheduler.NewScheduler()
-
-	for i := 0; i < 5; i++ {
-		err := handleDemandChange(di, s)
-		if err != nil {
-			t.Fatalf("handleDemandChange failed")
+	for _, test := range tests {
+		os.Setenv("F12_SCHEDULER", test.sched)
+		st := get_settings()
+		_, err = get_scheduler(st)
+		if err != nil && test.pass {
+			t.Fatalf("Should have been able to create %s", test.sched)
 		}
-		log.Println(tasks)
+		if err == nil && !test.pass {
+			t.Fatalf("Should not have been able to create %s", test.sched)
+		}
+	}
+}
+
+func TestInitDemand(t *testing.T) {
+	var err error
+
+	tests := []struct {
+		input string
+		pass  bool
+	}{
+		{input: "CONSUL", pass: true},
+		{input: "RNG", pass: true},
+		{input: "BLAH", pass: false},
+	}
+
+	for _, test := range tests {
+		os.Setenv("F12_DEMAND_MODEL", test.input)
+		st := get_settings()
+		_, err = get_demand_input(st)
+		if err != nil && test.pass {
+			t.Fatalf("Should have been able to create %s", test.input)
+		}
+		if err == nil && !test.pass {
+			t.Fatalf("Should not have been able to create %s", test.input)
+		}
 	}
 }

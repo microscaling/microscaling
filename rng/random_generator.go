@@ -37,8 +37,6 @@ func (rng *RandomDemand) GetDemand(taskType string) (int, error) {
 
 	switch taskType {
 	case "priority1": // TODO! Priority name shouldn't be hard-coded like this
-		// log.Printf("P1 old demand %d", rng.currentP1Demand)
-
 		// Random value between +/- delta is the same as
 		// (random value between 0 and 2*delta) - delta
 		// noting that if r = rand.Intn(n) then 0 <= r < n
@@ -52,8 +50,10 @@ func (rng *RandomDemand) GetDemand(taskType string) (int, error) {
 			newDemand = 0
 		}
 
-		// log.Printf("P1 random demand %d", newDemand)
 		rng.currentP1Demand = newDemand
+	case "priority2":
+		// priority2 gets whatever is left over
+		newDemand = rng.maximum - rng.currentP1Demand
 	default:
 		err = fmt.Errorf("Wrong task type passed to RNG: %s", taskType)
 	}

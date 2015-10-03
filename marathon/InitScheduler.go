@@ -39,7 +39,6 @@ func (m *MarathonScheduler) InitScheduler(appId string) error {
 	resp, err := http.Get(m.baseMarathonUrl)
 	defer resp.Body.Close()
 	if err != nil {
-		// handle error
 		return err
 	}
 

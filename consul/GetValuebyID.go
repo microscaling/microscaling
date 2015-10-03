@@ -37,7 +37,6 @@ func (d *DemandFromConsul) GetValuebyID(key string) (string, error) {
 	log.Println("GET demand: " + url)
 	resp, err := http.Get(url)
 	if err != nil {
-		// handle error
 		return "", fmt.Errorf("GET value by ID failed %v", err)
 	}
 	defer resp.Body.Close()

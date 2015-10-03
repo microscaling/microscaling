@@ -14,23 +14,24 @@ func TestRandomDemand(t *testing.T) {
 
 	for i := 0; i < 20; i++ {
 		old_demand := rng.currentP1Demand
-		demand, _ := rng.GetDemand("priority1")
+		demand1, _ := rng.GetDemand("priority1")
+		demand2, _ := rng.GetDemand("priority2")
 
-		if demand > maximum {
+		if demand1 > maximum || demand2 > maximum {
 			t.Fatalf("Random value exceeds maximum")
 		}
 
-		if demand < 0 {
+		if demand1 < 0 || demand2 < 0 {
 			t.Fatalf("Random value below 0")
 		}
 
-		if math.Abs(float64(demand)-float64(old_demand)) > float64(delta) {
+		if math.Abs(float64(demand1)-float64(old_demand)) > float64(delta) {
 			t.Fatalf("Random value varied more than the delta")
 		}
-		log.Printf("Demand changed from %d to %d", old_demand, demand)
+		log.Printf("Demand changed from %d to %d", old_demand, demand1)
 	}
 
-	// Right now you should only pass in priority1-demand
+	// Right now you should only pass in priority1 or priority2
 	_, err := rng.GetDemand("something")
 	if err == nil {
 		t.Fatalf("Failed to barf on the wrong task type")
