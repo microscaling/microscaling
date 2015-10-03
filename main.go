@@ -31,7 +31,9 @@ package main
 import (
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"bitbucket.org/force12io/force12-scheduler/api"
@@ -44,8 +46,8 @@ import (
 	"bitbucket.org/force12io/force12-scheduler/toy_scheduler"
 )
 
-const const_sleep = 100           // milliseconds
-const const_sendstate_sleeps = 5  // number of sleeps before we send state on the API
+const const_sleep = 100           // milliseconds - delay before we check for demand. TODO! Make this driven by webhooks rather than simply a delay
+const const_sendstate_sleep = 500 // milliseconds - delay before we send state on the metrics API
 const const_stopsleep = 250       // milliseconds pause between stopping and restarting containers
 const const_p1demandstart int = 1 // The yaml file will automatically start one of each
 const const_p2demandstart int = 1
@@ -132,13 +134,26 @@ func getEnvOrDefault(name string, defaultValue string) string {
 	return v
 }
 
-// For the simple prototype, Force12.io sits in a loop checking for demand changes every X milliseconds
-// In phase 2 we'll add a reactive mode where appropriate.
-//
-// Note - we don't route messages from demandcheckers to demandhandlers using channels because we want new values
-// to override old values. Queued history is of no importance here.
-//
-// Also for simplicity this first release is concurrency free (single threaded)
+// cleanup resets demand for all tasks to 0 before we quit
+func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
+	var err error
+
+	log.Println("Cleaning up tasks on interrupt")
+	for name, task := range tasks {
+		task.Demand = 0
+		// Don't change our own force12 task
+		if name != "force12" {
+			err = s.StopStartNTasks(name, &task)
+			if err != nil {
+				log.Printf("Failed to cleanup %s tasks. %v", name, err)
+				break
+			}
+			log.Printf("Reset %s tasks to 0 for cleanup", name)
+		}
+	}
+}
+
+// For this simple prototype, Force12.io sits in a loop checking for demand changes every X milliseconds
 func main() {
 	var err error
 	// TODO! Make it so you can send in settings on the command line
@@ -218,38 +233,49 @@ func main() {
 		}
 	}
 
-	var sleepcount int = 0
-	var sleep time.Duration = const_sleep * time.Millisecond
+	// Prepare for cleanup when we receive an interrupt
+	closedown := make(chan os.Signal, 1)
+	signal.Notify(closedown, os.Interrupt)
+	signal.Notify(closedown, syscall.SIGTERM)
+
+	// Periodically check for changes in demand
+	// TODO: In future demand changes should come in through a channel rather than on a timer
+	timeout := time.NewTicker(const_sleep * time.Millisecond)
 	lastDemandUpdate := time.Now()
+
+	// Periodically send state to the API if required
+	var sendstateTimeout *time.Ticker
+	if sendstate {
+		sendstateTimeout = time.NewTicker(const_sendstate_sleep * time.Millisecond)
+	}
 
 	// Loop, continually checking for changes in demand that need to be scheduled
 	// At the moment we plough on regardless in the face of errors, simply logging them out
 	for {
-		// Don't change demand more often than defined by demandInterval
-		if time.Since(lastDemandUpdate) > demandInterval {
-			err = handleDemandChange(di, s)
-			if err != nil {
-				log.Printf("Failed to handle demand change. %v", err)
-			}
-			lastDemandUpdate = time.Now()
-		}
-
-		time.Sleep(sleep)
-		sleepcount++
-		if sleepcount == const_sendstate_sleeps {
-			sleepcount = 0
-
-			//Periodically send state to the API if required
-			if sendstate {
-
-				// Find out how many isntances of each task are running
-				s.CountAllTasks(tasks)
-
-				err = api.SendState(userID, tasks, maximumContainers)
+		select {
+		case <-timeout.C:
+			// Don't change demand more often than defined by demandInterval
+			// We check for changes in demand more often because we want to react quickly if there hasn't been a recent change
+			if time.Since(lastDemandUpdate) > demandInterval {
+				err = handleDemandChange(di, s)
 				if err != nil {
-					log.Printf("Failed to send state. %v", err)
+					log.Printf("Failed to handle demand change. %v", err)
 				}
+				lastDemandUpdate = time.Now()
 			}
+
+		case <-sendstateTimeout.C:
+			// Find out how many isntances of each task are running
+			s.CountAllTasks(tasks)
+			err = api.SendState(userID, tasks, maximumContainers)
+			if err != nil {
+				log.Printf("Failed to send state. %v", err)
+			}
+
+		case <-closedown:
+			cleanup(s, tasks)
+			os.Exit(1)
 		}
+
 	}
 }
