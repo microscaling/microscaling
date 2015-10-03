@@ -48,6 +48,13 @@ func TestHandleDemandChange(t *testing.T) {
 		Requested:  0,
 	}
 
+	// We might see our own task when we look at Docker, we shouldn't be scaling it!
+	tasks["force12"] = demand.Task{
+		FamilyName: "force12",
+		Demand:     1,
+		Requested:  1,
+	}
+
 	di := rng.NewDemandModel(3, 9)
 	s := toy_scheduler.NewScheduler()
 

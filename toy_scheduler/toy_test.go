@@ -33,4 +33,10 @@ func TestToyScheduler(t *testing.T) {
 		log.Printf("after counting: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
 
 	}
+
+	task = demand.Task{Demand: 1, Requested: 1}
+	err = m.StopStartNTasks("force12", &task)
+	if err == nil {
+		t.Fatalf("Shouldn't scale our own force12 task")
+	}
 }

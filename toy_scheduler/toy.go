@@ -2,6 +2,7 @@
 package toy_scheduler
 
 import (
+	"fmt"
 	"log"
 
 	"bitbucket.org/force12io/force12-scheduler/demand"
@@ -39,6 +40,9 @@ func (t *ToyScheduler) InitScheduler(appId string) error {
 
 // StopStartNTasks asks the scheduler to bring the number of running tasks up to task.Demand.
 func (t *ToyScheduler) StopStartNTasks(appId string, task *demand.Task) error {
+	if appId == "force12" {
+		return fmt.Errorf("Don't try to scale our own force12 task!")
+	}
 	task.Requested = task.Demand
 	return nil
 }

@@ -73,10 +73,13 @@ func handleDemandChange(input demand.Input, s scheduler.Scheduler) error {
 	if demandChanged {
 		// Ask the scheduler to make the changes
 		for name, task := range tasks {
-			err = s.StopStartNTasks(name, &task)
-			if err != nil {
-				log.Printf("Failed to start %s tasks. %v", name, err)
-				break
+			// Don't change our own force12 task
+			if name != "force12" {
+				err = s.StopStartNTasks(name, &task)
+				if err != nil {
+					log.Printf("Failed to start %s tasks. %v", name, err)
+					break
+				}
 			}
 		}
 	}
