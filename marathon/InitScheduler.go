@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"bitbucket.org/force12io/force12-scheduler/demand"
 )
 
 type app struct {
@@ -34,7 +36,7 @@ type container struct {
 // InitScheduler ensures our app is started on the cluster.
 //
 // appId - string identifier of a container
-func (m *MarathonScheduler) InitScheduler(appId string) error {
+func (m *MarathonScheduler) InitScheduler(appId string, task *demand.Task) error {
 	// Ask Marathon which apps are running
 	resp, err := http.Get(m.baseMarathonUrl)
 	defer resp.Body.Close()
@@ -135,6 +137,7 @@ func (m *MarathonScheduler) InitScheduler(appId string) error {
 		//}
 		log.Printf("create app: %s", appId)
 
+		// TODO!!! Should the number of instances be task.Demand?
 		app := app{
 			Id:        appId,
 			Cmd:       "/tmp/sleep.sh",

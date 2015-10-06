@@ -26,7 +26,8 @@ func TestSettings(t *testing.T) {
 }
 
 func TestTasks(t *testing.T) {
-	tasks := get_tasks()
+	s := get_settings()
+	tasks := get_tasks(s)
 	log.Println("Tasks: ", tasks)
 	if _, ok := tasks["priority1"]; !ok {
 		t.Fatalf("No priority1")

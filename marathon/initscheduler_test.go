@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"bitbucket.org/force12io/force12-scheduler/demand"
 )
 
 const initSchedRsp = `{
@@ -145,7 +147,10 @@ func TestInitScheduler(t *testing.T) {
 		m := NewScheduler()
 		m.baseMarathonUrl = server.URL
 
-		err := m.InitScheduler(test.appId)
+		var task demand.Task
+		task.Demand = 1
+
+		err := m.InitScheduler(test.appId, &task)
 		if err != nil {
 			if !test.expError {
 				t.Fatalf("InitScheduler returned an error %v", err)

@@ -34,8 +34,9 @@ func NewScheduler() *ComposeScheduler {
 // compile-time assert that we implement the right interface
 var _ scheduler.Scheduler = (*ComposeScheduler)(nil)
 
-func (c *ComposeScheduler) InitScheduler(appId string) error {
-	// Nothing to do here. yaml file from windtunnel will start one container of each type
+func (c *ComposeScheduler) InitScheduler(appId string, task *demand.Task) error {
+	// Nothing to do - we don't need to tell Docker Compose about tasks in advance
+	log.Printf("Compose scheduler initializing task %s", appId)
 	return nil
 }
 

@@ -14,6 +14,8 @@ func TestToyScheduler(t *testing.T) {
 	m := NewScheduler()
 
 	task := tasks["anything"]
+	m.InitScheduler("anything", &task)
+
 	log.Printf("before start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
 	err := m.StopStartNTasks("blah", &task)
 	log.Printf("after start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)

@@ -7,7 +7,7 @@ import (
 
 type Scheduler interface {
 	// InitScheduler creates and starts the app identified by appId
-	InitScheduler(appId string) error
+	InitScheduler(appId string, task *demand.Task) error
 
 	// StopStartNTasks changes the count of containers to match task.Demand
 	StopStartNTasks(appId string, task *demand.Task) error

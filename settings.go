@@ -78,7 +78,7 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 	return s, nil
 }
 
-func get_tasks() map[string]demand.Task {
+func get_tasks(st settings) map[string]demand.Task {
 	var t map[string]demand.Task
 
 	p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", p1TaskName)
