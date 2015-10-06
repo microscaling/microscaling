@@ -90,13 +90,13 @@ func get_tasks(st settings) map[string]demand.Task {
 
 	t[p1TaskName] = demand.Task{
 		FamilyName: p1FamilyName,
-		Demand:     const_p1demandstart,
+		Demand:     st.maxContainers / 2,
 		Requested:  0,
 	}
 
 	t[p2TaskName] = demand.Task{
 		FamilyName: p2FamilyName,
-		Demand:     const_p2demandstart,
+		Demand:     st.maxContainers - (st.maxContainers / 2),
 		Requested:  0,
 	}
 

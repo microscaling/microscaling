@@ -42,8 +42,6 @@ import (
 
 const const_sleep = 100           // milliseconds - delay before we check for demand. TODO! Make this driven by webhooks rather than simply a delay
 const const_sendstate_sleep = 500 // milliseconds - delay before we send state on the metrics API
-const const_p1demandstart int = 1 // The yaml file will automatically start one of each
-const const_p2demandstart int = 1
 
 var p1TaskName string = "priority1"
 var p2TaskName string = "priority2"
@@ -88,7 +86,7 @@ func main() {
 		return
 	}
 
-	tasks := get_tasks()
+	tasks := get_tasks(st)
 	log.Printf("Vary tasks with delta %d up to max %d containers every %d s", st.demandDelta, st.maxContainers, int(st.demandInterval.Seconds()))
 
 	// Let the scheduler know about the task types. For the moment the actual container information is hard-coded

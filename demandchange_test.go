@@ -15,13 +15,13 @@ func TestDemandUpdate(t *testing.T) {
 	tasks = make(map[string]demand.Task)
 	tasks["priority1"] = demand.Task{
 		FamilyName: "p1family",
-		Demand:     const_p1demandstart,
+		Demand:     3,
 		Requested:  0,
 	}
 
 	tasks["priority2"] = demand.Task{
 		FamilyName: "p2family",
-		Demand:     const_p2demandstart,
+		Demand:     5,
 		Requested:  0,
 	}
 
@@ -38,13 +38,13 @@ func TestHandleDemandChange(t *testing.T) {
 	tasks = make(map[string]demand.Task)
 	tasks["priority1"] = demand.Task{
 		FamilyName: "p1family",
-		Demand:     const_p1demandstart,
+		Demand:     4,
 		Requested:  0,
 	}
 
 	tasks["priority2"] = demand.Task{
 		FamilyName: "p2family",
-		Demand:     const_p2demandstart,
+		Demand:     3,
 		Requested:  0,
 	}
 
