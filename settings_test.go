@@ -46,6 +46,9 @@ func TestInitScheduler(t *testing.T) {
 	}{
 		{sched: "COMPOSE", pass: true},
 		{sched: "ECS", pass: false},
+		{sched: "KUBERNETES", pass: false},
+		{sched: "MESOS", pass: false},
+		{sched: "NOMAD", pass: false},
 		{sched: "TOY", pass: true},
 		{sched: "BLAH", pass: false},
 	}
@@ -70,7 +73,7 @@ func TestInitDemand(t *testing.T) {
 		input string
 		pass  bool
 	}{
-		{input: "CONSUL", pass: true},
+		{input: "CONSUL", pass: false},
 		{input: "RNG", pass: true},
 		{input: "BLAH", pass: false},
 	}

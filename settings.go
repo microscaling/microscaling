@@ -8,9 +8,7 @@ import (
 	"time"
 
 	"bitbucket.org/force12io/force12-scheduler/compose"
-	"bitbucket.org/force12io/force12-scheduler/consul"
 	"bitbucket.org/force12io/force12-scheduler/demand"
-	"bitbucket.org/force12io/force12-scheduler/marathon"
 	"bitbucket.org/force12io/force12-scheduler/rng"
 	"bitbucket.org/force12io/force12-scheduler/scheduler"
 	"bitbucket.org/force12io/force12-scheduler/toy_scheduler"
@@ -44,8 +42,7 @@ func get_demand_input(st settings) (demand.Input, error) {
 
 	switch st.demandModelType {
 	case "CONSUL":
-		log.Println("Getting demand metric from Consul")
-		di = consul.NewDemandModel()
+		return nil, fmt.Errorf("Demand metric from Consul not yet supported")
 	case "RNG":
 		log.Println("Random demand generation")
 		di = rng.NewDemandModel(st.demandDelta, st.maxContainers)
@@ -64,10 +61,13 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 		log.Println("Scheduling with Docker compose")
 		s = compose.NewScheduler()
 	case "ECS":
-		return nil, fmt.Errorf("Scheduling with ECS not yet supported")
+		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #F12ECS if you'd like us to add this next!")
+	case "KUBERNETES":
+		return nil, fmt.Errorf("Scheduling with Kubernetes not yet supported. Tweet with hashtag #F12Kubernetes if you'd like us to add this next!")
 	case "MESOS":
-		log.Println("Scheduling with Mesos / Marathon")
-		s = marathon.NewScheduler()
+		return nil, fmt.Errorf("Scheduling with Mesos / Marathon not yet supported. Tweet with hashtag #F12Mesos if you'd like us to add this next!")
+	case "NOMAD":
+		return nil, fmt.Errorf("Scheduling with Nomad not yet supported. Tweet with hashtag #F12Nomad if you'd like us to add this next!")
 	case "TOY":
 		log.Println("Scheduling with toy scheduler")
 		s = toy_scheduler.NewScheduler()
