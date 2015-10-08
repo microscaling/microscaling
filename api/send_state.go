@@ -56,18 +56,20 @@ func SendState(userID string, tasks map[string]demand.Task, maxContainers int) e
 	}
 
 	req, err := http.NewRequest("PUT", url, w)
-
 	if err != nil {
 		return fmt.Errorf("Failed to build API PUT request err %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
-
 	if err != nil {
-		return fmt.Errorf("API state err %v", err)
+		return fmt.Errorf("API send state error %v", err)
 	}
+
+	if resp == nil || resp.Body == nil {
+		log.Printf("Http response is unexpectedly nil")
+	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode > 204 {
 		return fmt.Errorf("error response from API. %s", resp.Status)
