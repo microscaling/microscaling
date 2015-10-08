@@ -59,6 +59,9 @@ func SendState(userID string, tasks map[string]demand.Task, maxContainers int) e
 	if err != nil {
 		return fmt.Errorf("Failed to build API PUT request err %v", err)
 	}
+
+	// See http://stackoverflow.com/questions/17714494/golang-http-request-results-in-eof-errors-when-making-multiple-requests-successi
+	req.Close = true
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
