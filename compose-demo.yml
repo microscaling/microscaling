@@ -4,5 +4,5 @@ priority1:
   image: force12io/force12-demo:latest
   read_only: true
 priority2:
-  image: force12io/rossf7/force12-demo:latest
+  image: force12io/force12-demo:latest
   read_only: true
