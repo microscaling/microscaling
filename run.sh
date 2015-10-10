@@ -1,3 +1,4 @@
 #!/bin/bash
-ls -l /force12
+
+# Run force12 binary
 /force12
