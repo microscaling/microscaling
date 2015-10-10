@@ -1,6 +1,0 @@
-# windtunnel-compose.yml
-
-priority1:
-  image: quay.io/rossf7/force12-sleeper:latest
-priority2:
-  image: quay.io/rossf7/force12-sleeper:latest
