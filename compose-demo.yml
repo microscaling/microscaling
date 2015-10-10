@@ -1,0 +1,8 @@
+# compose-demo.yml
+
+priority1:
+  image: force12io/force12-demo:latest
+  read_only: true
+priority2:
+  image: force12io/force12-demo:latest
+  read_only: true

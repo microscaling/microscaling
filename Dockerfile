@@ -14,10 +14,10 @@ RUN pip install -U docker-compose==1.4.2
 # force12 needs to be built for Linux:
 #   GOOS=linux go build -o force12 .
 ADD force12 /
-ADD windtunnel-compose.yml /
+
+ADD compose-demo.yml /
+ADD run.sh /
+RUN chmod +x /run.sh
 
 # Needs a run.sh wrapper to run the force12 binary successfully
-ENTRYPOINT ["/bin/bash"]
-ADD run.sh /
-
-CMD ["/run.sh"]
+ENTRYPOINT ["/run.sh"]
