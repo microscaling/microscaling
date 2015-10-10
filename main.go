@@ -51,21 +51,18 @@ var p2FamilyName string = "p2-family"
 var tasks map[string]demand.Task
 
 // cleanup resets demand for all tasks to 0 before we quit
-func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
+func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task, ready chan struct{}) {
 	var err error
 
 	log.Println("Cleaning up tasks on interrupt")
 	for name, task := range tasks {
 		task.Demand = 0
-		// Don't change our own force12 task
-		if name != "force12" {
-			err = s.StopStartNTasks(name, &task)
-			if err != nil {
-				log.Printf("Failed to cleanup %s tasks. %v", name, err)
-				break
-			}
-			log.Printf("Reset %s tasks to 0 for cleanup", name)
+		err = s.StopStartNTasks(name, &task, ready)
+		if err != nil {
+			log.Printf("Failed to cleanup %s tasks. %v", name, err)
+			break
 		}
+		log.Printf("Reset %s tasks to 0 for cleanup", name)
 	}
 }
 
@@ -114,6 +111,12 @@ func main() {
 		sendstateTimeout = time.NewTicker(const_sendstate_sleep * time.Millisecond)
 	}
 
+	// Only allow one scaling command to be outstanding at a time
+	ready := make(chan struct{}, 1)
+	var scaling_ready bool = true
+	var cleanup_when_ready bool = false
+	var exit_when_ready bool = false
+
 	// Loop, continually checking for changes in demand that need to be scheduled
 	// At the moment we plough on regardless in the face of errors, simply logging them out
 	for {
@@ -122,7 +125,7 @@ func main() {
 			// Don't change demand more often than defined by demandInterval
 			// We check for changes in demand more often because we want to react quickly if there hasn't been a recent change
 			if time.Since(lastDemandUpdate) > st.demandInterval {
-				err = handleDemandChange(di, s, tasks)
+				err = handleDemandChange(di, s, &scaling_ready, ready, tasks)
 				if err != nil {
 					log.Printf("Failed to handle demand change. %v", err)
 				}
@@ -137,9 +140,26 @@ func main() {
 				log.Printf("Failed to send state. %v", err)
 			}
 
+		case <-ready:
+			// An outstanding scale command has finished so we are OK to send another one
+			log.Printf("Ready to scale again")
+			scaling_ready = true
+			if cleanup_when_ready {
+				log.Printf("Now we can close down")
+				exit_when_ready = true
+				cleanup(s, tasks, ready)
+			} else if exit_when_ready {
+				os.Exit(1)
+			}
+
 		case <-closedown:
-			cleanup(s, tasks)
-			os.Exit(1)
+			if !scaling_ready {
+				log.Printf("Closing down - wait till we've completed the previous scale command")
+				cleanup_when_ready = true
+			} else {
+				exit_when_ready = true
+				cleanup(s, tasks, ready)
+			}
 		}
 	}
 }

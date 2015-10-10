@@ -26,7 +26,7 @@ func (t *ToyScheduler) InitScheduler(appId string, task *demand.Task) error {
 }
 
 // StopStartNTasks asks the scheduler to bring the number of running tasks up to task.Demand.
-func (t *ToyScheduler) StopStartNTasks(appId string, task *demand.Task) error {
+func (t *ToyScheduler) StopStartNTasks(appId string, task *demand.Task, ready chan struct{}) error {
 	if appId == "force12" {
 		return fmt.Errorf("Don't try to scale our own force12 task!")
 	}

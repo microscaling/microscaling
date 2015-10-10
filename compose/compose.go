@@ -40,25 +40,32 @@ func (c *ComposeScheduler) InitScheduler(appId string, task *demand.Task) error 
 	return nil
 }
 
-func (c *ComposeScheduler) StopStartNTasks(appId string, task *demand.Task) error {
+func (c *ComposeScheduler) StopStartNTasks(appId string, task *demand.Task, ready chan struct{}) error {
 	// Shell out to Docker compose scale
 	// docker-compose scale web=2 worker=3
 
-	var err error
-
 	param := fmt.Sprintf("%s=%d", appId, task.Demand)
-	cmd := exec.Command("docker-compose", "scale", param)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	err = cmd.Run()
-	if err != nil {
-		log.Printf("Stderr: %s", stderr.String())
-		return err
-	}
+
+	go func() {
+		var err error
+
+		cmd := exec.Command("docker-compose", "scale", param)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		log.Printf("Running cmd: %v", cmd)
+		err = cmd.Run()
+
+		// We're just logging out any errors and carrying on
+		if err != nil {
+			log.Printf("Stderr: %s", stderr.String())
+		}
+
+		// Notify the channel when the scaling command has completed
+		ready <- struct{}{}
+	}()
 
 	task.Requested = task.Demand
-
-	return err
+	return nil
 }
 
 func (c *ComposeScheduler) CountAllTasks(tasks map[string]demand.Task) error {
@@ -85,12 +92,15 @@ func (c *ComposeScheduler) CountAllTasks(tasks map[string]demand.Task) error {
 		labels := containers[i].Labels
 		service_name, present = labels["com.docker.compose.service"]
 		if present {
-			t := tasks[service_name]
-			t.Running++
-			tasks[service_name] = t
+			// Only update tasks that are already in our task map - don't try to manage anything else
+			t, in_our_tasks := tasks[service_name]
+			if in_our_tasks {
+				t.Running++
+				tasks[service_name] = t
+			}
 		}
 	}
 
-	fmt.Println(tasks)
+	log.Println(tasks)
 	return err
 }

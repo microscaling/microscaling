@@ -8,7 +8,7 @@ import (
 )
 
 // handleDemandChange checks the new demand
-func handleDemandChange(input demand.Input, s scheduler.Scheduler, ts map[string]demand.Task) error {
+func handleDemandChange(input demand.Input, s scheduler.Scheduler, scaling_ready *bool, ready chan struct{}, ts map[string]demand.Task) error {
 	var err error = nil
 	var demandChanged bool
 
@@ -19,17 +19,21 @@ func handleDemandChange(input demand.Input, s scheduler.Scheduler, ts map[string
 	}
 
 	if demandChanged {
+		// If we already have a scaling change outstanding, we can't do another one
+		if !*scaling_ready {
+			log.Printf("Scale change still outstanding - demand changes coming too fast to handle!")
+			// This isn't an error - we simply don't try to update scale until the scheduler is ready
+			return nil
+		}
+
 		// Ask the scheduler to make the changes
 		for name, task := range ts {
-			// Don't change our own force12 task
-			if name != "force12" {
-				err = s.StopStartNTasks(name, &task)
-				if err != nil {
-					log.Printf("Failed to start %s tasks. %v", name, err)
-					break
-				}
-				ts[name] = task
+			err = s.StopStartNTasks(name, &task, ready)
+			if err != nil {
+				log.Printf("Failed to start %s tasks. %v", name, err)
+				break
 			}
+			ts[name] = task
 		}
 	}
 
@@ -71,7 +75,7 @@ func update(input demand.Input, ts map[string]demand.Task) (bool, error) {
 	// This is where we could decide whether this is a significant enough
 	// demand change to do anything
 
-	log.Println(ts)
+	log.Printf("Running tasks: %v", ts)
 
 	return demandchange, err
 }
