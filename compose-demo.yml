@@ -1,4 +1,4 @@
-# windtunnel-compose.yml
+# compose-demo.yml
 
 priority1:
   image: force12io/force12-demo:latest
