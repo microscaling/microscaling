@@ -19,16 +19,19 @@ func handleDemandChange(input demand.Input, s scheduler.Scheduler, scaling_ready
 	}
 
 	if demandChanged {
-		// If we already have a scaling change outstanding, we can't do another one
-		if !*scaling_ready {
-			log.Printf("Scale change still outstanding - demand changes coming too fast to handle!")
-			// This isn't an error - we simply don't try to update scale until the scheduler is ready
-			return nil
-		}
-
 		// Ask the scheduler to make the changes
+
+		// TODO!! We need to send these to compose all at once
+
 		for name, task := range ts {
-			err = s.StopStartNTasks(name, &task, ready)
+			// If we already have a scaling change outstanding, we can't do another one
+			if !*scaling_ready {
+				log.Printf("Scale change still outstanding - demand changes coming too fast to handle!")
+				// This isn't an error - we simply don't try to update scale until the scheduler is ready
+				return nil
+			}
+
+			*scaling_ready, err = s.StopStartNTasks(name, &task, ready)
 			if err != nil {
 				log.Printf("Failed to start %s tasks. %v", name, err)
 				break
