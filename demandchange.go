@@ -8,35 +8,28 @@ import (
 )
 
 // handleDemandChange checks the new demand
-func handleDemandChange(input demand.Input, s scheduler.Scheduler, scaling_ready *bool, ready chan struct{}, ts map[string]demand.Task) error {
+func handleDemandChange(input demand.Input, s scheduler.Scheduler, scaling_ready *bool, ready chan struct{}, tasks map[string]demand.Task) error {
 	var err error = nil
 	var demandChanged bool
 
-	demandChanged, err = update(input, ts)
+	demandChanged, err = update(input, tasks)
 	if err != nil {
 		log.Printf("Failed to get new demand. %v", err)
 		return err
 	}
 
 	if demandChanged {
+		// If we already have a scaling change outstanding, we can't do another one
+		if !*scaling_ready {
+			log.Printf("Scale change still outstanding - demand changes coming too fast to handle!")
+			// This isn't an error - we simply don't try to update scale until the scheduler is ready
+			return nil
+		}
+
 		// Ask the scheduler to make the changes
-
-		// TODO!! We need to send these to compose all at once
-
-		for name, task := range ts {
-			// If we already have a scaling change outstanding, we can't do another one
-			if !*scaling_ready {
-				log.Printf("Scale change still outstanding - demand changes coming too fast to handle!")
-				// This isn't an error - we simply don't try to update scale until the scheduler is ready
-				return nil
-			}
-
-			*scaling_ready, err = s.StopStartNTasks(name, &task, ready)
-			if err != nil {
-				log.Printf("Failed to start %s tasks. %v", name, err)
-				break
-			}
-			ts[name] = task
+		*scaling_ready, err = s.StopStartTasks(tasks, ready)
+		if err != nil {
+			log.Printf("Failed to stop / start tasks. %v", err)
 		}
 	}
 

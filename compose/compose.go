@@ -41,16 +41,24 @@ func (c *ComposeScheduler) InitScheduler(appId string, task *demand.Task) error 
 	return nil
 }
 
-func (c *ComposeScheduler) StopStartNTasks(appId string, task *demand.Task, ready chan struct{}) error {
+func (c *ComposeScheduler) StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) (bool, error) {
 	// Shell out to Docker compose scale
 	// docker-compose scale web=2 worker=3
 
-	param := fmt.Sprintf("%s=%d", appId, task.Demand)
+	var params []string
+
+	params = append(params, "scale")
+	for name, task := range tasks {
+		param := fmt.Sprintf("%s=%d", name, task.Demand)
+		params = append(params, param)
+		task.Requested = task.Demand
+		tasks[name] = task
+	}
 
 	go func() {
 		var err error
 
-		cmd := exec.Command("docker-compose", "scale", param)
+		cmd := exec.Command("docker-compose", params...)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
@@ -70,8 +78,8 @@ func (c *ComposeScheduler) StopStartNTasks(appId string, task *demand.Task, read
 		ready <- struct{}{}
 	}()
 
-	task.Requested = task.Demand
-	return nil
+	// There's a scale command outstanding on another thread, so return false
+	return false, nil
 }
 
 func (c *ComposeScheduler) CountAllTasks(tasks map[string]demand.Task) error {

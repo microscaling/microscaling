@@ -2,7 +2,6 @@
 package toy_scheduler
 
 import (
-	"fmt"
 	"log"
 
 	"bitbucket.org/force12io/force12-scheduler/demand"
@@ -26,12 +25,16 @@ func (t *ToyScheduler) InitScheduler(appId string, task *demand.Task) error {
 }
 
 // StopStartNTasks asks the scheduler to bring the number of running tasks up to task.Demand.
-func (t *ToyScheduler) StopStartNTasks(appId string, task *demand.Task, ready chan struct{}) error {
-	if appId == "force12" {
-		return fmt.Errorf("Don't try to scale our own force12 task!")
+// For the Toy scheduler we can return True because we are ready to scale again straight away
+func (t *ToyScheduler) StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) (bool, error) {
+	for name, task := range tasks {
+		task.Requested = task.Demand
+		tasks[name] = task
+		log.Printf("Toy scheduler setting Requested for %s to %d", name, task.Requested)
 	}
-	task.Requested = task.Demand
-	return nil
+
+	log.Println(tasks)
+	return true, nil
 }
 
 // CountAllTasks for the Toy scheduler simply reflects back what has been requested

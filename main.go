@@ -57,12 +57,13 @@ func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task, ready chan str
 	log.Println("Cleaning up tasks on interrupt")
 	for name, task := range tasks {
 		task.Demand = 0
-		err = s.StopStartNTasks(name, &task, ready)
-		if err != nil {
-			log.Printf("Failed to cleanup %s tasks. %v", name, err)
-			break
-		}
-		log.Printf("Reset %s tasks to 0 for cleanup", name)
+		tasks[name] = task
+	}
+
+	log.Printf("Reset tasks to 0 for cleanup")
+	_, err = s.StopStartTasks(tasks, ready)
+	if err != nil {
+		log.Printf("Failed to cleanup tasks. %v", err)
 	}
 }
 
@@ -122,6 +123,11 @@ func main() {
 	for {
 		select {
 		case <-timeout.C:
+			// Don't do anything if we're about to exit
+			if cleanup_when_ready || exit_when_ready {
+				break
+			}
+
 			// Don't change demand more often than defined by demandInterval
 			// We check for changes in demand more often because we want to react quickly if there hasn't been a recent change
 			if time.Since(lastDemandUpdate) > st.demandInterval {
@@ -134,7 +140,11 @@ func main() {
 
 		case <-sendstateTimeout.C:
 			// Find out how many isntances of each task are running
-			s.CountAllTasks(tasks)
+			err = s.CountAllTasks(tasks)
+			if err != nil {
+				log.Printf("Failed to count containers. %v", err)
+			}
+
 			err = api.SendState(st.userID, tasks, st.maxContainers)
 			if err != nil {
 				log.Printf("Failed to send state. %v", err)
@@ -147,6 +157,7 @@ func main() {
 			if cleanup_when_ready {
 				log.Printf("Now we can close down")
 				exit_when_ready = true
+				cleanup_when_ready = false
 				cleanup(s, tasks, ready)
 			} else if exit_when_ready {
 				os.Exit(1)

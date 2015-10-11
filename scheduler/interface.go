@@ -9,12 +9,9 @@ type Scheduler interface {
 	// InitScheduler creates and starts the app identified by appId
 	InitScheduler(appId string, task *demand.Task) error
 
-	// StopStartNTasks changes the count of containers to match task.Demand
-	// returns true if we can immediately call this again, otherwise
-	StopStartNTasks(appId string, task *demand.Task, ready chan struct{}) error
-
-	// TODO! It might be more efficient to have a start-stop that can change counts for multiple
-	// container types at once
+	// StopStartTasks changes the count of containers to match task.Demand
+	// returns true if we can immediately call this again, false if we are waiting for a scale command to complete
+	StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) (bool, error)
 
 	// CountAllTasks updates task.Running to tell us how many instances of each task are currently running
 	CountAllTasks(tasks map[string]demand.Task) error

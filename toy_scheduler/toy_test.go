@@ -17,9 +17,12 @@ func TestToyScheduler(t *testing.T) {
 	m.InitScheduler("anything", &task)
 
 	log.Printf("before start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
-	err := m.StopStartNTasks("blah", &task)
+	ready, err := m.StopStartTasks(tasks, nil)
+	if !ready {
+		t.Fatalf("Toy scheduler is always ready")
+	}
+	task = tasks["anything"]
 	log.Printf("after start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
-	tasks["anything"] = task
 
 	if err != nil {
 		t.Fatalf("Error. %v", err)
@@ -36,9 +39,4 @@ func TestToyScheduler(t *testing.T) {
 
 	}
 
-	task = demand.Task{Demand: 1, Requested: 1}
-	err = m.StopStartNTasks("force12", &task)
-	if err == nil {
-		t.Fatalf("Shouldn't scale our own force12 task")
-	}
 }
