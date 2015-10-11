@@ -13,8 +13,8 @@ import (
 
 func TestGetBaseUrl(t *testing.T) {
 	base := getBaseF12APIUrl()
-	if base != "https://force12-windtunnel.herokuapp.com" || base != baseF12APIUrl {
-		t.Fatalf("Maybe F12_METRICS_API_ADDRESS is set")
+	if base != "http://app.force12.io" || base != baseF12APIUrl {
+		t.Fatalf("Maybe F12_METRICS_API_ADDRESS is set: %v", base)
 	}
 }
 
