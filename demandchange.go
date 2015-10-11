@@ -78,7 +78,7 @@ func update(input demand.Input, ts map[string]demand.Task) (bool, error) {
 	// This is where we could decide whether this is a significant enough
 	// demand change to do anything
 
-	log.Printf("Running tasks: %v", ts)
+	log.Printf("Current demand: p1 %d, p2 %d", ts[p1TaskName].Demand, ts[p2TaskName].Demand)
 
 	return demandchange, err
 }

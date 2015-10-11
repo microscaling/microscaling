@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"time"
 
 	"bitbucket.org/force12io/force12-scheduler/demand"
 	"bitbucket.org/force12io/force12-scheduler/scheduler"
@@ -52,13 +53,18 @@ func (c *ComposeScheduler) StopStartNTasks(appId string, task *demand.Task, read
 		cmd := exec.Command("docker-compose", "scale", param)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
-		log.Printf("Running cmd: %v", cmd)
+
+		log.Printf("Running %s with args: %v", cmd.Path, cmd.Args)
+		cmdIssuedAt := time.Now()
 		err = cmd.Run()
 
 		// We're just logging out any errors and carrying on
 		if err != nil {
 			log.Printf("Stderr: %s", stderr.String())
 		}
+
+		cmdDuration := time.Since(cmdIssuedAt)
+		log.Printf("docker-compose command took %v", cmdDuration)
 
 		// Notify the channel when the scaling command has completed
 		ready <- struct{}{}
@@ -69,7 +75,6 @@ func (c *ComposeScheduler) StopStartNTasks(appId string, task *demand.Task, read
 }
 
 func (c *ComposeScheduler) CountAllTasks(tasks map[string]demand.Task) error {
-
 	// Docker Remote API https://docs.docker.com/reference/api/docker_remote_api_v1.20/
 	// get /containers/json
 	var err error
@@ -101,6 +106,5 @@ func (c *ComposeScheduler) CountAllTasks(tasks map[string]demand.Task) error {
 		}
 	}
 
-	log.Println(tasks)
 	return err
 }
