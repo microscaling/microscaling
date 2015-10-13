@@ -26,6 +26,8 @@ func getBaseF12APIUrl() string {
 	if baseUrl == "" {
 		baseUrl = "http://app.force12.io"
 	}
+
+	log.Printf("Sending results to %s", baseUrl)
 	return baseUrl
 }
 
@@ -37,8 +39,8 @@ func SendState(userID string, tasks map[string]demand.Task, maxContainers int) e
 
 	// Submit a PUT request to the API
 	url := baseF12APIUrl + "/metrics/" + userID
-	log.Printf("API PUT: %s | p1 %d running, p2 %d running | p1 demand %d", url,
-		tasks["priority1"].Running, tasks["priority2"].Running, tasks["priority1"].Demand)
+	// log.Printf("API PUT: %s | p1 %d running, p2 %d running | p1 demand %d", url,
+	// 	tasks["priority1"].Running, tasks["priority2"].Running, tasks["priority1"].Demand)
 
 	// TODO! Make this less specific to P1 & P2 model
 	payload := sendStatePayload{

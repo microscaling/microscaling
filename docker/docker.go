@@ -24,8 +24,7 @@ func NewScheduler() *DockerScheduler {
 	client, _ := docker.NewClient(os.Getenv("DOCKER_HOST"))
 
 	return &DockerScheduler{
-		client: client,
-		// hostConfig: docker.HostConfig{PublishAllPorts: true},
+		client:     client,
 		containers: make(map[string][]string),
 	}
 }
@@ -35,7 +34,9 @@ var _ scheduler.Scheduler = (*DockerScheduler)(nil)
 
 func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) error {
 	log.Printf("Docker initializing task %s", appId)
-	c.containers[appId] = []string{}
+
+	// TODO Size of this should be max containers
+	c.containers[appId] = make([]string, 100)
 	return nil
 }
 
@@ -46,7 +47,6 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 		f12_map: name,
 	}
 
-	log.Printf("Creating a task type %s with image %s", name, task.Image)
 	createOpts := docker.CreateContainerOptions{
 		Config: &docker.Config{
 			Image:        task.Image,
@@ -54,7 +54,6 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 			AttachStdin:  true,
 			Labels:       labels,
 		},
-		// HostConfig: &c.hostConfig,
 	}
 
 	container, err := c.client.CreateContainer(createOpts)
@@ -62,8 +61,8 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 		return err
 	}
 
-	c.containers[name] = append(c.containers[name], container.ID)
-	log.Printf("Created task %s with ID %s", name, container.ID)
+	c.containers[name] = append(c.containers[name], container.ID[:12])
+	log.Printf("Created task %s with image %s, ID %s", name, task.Image, container.ID)
 
 	// Start it
 	err = c.client.StartContainer(container.ID, &c.hostConfig)
@@ -75,23 +74,22 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 	var err error = nil
 
-	// Kill the last container of this type
+	// Kill the last container of this type.
 	these_containers := c.containers[name]
 	container_to_kill := these_containers[len(these_containers)-1]
-	log.Printf("Killing task %s with ID %s", name, container_to_kill)
-
 	c.containers[name] = these_containers[:len(these_containers)-1]
+	log.Printf("Removing task %s with ID %s", name, container_to_kill)
 
-	err = c.client.StopContainer(container_to_kill, 0)
+	err = c.client.StopContainer(container_to_kill, 1)
 	if err != nil {
 		return err
 	}
 
-	killOpts := docker.KillContainerOptions{
+	removeOpts := docker.RemoveContainerOptions{
 		ID: container_to_kill,
 	}
 
-	err = c.client.KillContainer(killOpts)
+	err = c.client.RemoveContainer(removeOpts)
 	return err
 }
 
@@ -102,6 +100,7 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task, ready cha
 	var diff int
 	var err error = nil
 
+	// TODO: Consider checking the number running before we start & stop
 	for name, task := range tasks {
 		if task.Demand > task.Requested {
 			// There aren't enough of these containers yet
@@ -114,38 +113,41 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task, ready cha
 		}
 	}
 
-	// Scale down first to free up resources
-	for _, name := range too_many {
-		task := tasks[name]
-		diff = task.Requested - task.Demand
-		log.Printf("Stop %d of task %s", diff, name)
-		for i := 0; i < diff; i++ {
-			err = c.stopTask(name, &task)
-			if err != nil {
-				log.Printf("Couldn't stop %s: %v ", name, err)
-			}
-			task.Requested -= 1
-		}
-		tasks[name] = task
-	}
+	go func() {
 
-	// Now we can scale up
-	for _, name := range too_few {
-		task := tasks[name]
-		diff = task.Demand - task.Requested
-		log.Printf("Start %d of task %s", diff, name)
-		for i := 0; i < diff; i++ {
-			err = c.startTask(name, &task)
-			if err != nil {
-				log.Printf("Couldn't start %s: %v ", name, err)
+		// Scale down first to free up resources
+		for _, name := range too_many {
+			task := tasks[name]
+			diff = task.Requested - task.Demand
+			log.Printf("Stop %d of task %s", diff, name)
+			for i := 0; i < diff; i++ {
+				err = c.stopTask(name, &task)
+				if err != nil {
+					log.Printf("Couldn't stop %s: %v ", name, err)
+				}
+				task.Requested -= 1
 			}
-			task.Requested += 1
+			tasks[name] = task
 		}
-		tasks[name] = task
-	}
 
-	// Notify the channel when the scaling command has completed
-	ready <- struct{}{}
+		// Now we can scale up
+		for _, name := range too_few {
+			task := tasks[name]
+			diff = task.Demand - task.Requested
+			log.Printf("Start %d of task %s", diff, name)
+			for i := 0; i < diff; i++ {
+				err = c.startTask(name, &task)
+				if err != nil {
+					log.Printf("Couldn't start %s: %v ", name, err)
+				}
+				task.Requested += 1
+			}
+			tasks[name] = task
+		}
+
+		// Notify the channel when the scaling command has completed
+		ready <- struct{}{}
+	}()
 
 	return err
 }
@@ -174,7 +176,7 @@ func (c *DockerScheduler) CountAllTasks(tasks map[string]demand.Task) error {
 		service_name, present = labels[f12_map]
 		if present {
 			// Only update tasks that are already in our task map - don't try to manage anything else
-			log.Printf("Found a container with labels %v", labels)
+			// log.Printf("Found a container with labels %v", labels)
 			t, in_our_tasks := tasks[service_name]
 			if in_our_tasks {
 				t.Running++

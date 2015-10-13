@@ -24,6 +24,8 @@ func handleDemandChange(input demand.Input, s scheduler.Scheduler, ready chan st
 		if err != nil {
 			log.Printf("Failed to stop / start tasks. %v", err)
 		}
+	} else {
+		ready <- struct{}{}
 	}
 
 	return err
