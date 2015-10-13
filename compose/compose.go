@@ -36,7 +36,7 @@ func (c *ComposeScheduler) InitScheduler(appId string, task *demand.Task) error 
 	return nil
 }
 
-func (c *ComposeScheduler) StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) (bool, error) {
+func (c *ComposeScheduler) StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) error {
 	// Shell out to Docker compose scale
 	// docker-compose scale web=2 worker=3
 
@@ -73,8 +73,7 @@ func (c *ComposeScheduler) StopStartTasks(tasks map[string]demand.Task, ready ch
 		ready <- struct{}{}
 	}()
 
-	// There's a scale command outstanding on another thread, so return false
-	return false, nil
+	return nil
 }
 
 func (c *ComposeScheduler) CountAllTasks(tasks map[string]demand.Task) error {

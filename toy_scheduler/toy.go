@@ -26,15 +26,16 @@ func (t *ToyScheduler) InitScheduler(appId string, task *demand.Task) error {
 
 // StopStartNTasks asks the scheduler to bring the number of running tasks up to task.Demand.
 // For the Toy scheduler we can return True because we are ready to scale again straight away
-func (t *ToyScheduler) StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) (bool, error) {
+func (t *ToyScheduler) StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) error {
 	for name, task := range tasks {
 		task.Requested = task.Demand
 		tasks[name] = task
 		log.Printf("Toy scheduler setting Requested for %s to %d", name, task.Requested)
 	}
+	ready <- struct{}{}
 
 	log.Println(tasks)
-	return true, nil
+	return nil
 }
 
 // CountAllTasks for the Toy scheduler simply reflects back what has been requested
