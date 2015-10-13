@@ -62,6 +62,7 @@ func TestHandleDemandChange(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		err := handleDemandChange(di, s, ready, tasks)
+		<-ready
 		if err != nil {
 			t.Fatalf("handleDemandChange failed")
 		}
