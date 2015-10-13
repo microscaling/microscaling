@@ -19,11 +19,6 @@ type ComposeScheduler struct {
 	client *docker.Client
 }
 
-type ComposeContainer struct {
-	id    string   `json:"Id"`
-	names []string `json:"Names"`
-}
-
 func NewScheduler() *ComposeScheduler {
 	client, _ := docker.NewClient(os.Getenv("DOCKER_HOST"))
 
