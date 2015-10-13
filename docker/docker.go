@@ -157,7 +157,7 @@ func (c *DockerScheduler) CountAllTasks(tasks map[string]demand.Task) error {
 	// get /containers/json
 	var err error
 	var containers []docker.APIContainers
-	containers, err = c.client.ListContainers(docker.ListContainersOptions{All: true})
+	containers, err = c.client.ListContainers(docker.ListContainersOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to list containers: %v", err)
 	}
