@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"bitbucket.org/force12io/force12-scheduler/compose"
 	"bitbucket.org/force12io/force12-scheduler/demand"
 	"bitbucket.org/force12io/force12-scheduler/docker"
 	"bitbucket.org/force12io/force12-scheduler/rng"
@@ -58,9 +57,6 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 	var s scheduler.Scheduler
 
 	switch st.schedulerType {
-	case "COMPOSE":
-		log.Println("Scheduling with Docker compose")
-		s = compose.NewScheduler()
 	case "DOCKER":
 		log.Println("Scheduling with Docker remote API")
 		s = docker.NewScheduler()
