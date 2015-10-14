@@ -2,6 +2,7 @@ FROM alpine:3.2
 MAINTAINER Ross Fairbanks "ross@force12.io"
 
 ENV BUILD_PACKAGES bash curl-dev
+
 RUN apk update && \
     apk upgrade && \
     apk add $BUILD_PACKAGES && \
@@ -11,7 +12,6 @@ RUN apk update && \
 # GOOS=linux go build -o force12 .
 ADD force12 /
 
-ADD compose-demo.yml /
 ADD run.sh /
 RUN chmod +x /run.sh
 
