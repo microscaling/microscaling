@@ -47,6 +47,8 @@ var p1TaskName string = "priority1"
 var p2TaskName string = "priority2"
 var p1FamilyName string = "p1-family"
 var p2FamilyName string = "p2-family"
+var p1Image string = "force12io/priority-1:latest"
+var p2Image string = "force12io/priority-2:latest"
 
 var tasks map[string]demand.Task
 
@@ -54,14 +56,13 @@ var tasks map[string]demand.Task
 func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task, ready chan struct{}) {
 	var err error
 
-	log.Println("Cleaning up tasks on interrupt")
 	for name, task := range tasks {
 		task.Demand = 0
 		tasks[name] = task
 	}
 
 	log.Printf("Reset tasks to 0 for cleanup")
-	_, err = s.StopStartTasks(tasks, ready)
+	err = s.StopStartTasks(tasks, ready)
 	if err != nil {
 		log.Printf("Failed to cleanup tasks. %v", err)
 	}
@@ -94,6 +95,12 @@ func main() {
 			log.Printf("Failed to start task %s: %v", name, err)
 			return
 		}
+	}
+
+	// Check if there are already any of these containers running
+	err = s.CountAllTasks(tasks)
+	if err != nil {
+		log.Printf("Failed to count containers. %v", err)
 	}
 
 	// Prepare for cleanup when we receive an interrupt
@@ -131,11 +138,19 @@ func main() {
 			// Don't change demand more often than defined by demandInterval
 			// We check for changes in demand more often because we want to react quickly if there hasn't been a recent change
 			if time.Since(lastDemandUpdate) > st.demandInterval {
-				err = handleDemandChange(di, s, &scaling_ready, ready, tasks)
-				if err != nil {
-					log.Printf("Failed to handle demand change. %v", err)
+				// If we already have a scaling change outstanding, we can't do another one
+				if !scaling_ready {
+					log.Printf("Scale change still outstanding - demand changes coming too fast to handle!")
+					// This isn't an error - we simply don't try to update scale until the scheduler is ready
+				} else {
+					scaling_ready = false
+					err = handleDemandChange(di, s, ready, tasks)
+					if err != nil {
+						log.Printf("Failed to handle demand change. %v", err)
+						scaling_ready = true
+					}
+					lastDemandUpdate = time.Now()
 				}
-				lastDemandUpdate = time.Now()
 			}
 
 		case <-sendstateTimeout.C:
@@ -152,15 +167,16 @@ func main() {
 
 		case <-ready:
 			// An outstanding scale command has finished so we are OK to send another one
-			log.Printf("Ready to scale again")
 			scaling_ready = true
-			if cleanup_when_ready {
-				log.Printf("Now we can close down")
-				exit_when_ready = true
-				cleanup_when_ready = false
-				cleanup(s, tasks, ready)
-			} else if exit_when_ready {
+
+			if exit_when_ready {
 				os.Exit(1)
+			}
+
+			if cleanup_when_ready {
+				exit_when_ready = true
+				// cleanup_when_ready = false
+				cleanup(s, tasks, ready)
 			}
 
 		case <-closedown:
@@ -168,6 +184,7 @@ func main() {
 				log.Printf("Closing down - wait till we've completed the previous scale command")
 				cleanup_when_ready = true
 			} else {
+				log.Printf("Closing down - start cleanup")
 				exit_when_ready = true
 				cleanup(s, tasks, ready)
 			}

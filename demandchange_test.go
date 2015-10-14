@@ -59,10 +59,10 @@ func TestHandleDemandChange(t *testing.T) {
 	s := toy_scheduler.NewScheduler()
 
 	ready := make(chan struct{}, 1)
-	var scaling_ready bool
 
 	for i := 0; i < 5; i++ {
-		err := handleDemandChange(di, s, &scaling_ready, ready, tasks)
+		err := handleDemandChange(di, s, ready, tasks)
+		<-ready
 		if err != nil {
 			t.Fatalf("handleDemandChange failed")
 		}

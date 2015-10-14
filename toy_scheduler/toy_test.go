@@ -17,9 +17,10 @@ func TestToyScheduler(t *testing.T) {
 	m.InitScheduler("anything", &task)
 
 	log.Printf("before start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
-	ready, err := m.StopStartTasks(tasks, nil)
-	if !ready {
-		t.Fatalf("Toy scheduler is always ready")
+	ready := make(chan struct{}, 1)
+	err := m.StopStartTasks(tasks, ready)
+	if err != nil {
+		t.Fatalf("Error %v", err)
 	}
 	task = tasks["anything"]
 	log.Printf("after start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)

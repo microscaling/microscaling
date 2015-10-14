@@ -26,10 +26,15 @@ func getBaseF12APIUrl() string {
 	if baseUrl == "" {
 		baseUrl = "http://app.force12.io"
 	}
+
+	log.Printf("Sending results to %s", baseUrl)
 	return baseUrl
 }
 
 var baseF12APIUrl string = getBaseF12APIUrl()
+var httpClient *http.Client = &http.Client{
+	Timeout: 8000 * time.Millisecond,
+}
 
 // sendState sends the current state of tasks to the f12 API
 func SendState(userID string, tasks map[string]demand.Task, maxContainers int) error {
@@ -62,7 +67,10 @@ func SendState(userID string, tasks map[string]demand.Task, maxContainers int) e
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	// issuedAt := time.Now()
+	resp, err := httpClient.Do(req)
+	// apiDuration := time.Since(issuedAt)
+	// log.Printf("API put took %v", apiDuration)
 
 	if err != nil {
 		if err.Error() == "EOF" {

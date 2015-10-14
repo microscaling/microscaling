@@ -9,6 +9,7 @@ import (
 
 	"bitbucket.org/force12io/force12-scheduler/compose"
 	"bitbucket.org/force12io/force12-scheduler/demand"
+	"bitbucket.org/force12io/force12-scheduler/docker"
 	"bitbucket.org/force12io/force12-scheduler/rng"
 	"bitbucket.org/force12io/force12-scheduler/scheduler"
 	"bitbucket.org/force12io/force12-scheduler/toy_scheduler"
@@ -27,7 +28,7 @@ type settings struct {
 func get_settings() settings {
 	var st settings
 	st.demandModelType = getEnvOrDefault("F12_DEMAND_MODEL", "RNG")
-	st.schedulerType = getEnvOrDefault("F12_SCHEDULER", "COMPOSE")
+	st.schedulerType = getEnvOrDefault("F12_SCHEDULER", "DOCKER")
 	st.userID = getEnvOrDefault("F12_USER_ID", "5k5gk")
 	st.sendstate = (getEnvOrDefault("F12_SEND_STATE_TO_API", "true") == "true")
 	st.demandDelta, _ = strconv.Atoi(getEnvOrDefault("F12_DEMAND_DELTA", "3"))
@@ -60,6 +61,9 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 	case "COMPOSE":
 		log.Println("Scheduling with Docker compose")
 		s = compose.NewScheduler()
+	case "DOCKER":
+		log.Println("Scheduling with Docker remote API")
+		s = docker.NewScheduler()
 	case "ECS":
 		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #F12ECS if you'd like us to add this next!")
 	case "KUBERNETES":
@@ -85,6 +89,8 @@ func get_tasks(st settings) map[string]demand.Task {
 	p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", p2TaskName)
 	p1FamilyName = getEnvOrDefault("F12_PRIORITY1_FAMILY", p1FamilyName)
 	p2FamilyName = getEnvOrDefault("F12_PRIORITY2_FAMILY", p2FamilyName)
+	p1Image = getEnvOrDefault("F12_PRIORITY1_IMAGE", p1Image)
+	p2Image = getEnvOrDefault("F12_PRIORITY2_IMAGE", p2Image)
 
 	t = make(map[string]demand.Task)
 
@@ -92,12 +98,14 @@ func get_tasks(st settings) map[string]demand.Task {
 		FamilyName: p1FamilyName,
 		Demand:     st.maxContainers / 2,
 		Requested:  0,
+		Image:      p1Image,
 	}
 
 	t[p2TaskName] = demand.Task{
 		FamilyName: p2FamilyName,
 		Demand:     st.maxContainers - (st.maxContainers / 2),
 		Requested:  0,
+		Image:      p2Image,
 	}
 
 	return t
