@@ -44,7 +44,8 @@ func TestInitScheduler(t *testing.T) {
 		sched string
 		pass  bool
 	}{
-		{sched: "COMPOSE", pass: true},
+		{sched: "COMPOSE", pass: false},
+		{sched: "DOCKER", pass: true},
 		{sched: "ECS", pass: false},
 		{sched: "KUBERNETES", pass: false},
 		{sched: "MESOS", pass: false},
