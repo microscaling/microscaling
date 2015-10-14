@@ -2,6 +2,7 @@
 *.o
 *.a
 *.so
+force12
 
 # Folders
 _obj
