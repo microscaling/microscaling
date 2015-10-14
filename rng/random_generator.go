@@ -5,6 +5,7 @@ import (
 	"fmt"
 	// "log"
 	"math/rand"
+	"time"
 
 	"bitbucket.org/force12io/force12-scheduler/demand"
 )
@@ -23,6 +24,9 @@ var _ demand.Input = (*RandomDemand)(nil)
 // maximum - max total number of containers
 // interval - the number of milliseconds that has to pass before demand is allowed to change
 func NewDemandModel(delta int, maximum int) *RandomDemand {
+
+	rand.Seed(int64(time.Now().Nanosecond()))
+
 	return &RandomDemand{
 		currentP1Demand: 0,
 		delta:           delta,
