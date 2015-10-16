@@ -1,4 +1,4 @@
-// The demand package defined the interface for demand models
+// The demand package defines the interface for demand models
 package demand
 
 type Task struct {

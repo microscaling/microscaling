@@ -1,3 +1,4 @@
+// API between Force12 agent and server
 package api
 
 import (

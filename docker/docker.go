@@ -1,4 +1,4 @@
-// Schedule using docker compose
+// Schedule using docker remote API
 package docker
 
 import (
