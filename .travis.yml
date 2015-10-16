@@ -5,6 +5,9 @@ go:
   - 1.4
   - 1.5
 
+env:
+  - DOCKER_HOST=unix:///var/run/docker.sock
+
 services:
   - docker
 
