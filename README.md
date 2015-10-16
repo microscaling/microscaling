@@ -10,6 +10,8 @@ on your machine. Full instructions for running the demo are at [app.force12.io](
 The easiest way to run Microscaling-in-a-box is to [follow the instructions](http://app.force12.io). The `docker run` command 
 pulls the latest image of this code from [Docker hub](https://hub.docker.com/u/force12io/). 
 
+[![](https://badge.imagelayers.io/force12io/force12:latest.svg)](https://imagelayers.io/?images=force12io/force12:latest 'Get your own badge on imagelayers.io')
+
 If you want to build and run your own version locally:
 
 - Clone this repo
