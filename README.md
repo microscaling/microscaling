@@ -3,10 +3,14 @@
 This simple demo runs on your own machine and makes it easy to experiment with microscaling and see containers running locally 
 on your machine. Full instructions for running the demo are at [app.force12.io](http://app.force12.io). 
 
+[![Build Status](https://travis-ci.org/force12io/force12.png?branch=master)](https://travis-ci.org/force12io/force12) Go 1.4 1.5
+
 ## Building and running from source
 
 The easiest way to run Microscaling-in-a-box is to [follow the instructions](http://app.force12.io). The `docker run` command 
 pulls the latest image of this code from [Docker hub](https://hub.docker.com/u/force12io/). 
+
+[![](https://badge.imagelayers.io/force12io/force12:latest.svg)](https://imagelayers.io/?images=force12io/force12:latest 'Get your own badge on imagelayers.io')
 
 If you want to build and run your own version locally:
 
@@ -29,4 +33,4 @@ We've got lots of ideas for improvements - here are a few headlines:
 ## Contact Us
 
 We'd love to hear from you at [hello@force12.io](mailto:hello@force12.io) or on Twitter at [@force12io](http://twitter.com/force12io). 
-And we welcome new [issues](https://github.com/force12io/force12/issues) or pull requests! 
+And we welcome new [issues](https://github.com/force12io/force12/issues) or pull requests!
