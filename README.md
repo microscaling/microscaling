@@ -3,7 +3,7 @@
 This simple demo runs on your own machine and makes it easy to experiment with microscaling and see containers running locally 
 on your machine. Full instructions for running the demo are at [app.force12.io](http://app.force12.io). 
 
-[![Build Status](https://travis-ci.org/force12io/force12.png?branch=master)](https://travis-ci.org/force12io/force12) Go 1.4 1.5
+[![Build Status](https://api.travis-ci.org/force12io/force12.svg)](https://travis-ci.org/force12io/force12) Go 1.4 1.5
 
 ## Building and running from source
 
