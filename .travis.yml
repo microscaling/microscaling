@@ -1,5 +1,15 @@
 language: go
+sudo: required
 
 go:
   - 1.4
   - 1.5
+
+env:
+  - DOCKER_HOST=unix:///var/run/docker.sock
+
+services:
+  - docker
+
+before_install:
+  - docker pull force12io/force12-demo:latest
