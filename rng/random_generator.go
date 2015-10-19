@@ -43,9 +43,22 @@ func (rng *RandomDemand) GetDemand(taskType string) (int, error) {
 	case "priority1": // TODO! Priority name shouldn't be hard-coded like this
 		// Random value between +/- delta is the same as
 		// (random value between 0 and 2*delta) - delta
+		// Using l_delta and r_delta means we don't have a 50% chance of staying the same value if we're
+		// at one extreme or another of the allowed range
+
+		l_delta := rng.delta
+		if rng.currentP1Demand < rng.delta {
+			l_delta = rng.currentP1Demand
+		}
+
+		r_delta := rng.delta
+		if rng.currentP1Demand > (rng.maximum - rng.delta) {
+			r_delta = rng.maximum - rng.currentP1Demand
+		}
+
 		// noting that if r = rand.Intn(n) then 0 <= r < n
-		r := rand.Intn((2 * rng.delta) + 1)
-		newDemand = rng.currentP1Demand + r - rng.delta
+		r := rand.Intn((l_delta + r_delta) + 1)
+		newDemand = rng.currentP1Demand + r - l_delta
 		if newDemand > rng.maximum {
 			newDemand = rng.maximum
 		}

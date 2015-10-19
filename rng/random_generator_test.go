@@ -16,6 +16,7 @@ func TestRandomDemand(t *testing.T) {
 		old_demand := rng.currentP1Demand
 		demand1, _ := rng.GetDemand("priority1")
 		demand2, _ := rng.GetDemand("priority2")
+		log.Printf("Demand changed from %d to %d", old_demand, demand1)
 
 		if demand1 > maximum || demand2 > maximum {
 			t.Fatalf("Random value exceeds maximum")
@@ -28,7 +29,6 @@ func TestRandomDemand(t *testing.T) {
 		if math.Abs(float64(demand1)-float64(old_demand)) > float64(delta) {
 			t.Fatalf("Random value varied more than the delta")
 		}
-		log.Printf("Demand changed from %d to %d", old_demand, demand1)
 	}
 
 	// Right now you should only pass in priority1 or priority2
