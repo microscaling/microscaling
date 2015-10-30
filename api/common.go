@@ -19,5 +19,5 @@ func getBaseF12APIUrl() string {
 
 var baseF12APIUrl string = getBaseF12APIUrl()
 var httpClient *http.Client = &http.Client{
-	Timeout: 30000 * time.Millisecond,
+	Timeout: 15000 * time.Millisecond,
 }
