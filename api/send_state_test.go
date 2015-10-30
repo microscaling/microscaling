@@ -11,13 +11,6 @@ import (
 	"github.com/force12io/force12/demand"
 )
 
-func TestGetBaseUrl(t *testing.T) {
-	base := getBaseF12APIUrl()
-	if base != "http://app.force12.io" || base != baseF12APIUrl {
-		t.Fatalf("Maybe F12_METRICS_API_ADDRESS is set: %v", base)
-	}
-}
-
 func TestSendState(t *testing.T) {
 	var tasks map[string]demand.Task = make(map[string]demand.Task)
 

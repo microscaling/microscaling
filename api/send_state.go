@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/force12io/force12/demand"
@@ -20,21 +19,6 @@ type sendStatePayload struct {
 	Priority1Running   int   `json:"priority1Running"`
 	Priority2Running   int   `json:"priority2Running"`
 	MaxContainers      int   `json:"maxContainers"`
-}
-
-func getBaseF12APIUrl() string {
-	baseUrl := os.Getenv("F12_METRICS_API_ADDRESS")
-	if baseUrl == "" {
-		baseUrl = "http://app.force12.io"
-	}
-
-	log.Printf("Sending results to %s", baseUrl)
-	return baseUrl
-}
-
-var baseF12APIUrl string = getBaseF12APIUrl()
-var httpClient *http.Client = &http.Client{
-	Timeout: 8000 * time.Millisecond,
 }
 
 // sendState sends the current state of tasks to the f12 API
