@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/force12io/force12/api"
 	"github.com/force12io/force12/demand"
 	"github.com/force12io/force12/docker"
 	"github.com/force12io/force12/rng"
@@ -81,29 +82,13 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 func get_tasks(st settings) map[string]demand.Task {
 	var t map[string]demand.Task
 
-	p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", p1TaskName)
-	p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", p2TaskName)
-	p1FamilyName = getEnvOrDefault("F12_PRIORITY1_FAMILY", p1FamilyName)
-	p2FamilyName = getEnvOrDefault("F12_PRIORITY2_FAMILY", p2FamilyName)
-	p1Image = getEnvOrDefault("F12_PRIORITY1_IMAGE", p1Image)
-	p2Image = getEnvOrDefault("F12_PRIORITY2_IMAGE", p2Image)
-
-	t = make(map[string]demand.Task)
-
-	t[p1TaskName] = demand.Task{
-		FamilyName: p1FamilyName,
-		Demand:     st.maxContainers / 2,
-		Requested:  0,
-		Image:      p1Image,
+	// Get the tasks that have been configured by this user
+	t, err := api.GetApps(st.userID)
+	if err != nil {
+		log.Printf("Error getting tasks: %v", err)
 	}
 
-	t[p2TaskName] = demand.Task{
-		FamilyName: p2FamilyName,
-		Demand:     st.maxContainers - (st.maxContainers / 2),
-		Requested:  0,
-		Image:      p2Image,
-	}
-
+	log.Println(t)
 	return t
 }
 
