@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/force12io/force12/demand"
 	"github.com/force12io/force12/scheduler"
@@ -47,9 +48,7 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 		f12_map: name,
 	}
 
-	var cmds []string = []string{
-		task.Command,
-	}
+	var cmds []string = strings.Fields(task.Command)
 
 	createOpts := docker.CreateContainerOptions{
 		Config: &docker.Config{
