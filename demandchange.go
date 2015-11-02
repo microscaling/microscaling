@@ -8,7 +8,7 @@ import (
 )
 
 // handleDemandChange checks the new demand
-func handleDemandChange(input demand.Input, s scheduler.Scheduler, ready chan struct{}, tasks map[string]demand.Task) error {
+func handleDemandChange(input demand.Input, s scheduler.Scheduler, tasks map[string]demand.Task) error {
 	var err error = nil
 	var demandChanged bool
 
@@ -20,12 +20,10 @@ func handleDemandChange(input demand.Input, s scheduler.Scheduler, ready chan st
 
 	if demandChanged {
 		// Ask the scheduler to make the changes
-		err = s.StopStartTasks(tasks, ready)
+		err = s.StopStartTasks(tasks)
 		if err != nil {
 			log.Printf("Failed to stop / start tasks. %v", err)
 		}
-	} else {
-		ready <- struct{}{}
 	}
 
 	return err

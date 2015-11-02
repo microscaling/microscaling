@@ -43,17 +43,10 @@ import (
 const const_sleep = 100           // milliseconds - delay before we check for demand. TODO! Make this driven by webhooks rather than simply a delay
 const const_sendstate_sleep = 500 // milliseconds - delay before we send state on the metrics API
 
-var p1TaskName string = "priority1"
-var p2TaskName string = "priority2"
-var p1FamilyName string = "p1-family"
-var p2FamilyName string = "p2-family"
-var p1Image string = "force12io/priority-1:latest"
-var p2Image string = "force12io/priority-2:latest"
-
 var tasks map[string]demand.Task
 
 // cleanup resets demand for all tasks to 0 before we quit
-func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task, ready chan struct{}) {
+func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
 	var err error
 
 	for name, task := range tasks {
@@ -62,7 +55,7 @@ func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task, ready chan str
 	}
 
 	log.Printf("Reset tasks to 0 for cleanup")
-	err = s.StopStartTasks(tasks, ready)
+	err = s.StopStartTasks(tasks)
 	if err != nil {
 		log.Printf("Failed to cleanup tasks. %v", err)
 	}
@@ -119,9 +112,11 @@ func main() {
 		sendstateTimeout = time.NewTicker(const_sendstate_sleep * time.Millisecond)
 	}
 
-	// Only allow one scaling command to be outstanding at a time
+	// Only allow one scaling command and one Send State API call to be outstanding at a time
 	ready := make(chan struct{}, 1)
+	ss_ready := make(chan struct{}, 1)
 	var scaling_ready bool = true
+	var sendState_ready bool = true
 	var cleanup_when_ready bool = false
 	var exit_when_ready bool = false
 
@@ -144,49 +139,72 @@ func main() {
 					// This isn't an error - we simply don't try to update scale until the scheduler is ready
 				} else {
 					scaling_ready = false
-					err = handleDemandChange(di, s, ready, tasks)
-					if err != nil {
-						log.Printf("Failed to handle demand change. %v", err)
-						scaling_ready = true
-					}
-					lastDemandUpdate = time.Now()
+					go func() {
+						err = handleDemandChange(di, s, tasks)
+						if err != nil {
+							log.Printf("Failed to handle demand change. %v", err)
+						}
+						lastDemandUpdate = time.Now()
+
+						// Notify the channel when the scaling command has completed
+						ready <- struct{}{}
+					}()
 				}
 			}
 
 		case <-sendstateTimeout.C:
-			// Find out how many isntances of each task are running
+			// Find out how many instances of each task are running
 			err = s.CountAllTasks(tasks)
 			if err != nil {
 				log.Printf("Failed to count containers. %v", err)
 			}
 
-			err = api.SendState(st.userID, tasks, st.maxContainers)
-			if err != nil {
-				log.Printf("Failed to send state. %v", err)
+			if !sendState_ready {
+				log.Printf("Send state change still outstanding - can't send again yet!")
+				// This isn't an error - we simply don't try to send another API call until the last response comes back
+			} else {
+				sendState_ready = false
+				go func() {
+					err = api.SendState(st.userID, tasks, st.maxContainers)
+					if err != nil {
+						log.Printf("Failed to send state. %v", err)
+					}
+
+					// Notify the channel when the API call has completed
+					ss_ready <- struct{}{}
+				}()
 			}
 
 		case <-ready:
-			// An outstanding scale command has finished so we are OK to send another one
-			scaling_ready = true
-
 			if exit_when_ready {
+				log.Printf("All finished")
 				os.Exit(1)
 			}
-
+			// An outstanding scale command has finished so we are OK to send another one
 			if cleanup_when_ready {
+				log.Printf("Scale command finished - now we can start cleaning up")
 				exit_when_ready = true
-				// cleanup_when_ready = false
-				cleanup(s, tasks, ready)
+				go func() {
+					cleanup(s, tasks)
+					ready <- struct{}{}
+				}()
+			} else {
+				scaling_ready = true
 			}
 
+		case <-ss_ready:
+			// An outstanding API call sending state has finished so we are OK to send another one
+			sendState_ready = true
+
 		case <-closedown:
-			if !scaling_ready {
-				log.Printf("Closing down - wait till we've completed the previous scale command")
-				cleanup_when_ready = true
-			} else {
+			cleanup_when_ready = true
+
+			if scaling_ready {
+				// Trigger it now
 				log.Printf("Closing down - start cleanup")
-				exit_when_ready = true
-				cleanup(s, tasks, ready)
+				ready <- struct{}{}
+			} else {
+				log.Printf("Closing down - wait till we've completed the previous scale command")
 			}
 		}
 	}
