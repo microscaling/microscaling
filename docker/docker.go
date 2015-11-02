@@ -97,7 +97,7 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 	return err
 }
 
-func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) error {
+func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 	// Create containers if there aren't enough of them, and stop them if there are too many
 	var too_many []string
 	var too_few []string
@@ -117,41 +117,35 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task, ready cha
 		}
 	}
 
-	go func() {
-
-		// Scale down first to free up resources
-		for _, name := range too_many {
-			task := tasks[name]
-			diff = task.Requested - task.Demand
-			log.Printf("Stop %d of task %s", diff, name)
-			for i := 0; i < diff; i++ {
-				err = c.stopTask(name, &task)
-				if err != nil {
-					log.Printf("Couldn't stop %s: %v ", name, err)
-				}
-				task.Requested -= 1
+	// Scale down first to free up resources
+	for _, name := range too_many {
+		task := tasks[name]
+		diff = task.Requested - task.Demand
+		log.Printf("Stop %d of task %s", diff, name)
+		for i := 0; i < diff; i++ {
+			err = c.stopTask(name, &task)
+			if err != nil {
+				log.Printf("Couldn't stop %s: %v ", name, err)
 			}
-			tasks[name] = task
+			task.Requested -= 1
 		}
+		tasks[name] = task
+	}
 
-		// Now we can scale up
-		for _, name := range too_few {
-			task := tasks[name]
-			diff = task.Demand - task.Requested
-			log.Printf("Start %d of task %s", diff, name)
-			for i := 0; i < diff; i++ {
-				err = c.startTask(name, &task)
-				if err != nil {
-					log.Printf("Couldn't start %s: %v ", name, err)
-				}
-				task.Requested += 1
+	// Now we can scale up
+	for _, name := range too_few {
+		task := tasks[name]
+		diff = task.Demand - task.Requested
+		log.Printf("Start %d of task %s", diff, name)
+		for i := 0; i < diff; i++ {
+			err = c.startTask(name, &task)
+			if err != nil {
+				log.Printf("Couldn't start %s: %v ", name, err)
 			}
-			tasks[name] = task
+			task.Requested += 1
 		}
-
-		// Notify the channel when the scaling command has completed
-		ready <- struct{}{}
-	}()
+		tasks[name] = task
+	}
 
 	return err
 }
