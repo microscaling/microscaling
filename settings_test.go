@@ -26,8 +26,9 @@ func TestSettings(t *testing.T) {
 }
 
 func TestTasks(t *testing.T) {
-	s := get_settings()
-	tasks := get_tasks(s)
+	_ = get_settings()
+	// TODO!! This would be async.
+	// tasks := get_tasks(s)
 	log.Println("Tasks: ", tasks)
 	log.Println("Not a test that does much!")
 }
