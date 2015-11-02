@@ -7,6 +7,7 @@ type Task struct {
 	Running    int
 	FamilyName string
 	Image      string
+	Command    string
 }
 
 type Input interface {

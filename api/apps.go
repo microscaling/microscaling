@@ -52,7 +52,8 @@ func appsFromResponse(b []byte) (tasks map[string]demand.Task, err error) {
 	for _, a := range a {
 		name := a.Name
 		task := demand.Task{
-			Image: a.Config.Image,
+			Image:   a.Config.Image,
+			Command: a.Config.Command,
 		}
 
 		tasks[name] = task

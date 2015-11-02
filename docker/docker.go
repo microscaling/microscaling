@@ -47,9 +47,14 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 		f12_map: name,
 	}
 
+	var cmds []string = []string{
+		task.Command,
+	}
+
 	createOpts := docker.CreateContainerOptions{
 		Config: &docker.Config{
 			Image:        task.Image,
+			Cmd:          cmds,
 			AttachStdout: true,
 			AttachStdin:  true,
 			Labels:       labels,
