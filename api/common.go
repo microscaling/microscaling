@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func getBaseF12APIUrl() string {
+func GetBaseF12APIUrl() string {
 	baseUrl := os.Getenv("F12_METRICS_API_ADDRESS")
 	if baseUrl == "" {
 		baseUrl = "http://app.force12.io"
@@ -20,7 +20,12 @@ func getBaseF12APIUrl() string {
 	return baseUrl
 }
 
-var baseF12APIUrl string = getBaseF12APIUrl()
+// SetBaseF12APIUrl only used for testing
+func SetBaseF12APIUrl(baseurl string) {
+	baseF12APIUrl = baseurl
+}
+
+var baseF12APIUrl string = GetBaseF12APIUrl()
 var httpClient *http.Client = &http.Client{
 	Timeout: 15000 * time.Millisecond,
 }

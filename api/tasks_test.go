@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/force12io/force12/api/apitest"
 	"github.com/force12io/force12/demand"
 )
 
@@ -109,7 +110,7 @@ func TestGetTasks(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		server := doTestGetJson(t, test.expUrl, test.success, test.json)
+		server := apitest.DoTestGetJson(t, test.expUrl, test.success, test.json)
 		defer server.Close()
 
 		baseF12APIUrl = server.URL

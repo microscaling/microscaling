@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/force12io/force12/api/apitest"
 	"github.com/force12io/force12/demand"
 )
 
@@ -84,7 +85,7 @@ func TestGetApps(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		server := doTestGetJson(t, test.expUrl, test.success, test.json)
+		server := apitest.DoTestGetJson(t, test.expUrl, test.success, test.json)
 
 		defer server.Close()
 
@@ -93,7 +94,7 @@ func TestGetApps(t *testing.T) {
 		baseF12APIUrl = getBaseF12APIUrl()
 
 		if test.success {
-			checkReturnedTasks(t, test.tasks, returned_tasks)
+			apitest.CheckReturnedTasks(t, test.tasks, returned_tasks)
 
 			if err != nil {
 				t.Fatalf("Unexpected error %v", err)
