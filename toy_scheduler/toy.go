@@ -32,7 +32,6 @@ func (t *ToyScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 		log.Printf("Toy scheduler setting Requested for %s to %d", name, task.Requested)
 	}
 
-	log.Println(tasks)
 	return nil
 }
 

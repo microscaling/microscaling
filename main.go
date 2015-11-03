@@ -134,10 +134,8 @@ func main() {
 			// We check for changes in demand more often because we want to react quickly if there hasn't been a recent change
 			if time.Since(lastDemandUpdate) > st.demandInterval {
 				// If we already have a scaling change outstanding, we can't do another one
-				if !scaling_ready {
-					log.Printf("Scale change still outstanding - demand changes coming too fast to handle!")
-					// This isn't an error - we simply don't try to update scale until the scheduler is ready
-				} else {
+				// We also don't count as ready if we're still checking the API for demand changes
+				if scaling_ready {
 					scaling_ready = false
 					go func() {
 						err = handleDemandChange(di, s, tasks)
