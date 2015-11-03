@@ -64,6 +64,6 @@ func TestSendState(t *testing.T) {
 
 		baseF12APIUrl = server.URL
 		SendState("hello", tasks, test.expMaxContainers)
-		baseF12APIUrl = getBaseF12APIUrl()
+		baseF12APIUrl = GetBaseF12APIUrl()
 	}
 }

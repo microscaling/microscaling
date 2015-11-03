@@ -91,7 +91,7 @@ func TestGetApps(t *testing.T) {
 
 		baseF12APIUrl = server.URL
 		returned_tasks, err := GetApps("hello")
-		baseF12APIUrl = getBaseF12APIUrl()
+		baseF12APIUrl = GetBaseF12APIUrl()
 
 		if test.success {
 			apitest.CheckReturnedTasks(t, test.tasks, returned_tasks)

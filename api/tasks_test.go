@@ -78,7 +78,7 @@ func TestGetTasks(t *testing.T) {
 
 		baseF12APIUrl = server.URL
 		td, err := GetTasks("hello")
-		baseF12APIUrl = getBaseF12APIUrl()
+		baseF12APIUrl = GetBaseF12APIUrl()
 
 		if test.success {
 			if err != nil {

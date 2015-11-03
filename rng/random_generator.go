@@ -35,7 +35,7 @@ func NewDemandModel(delta int, maximum int) *RandomDemand {
 }
 
 // GetDemand generates the demand, which will be within +/- delta of the current value, up to the maximum.
-func (rng *RandomDemand) getDemand(taskType string) (int, error) {
+func (rng *RandomDemand) GetDemand(taskType string) (int, error) {
 	var newDemand int
 	var err error = nil
 
@@ -85,7 +85,7 @@ func (rng *RandomDemand) Update(ts map[string]demand.Task) (bool, error) {
 
 	for name, task := range ts {
 		oldDemand := task.Demand
-		task.Demand, err = rng.getDemand(name)
+		task.Demand, err = rng.GetDemand(name)
 		if err != nil {
 			log.Printf("Failed to get new demand for task %s. %v", name, err)
 			return demandchange, err
