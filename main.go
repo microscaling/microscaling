@@ -119,6 +119,7 @@ func main() {
 	var sendState_ready bool = true
 	var cleanup_when_ready bool = false
 	var exit_when_ready bool = false
+	var demandChanged bool = false
 
 	// Loop, continually checking for changes in demand that need to be scheduled
 	// At the moment we plough on regardless in the face of errors, simply logging them out
@@ -138,11 +139,14 @@ func main() {
 				if scaling_ready {
 					scaling_ready = false
 					go func() {
-						err = handleDemandChange(di, s, tasks)
+						demandChanged, err = handleDemandChange(di, s, tasks)
 						if err != nil {
 							log.Printf("Failed to handle demand change. %v", err)
 						}
-						lastDemandUpdate = time.Now()
+
+						if demandChanged {
+							lastDemandUpdate = time.Now()
+						}
 
 						// Notify the channel when the scaling command has completed
 						ready <- struct{}{}

@@ -8,14 +8,11 @@ import (
 )
 
 // handleDemandChange checks the new demand
-func handleDemandChange(input demand.Input, s scheduler.Scheduler, tasks map[string]demand.Task) error {
-	var err error = nil
-	var demandChanged bool
-
-	demandChanged, err = update(input, tasks)
+func handleDemandChange(input demand.Input, s scheduler.Scheduler, tasks map[string]demand.Task) (demandChanged bool, err error) {
+	demandChanged, err = input.Update(tasks)
 	if err != nil {
 		log.Printf("Failed to get new demand. %v", err)
-		return err
+		return
 	}
 
 	if demandChanged {
@@ -26,29 +23,5 @@ func handleDemandChange(input demand.Input, s scheduler.Scheduler, tasks map[str
 		}
 	}
 
-	return err
-}
-
-// update checks for changes in demand, returning true if demand changed
-func update(input demand.Input, ts map[string]demand.Task) (bool, error) {
-	var err error = nil
-	var demandchange bool = false
-
-	for name, task := range ts {
-		oldDemand := task.Demand
-		task.Demand, err = input.GetDemand(name)
-		if err != nil {
-			log.Printf("Failed to get new demand for task %s. %v", name, err)
-			return demandchange, err
-		}
-
-		log.Printf("Current demand: task %s - %d", name, task.Demand)
-
-		if task.Demand != oldDemand {
-			demandchange = true
-		}
-
-		ts[name] = task
-	}
-	return demandchange, err
+	return
 }

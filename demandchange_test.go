@@ -27,7 +27,7 @@ func TestDemandUpdate(t *testing.T) {
 
 	di := rng.NewDemandModel(4, 10)
 
-	demandchange, _ = update(di, tasks)
+	demandchange, _ = di.Update(tasks)
 	if !demandchange {
 		// Note this test relies on us not seeding random numbers. Not very nice but OK for our purposes.
 		t.Fatalf("Expected demand to have changed but it didn't")
@@ -52,7 +52,7 @@ func TestHandleDemandChange(t *testing.T) {
 	s := toy_scheduler.NewScheduler()
 
 	for i := 0; i < 5; i++ {
-		err := handleDemandChange(di, s, tasks)
+		_, err := handleDemandChange(di, s, tasks)
 		if err != nil {
 			t.Fatalf("handleDemandChange failed")
 		}
