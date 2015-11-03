@@ -11,7 +11,7 @@ import (
 )
 
 func GetBaseF12APIUrl() string {
-	baseUrl := os.Getenv("F12_METRICS_API_ADDRESS")
+	baseUrl := os.Getenv("F12_API_ADDRESS")
 	if baseUrl == "" {
 		baseUrl = "http://app.force12.io"
 	}
