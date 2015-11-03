@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/force12io/force12/api/apitest"
@@ -26,25 +27,6 @@ func TestGetTasksDecode(t *testing.T) {
 	tasks["p3"] = demand.Task{
 		Demand: 9,
 	}
-
-	_ = tasksFromResponse(b, tasks)
-
-	p1 := tasks["priority1"]
-	if p1.Demand != 99 {
-		t.Fatalf("Bad demand for p1: %v", p1)
-	}
-	if p1.Requested != 5 {
-		t.Fatalf("Requested got modified for p1: %v", p1)
-	}
-	p2 := tasks["another_app"]
-	if p2.Demand != 100 {
-		t.Fatalf("Bad demand for p2")
-	}
-	// Demand should be unchanged for this one
-	p3 := tasks["p3"]
-	if p3.Demand != 9 {
-		t.Fatalf("Bad demand for p3")
-	}
 }
 
 func TestGetTasks(t *testing.T) {
@@ -57,27 +39,13 @@ func TestGetTasks(t *testing.T) {
 		expUrl  string
 		json    string
 		success bool
-		tasks   map[string]demand.Task
+		td      []TaskDescription
 	}{
 		{
 			expUrl:  "/tasks/hello",
 			json:    "",
 			success: false,
-			tasks: map[string]demand.Task{
-				"priority1": demand.Task{
-					Image:     "firstimage",
-					Demand:    8,
-					Requested: 3,
-					Running:   4,
-				},
-				"priority2": demand.Task{
-					Image:     "anotherimage",
-					Command:   "do this",
-					Demand:    0,
-					Requested: 7,
-					Running:   5,
-				},
-			},
+			td:      []TaskDescription{},
 		}, {
 			expUrl: "/tasks/hello",
 			json: `[
@@ -91,32 +59,38 @@ func TestGetTasks(t *testing.T) {
 			    }
 			]`,
 			success: true,
-			tasks: map[string]demand.Task{
-				"priority1": demand.Task{
-					Image:     "firstimage",
-					Demand:    7,
-					Requested: 3,
-					Running:   4,
+			td: []TaskDescription{
+				TaskDescription{
+					App:         "priority1",
+					DemandCount: 7,
 				},
-				"priority2": demand.Task{
-					Image:     "anotherimage",
-					Command:   "do this",
-					Demand:    3,
-					Requested: 7,
-					Running:   5,
+				TaskDescription{
+					App:         "priority2",
+					DemandCount: 3,
 				},
 			},
 		},
 	}
 
-	for _, test := range tests {
+	for number, test := range tests {
 		server := apitest.DoTestGetJson(t, test.expUrl, test.success, test.json)
 		defer server.Close()
 
 		baseF12APIUrl = server.URL
-		_ = GetTasks("hello", tasks)
+		td, err := GetTasks("hello")
 		baseF12APIUrl = getBaseF12APIUrl()
 
-		checkReturnedTasks(t, test.tasks, tasks)
+		if test.success {
+			if err != nil {
+				t.Fatalf("Didn't expect failure: v%", err)
+			}
+			if !reflect.DeepEqual(td, test.td) {
+				t.Fatalf("Task descriptions not equal: %v | %v", td, test.td)
+			}
+		} else {
+			if err == nil {
+				t.Fatalf("Test %d was supposed to fail", number)
+			}
+		}
 	}
 }
