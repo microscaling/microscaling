@@ -9,6 +9,7 @@ import (
 
 	"github.com/force12io/force12/api"
 	"github.com/force12io/force12/demand"
+	"github.com/force12io/force12/demandapi"
 	"github.com/force12io/force12/docker"
 	"github.com/force12io/force12/rng"
 	"github.com/force12io/force12/scheduler"
@@ -47,6 +48,8 @@ func get_demand_input(st settings) (demand.Input, error) {
 	case "RNG":
 		log.Println("Random demand generation")
 		di = rng.NewDemandModel(st.demandDelta, st.maxContainers)
+	case "API":
+		di = demandapi.NewDemandModel(st.userID)
 	default:
 		return nil, fmt.Errorf("Bad value for F12_DEMAND_MODEL: %s", st.demandModelType)
 	}
