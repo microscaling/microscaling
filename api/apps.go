@@ -1,13 +1,9 @@
-// API between Force12 agent and server
 package api
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
-	"io/ioutil"
+	// "io"
 	"log"
-	"net/http"
 
 	"github.com/force12io/force12/demand"
 )
@@ -25,14 +21,14 @@ type DockerAppConfig struct {
 
 type dockerAppConfig DockerAppConfig
 
-func Decode(r io.Reader) (x *AppDescription, err error) {
-	x = new(AppDescription)
-	err = json.NewDecoder(r).Decode(x)
-	if err != nil {
-		log.Printf("Error %v", err)
-	}
-	return
-}
+// func Decode(r io.Reader) (x *AppDescription, err error) {
+// 	x = new(AppDescription)
+// 	err = json.NewDecoder(r).Decode(x)
+// 	if err != nil {
+// 		log.Printf("Error %v", err)
+// 	}
+// 	return
+// }
 
 func (d *DockerAppConfig) UnmarshalJSON(b []byte) (err error) {
 	c := dockerAppConfig{}
@@ -44,12 +40,12 @@ func (d *DockerAppConfig) UnmarshalJSON(b []byte) (err error) {
 }
 
 func appsFromResponse(b []byte) (tasks map[string]demand.Task, err error) {
-	var a []AppDescription
-	err = json.Unmarshal(b, &a)
+	var apps []AppDescription
+	err = json.Unmarshal(b, &apps)
 
 	tasks = make(map[string]demand.Task)
 
-	for _, a := range a {
+	for _, a := range apps {
 		name := a.Name
 		task := demand.Task{
 			Image:   a.Config.Image,
@@ -62,22 +58,15 @@ func appsFromResponse(b []byte) (tasks map[string]demand.Task, err error) {
 	return
 }
 
+// Get /apps/ to receive a list of apps we'll be scaling
 func GetApps(userID string) (tasks map[string]demand.Task, err error) {
-	url := baseF12APIUrl + "/apps/" + userID
-
-	req, err := http.NewRequest("GET", url, nil)
+	body, err := getJsonGet(userID, "/apps/")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to build API GET request err %v", err)
+		log.Printf("Failed to get /apps/: %v", err)
+		return nil, err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to GET err %v", err)
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-
+	log.Println(string(body))
 	tasks, err = appsFromResponse(body)
 	return
 }

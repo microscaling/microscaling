@@ -14,18 +14,16 @@ func TestDockerScheduler(t *testing.T) {
 	task.Image = "force12io/force12-demo:latest"
 
 	d.InitScheduler("anything", &task)
-	fmt.Printf("%v\n", d)
 
 	err := d.startTask("anything", &task)
 	if err != nil {
+		// We don't actually expect these to work locally
+		// TODO! Some Docker tests that mock out the Docker client
 		fmt.Printf("Error %v", err)
 	}
-	fmt.Printf("%v\n", d)
 
 	var tasks map[string]demand.Task
 	tasks = make(map[string]demand.Task)
 	tasks["anything"] = task
 	d.CountAllTasks(tasks)
-
-	fmt.Println(tasks)
 }

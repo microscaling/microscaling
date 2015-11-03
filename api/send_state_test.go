@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -33,7 +32,6 @@ func TestSendState(t *testing.T) {
 
 	for _, test := range tests {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Println(r)
 			if r.URL.Path != test.expUrl {
 				t.Fatalf("Expected %s, have %s", test.expUrl, r.URL.Path)
 			}
@@ -51,12 +49,10 @@ func TestSendState(t *testing.T) {
 			}
 			payload := sendStatePayload{}
 			json.Unmarshal(data, &payload)
-			log.Println(payload)
 
 			if payload.MaxContainers != test.expMaxContainers {
 				t.Fatalf("Wrong max container count %d", payload.MaxContainers)
 			}
-			log.Println(payload.Priority1Running)
 			if payload.Priority1Running != test.expP1 {
 				t.Fatalf("Wrong P1 count %d", payload.Priority1Running)
 			}
@@ -68,5 +64,6 @@ func TestSendState(t *testing.T) {
 
 		baseF12APIUrl = server.URL
 		SendState("hello", tasks, test.expMaxContainers)
+		baseF12APIUrl = getBaseF12APIUrl()
 	}
 }
