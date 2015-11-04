@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,16 +18,18 @@ func TestSendState(t *testing.T) {
 	tasks["priority2"] = demand.Task{Demand: 2, Requested: 7, Running: 5}
 
 	tests := []struct {
-		expUrl           string
-		expMaxContainers int
-		expP1            int
-		expP2            int
+		expUrl   string
+		expP1    int
+		expP1Req int
+		expP2    int
+		expP2Req int
 	}{
 		{
-			expUrl:           "/metrics/hello",
-			expMaxContainers: 99,
-			expP1:            4,
-			expP2:            5,
+			expUrl:   "/metrics/hello",
+			expP1:    4,
+			expP1Req: 3,
+			expP2:    5,
+			expP2Req: 7,
 		},
 	}
 
@@ -47,23 +50,35 @@ func TestSendState(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to read post body. %v", err)
 			}
-			payload := sendStatePayload{}
+
+			payload := metricsPayload{}
 			json.Unmarshal(data, &payload)
 
-			if payload.MaxContainers != test.expMaxContainers {
-				t.Fatalf("Wrong max container count %d", payload.MaxContainers)
-			}
-			if payload.Priority1Running != test.expP1 {
-				t.Fatalf("Wrong P1 count %d", payload.Priority1Running)
-			}
-			if payload.Priority2Running != test.expP2 {
-				t.Fatalf("Wrong P2 count %d", payload.Priority2Running)
+			for key, value := range payload.Tasks {
+				log.Println(key, value)
+				if value.App == "priority1" {
+					if value.RunningCount != test.expP1 {
+						t.Fatalf("Bad running for %s expected %d got %d", key, test.expP1, value.RunningCount)
+					}
+					if value.PendingCount != test.expP1Req {
+						t.Fatalf("Bad pending for %s expected %d got %d", key, test.expP1Req, value.PendingCount)
+					}
+				} else if value.App == "priority2" {
+					if value.RunningCount != test.expP2 {
+						t.Fatalf("Bad running for %s expected %d got %d", key, test.expP2, value.RunningCount)
+					}
+					if value.PendingCount != test.expP2Req {
+						t.Fatalf("Bad pending for %s expected %d got %d", key, test.expP2Req, value.PendingCount)
+					}
+				} else {
+					t.Fatalf("Unexpected app name %s", value.App)
+				}
 			}
 		}))
 		defer server.Close()
 
 		baseF12APIUrl = server.URL
-		SendState("hello", tasks, test.expMaxContainers)
+		SendMetrics("hello", tasks)
 		baseF12APIUrl = GetBaseF12APIUrl()
 	}
 }

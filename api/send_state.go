@@ -12,41 +12,42 @@ import (
 	"github.com/force12io/force12/demand"
 )
 
-// TODO! Make this less specific to P1 & P2 model so it returns json structure for arbitrary set of tasks
-type sendStatePayload struct {
-	CreatedAt          int64 `json:"createdAt"`
-	Priority1Requested int   `json:"priority1Requested"`
-	Priority1Running   int   `json:"priority1Running"`
-	Priority2Running   int   `json:"priority2Running"`
-	MaxContainers      int   `json:"maxContainers"`
+type metricsPayload struct {
+	CreatedAt int64        `json:"createdAt"`
+	Tasks     []appMetrics `json:"tasks"`
 }
 
-// sendState sends the current state of tasks to the f12 API
-func SendState(userID string, tasks map[string]demand.Task, maxContainers int) error {
+type appMetrics struct {
+	App          string `json:"app"`
+	RunningCount int    `json:"runningCount"`
+	PendingCount int    `json: "pendingCount"`
+}
+
+// sendMetrics sends the current state of tasks to the F12 API
+func SendMetrics(userID string, tasks map[string]demand.Task) error {
 	var err error = nil
+	var index int = 0
 
-	// Submit a PUT request to the API
 	url := baseF12APIUrl + "/metrics/" + userID
-	log.Printf("API PUT: %s | p1 %d running, p2 %d running | p1 demand %d", url,
-		tasks["priority1"].Running, tasks["priority2"].Running, tasks["priority1"].Demand)
 
-	// TODO! Make this less specific to P1 & P2 model
-	payload := sendStatePayload{
-		CreatedAt:          time.Now().Unix(),
-		Priority1Requested: tasks["priority1"].Demand,
-		Priority1Running:   tasks["priority1"].Running,
-		Priority2Running:   tasks["priority2"].Running,
-		MaxContainers:      maxContainers,
+	payload := metricsPayload{
+		CreatedAt: time.Now().Unix(),
+		Tasks:     make([]appMetrics, len(tasks)),
 	}
 
-	w := &bytes.Buffer{}
-	encoder := json.NewEncoder(w)
-	err = encoder.Encode(&payload)
+	for name, task := range tasks {
+		payload.Tasks[index] = appMetrics{App: name, RunningCount: task.Running, PendingCount: task.Requested}
+		index++
+	}
+
+	// Submit a PUT request to the API
+	w, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("Failed to encode API json. %v", err)
 	}
 
-	req, err := http.NewRequest("PUT", url, w)
+	b := bytes.NewBuffer(w)
+	req, err := http.NewRequest("PUT", url, b)
 	if err != nil {
 		return fmt.Errorf("Failed to build API PUT request err %v", err)
 	}

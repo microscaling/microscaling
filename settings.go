@@ -19,7 +19,7 @@ import (
 type settings struct {
 	demandModelType string
 	schedulerType   string
-	sendstate       bool
+	sendMetrics     bool
 	userID          string
 	demandInterval  time.Duration
 	demandDelta     int
@@ -31,7 +31,7 @@ func get_settings() settings {
 	st.demandModelType = getEnvOrDefault("F12_DEMAND_MODEL", "RNG")
 	st.schedulerType = getEnvOrDefault("F12_SCHEDULER", "DOCKER")
 	st.userID = getEnvOrDefault("F12_USER_ID", "5k5gk")
-	st.sendstate = (getEnvOrDefault("F12_SEND_STATE_TO_API", "true") == "true")
+	st.sendMetrics = (getEnvOrDefault("F12_SEND_METRICS_TO_API", "true") == "true")
 	st.demandDelta, _ = strconv.Atoi(getEnvOrDefault("F12_DEMAND_DELTA", "3"))
 	st.maxContainers, _ = strconv.Atoi(getEnvOrDefault("F12_MAXIMUM_CONTAINERS", "9"))
 	demandIntervalMs, _ := strconv.Atoi(getEnvOrDefault("F12_DEMAND_CHANGE_INTERVAL_MS", "3000"))

@@ -40,8 +40,8 @@ import (
 	"github.com/force12io/force12/scheduler"
 )
 
-const const_sleep = 100           // milliseconds - delay before we check for demand. TODO! Make this driven by webhooks rather than simply a delay
-const const_sendstate_sleep = 500 // milliseconds - delay before we send state on the metrics API
+const const_sleep = 100             // milliseconds - delay before we check for demand. TODO! Make this driven by webhooks rather than simply a delay
+const const_sendMetrics_sleep = 500 // milliseconds - delay before we send state on the metrics API
 
 var tasks map[string]demand.Task
 
@@ -107,16 +107,16 @@ func main() {
 	lastDemandUpdate := time.Now()
 
 	// Periodically send state to the API if required
-	var sendstateTimeout *time.Ticker
-	if st.sendstate {
-		sendstateTimeout = time.NewTicker(const_sendstate_sleep * time.Millisecond)
+	var sendMetricsTimeout *time.Ticker
+	if st.sendMetrics {
+		sendMetricsTimeout = time.NewTicker(const_sendMetrics_sleep * time.Millisecond)
 	}
 
 	// Only allow one scaling command and one Send State API call to be outstanding at a time
 	ready := make(chan struct{}, 1)
-	ss_ready := make(chan struct{}, 1)
+	metrics_ready := make(chan struct{}, 1)
 	var scaling_ready bool = true
-	var sendState_ready bool = true
+	var sendMetrics_ready bool = true
 	var cleanup_when_ready bool = false
 	var exit_when_ready bool = false
 	var demandChanged bool = false
@@ -154,26 +154,26 @@ func main() {
 				}
 			}
 
-		case <-sendstateTimeout.C:
+		case <-sendMetricsTimeout.C:
 			// Find out how many instances of each task are running
 			err = s.CountAllTasks(tasks)
 			if err != nil {
 				log.Printf("Failed to count containers. %v", err)
 			}
 
-			if !sendState_ready {
-				log.Printf("Send state change still outstanding - can't send again yet!")
+			if !sendMetrics_ready {
+				log.Printf("Send metrics still outstanding - can't send again yet!")
 				// This isn't an error - we simply don't try to send another API call until the last response comes back
 			} else {
-				sendState_ready = false
+				sendMetrics_ready = false
 				go func() {
-					err = api.SendState(st.userID, tasks, st.maxContainers)
+					err = api.SendMetrics(st.userID, tasks)
 					if err != nil {
-						log.Printf("Failed to send state. %v", err)
+						log.Printf("Failed to send metrics. %v", err)
 					}
 
 					// Notify the channel when the API call has completed
-					ss_ready <- struct{}{}
+					metrics_ready <- struct{}{}
 				}()
 			}
 
@@ -194,9 +194,9 @@ func main() {
 				scaling_ready = true
 			}
 
-		case <-ss_ready:
+		case <-metrics_ready:
 			// An outstanding API call sending state has finished so we are OK to send another one
-			sendState_ready = true
+			sendMetrics_ready = true
 
 		case <-closedown:
 			cleanup_when_ready = true

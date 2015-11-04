@@ -66,7 +66,6 @@ func GetApps(userID string) (tasks map[string]demand.Task, err error) {
 		return nil, err
 	}
 
-	log.Println(string(body))
 	tasks, err = appsFromResponse(body)
 	return
 }
