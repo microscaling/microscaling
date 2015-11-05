@@ -53,10 +53,7 @@ func SendMetrics(userID string, tasks map[string]demand.Task) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	// issuedAt := time.Now()
-	resp, err := httpClient.Do(req)
-	// apiDuration := time.Since(issuedAt)
-	// log.Printf("API put took %v", apiDuration)
+	resp, err := timeHttpClientDo(req)
 
 	if err != nil {
 		if err.Error() == "EOF" {
