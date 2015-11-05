@@ -18,40 +18,44 @@ const f12_map string = "io.force12.microscaling-in-a-box"
 type DockerScheduler struct {
 	client     *docker.Client
 	hostConfig docker.HostConfig
+	pullImages bool
 	containers map[string][]string
 }
 
-func NewScheduler() *DockerScheduler {
+func NewScheduler(pullImages bool) *DockerScheduler {
 	client, err := docker.NewClient(os.Getenv("DOCKER_HOST"))
 	if err != nil {
 		log.Printf("Error starting Docker client: %v", err)
 		return nil
 	}
+
 	return &DockerScheduler{
 		client:     client,
 		containers: make(map[string][]string),
+		pullImages: pullImages,
 	}
 }
 
 // compile-time assert that we implement the right interface
 var _ scheduler.Scheduler = (*DockerScheduler)(nil)
 
-func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) error {
+func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err error) {
 	log.Printf("Docker initializing task %s", appId)
 
-	// TODO Size of this should be max containers
 	c.containers[appId] = make([]string, 100)
 
 	// We may need to pull the image for this container
-	pullOpts := docker.PullImageOptions{
-		Repository: task.Image,
-	}
+	if c.pullImages {
+		pullOpts := docker.PullImageOptions{
+			Repository: task.Image,
+		}
 
-	authOpts := docker.AuthConfiguration{}
+		authOpts := docker.AuthConfiguration{}
 
-	err := c.client.PullImage(pullOpts, authOpts)
-	if err != nil {
-		log.Printf("Failed to pull image %s: %v", task.Image, err)
+		err = c.client.PullImage(pullOpts, authOpts)
+		if err != nil {
+			log.Printf("Failed to pull image %s: %v", task.Image, err)
+		}
 	}
 
 	return err

@@ -24,6 +24,7 @@ type settings struct {
 	demandInterval  time.Duration
 	demandDelta     int
 	maxContainers   int
+	pullImages      bool
 }
 
 func get_settings() settings {
@@ -36,6 +37,7 @@ func get_settings() settings {
 	st.maxContainers, _ = strconv.Atoi(getEnvOrDefault("F12_MAXIMUM_CONTAINERS", "9"))
 	demandIntervalMs, _ := strconv.Atoi(getEnvOrDefault("F12_DEMAND_CHANGE_INTERVAL_MS", "3000"))
 	st.demandInterval = time.Duration(demandIntervalMs) * time.Millisecond
+	st.pullImages = (getEnvOrDefault("F12_PULL_IMAGES", "true") == "true")
 	return st
 }
 
@@ -68,7 +70,7 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 	switch st.schedulerType {
 	case "DOCKER":
 		log.Println("Scheduling with Docker remote API")
-		s = docker.NewScheduler()
+		s = docker.NewScheduler(st.pullImages)
 	case "ECS":
 		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #F12ECS if you'd like us to add this next!")
 	case "KUBERNETES":
