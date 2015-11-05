@@ -22,8 +22,11 @@ type DockerScheduler struct {
 }
 
 func NewScheduler() *DockerScheduler {
-	client, _ := docker.NewClient(os.Getenv("DOCKER_HOST"))
-
+	client, err := docker.NewClient(os.Getenv("DOCKER_HOST"))
+	if err != nil {
+		log.Printf("Error starting Docker client: %v", err)
+		return nil
+	}
 	return &DockerScheduler{
 		client:     client,
 		containers: make(map[string][]string),
@@ -38,7 +41,20 @@ func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) error {
 
 	// TODO Size of this should be max containers
 	c.containers[appId] = make([]string, 100)
-	return nil
+
+	// We may need to pull the image for this container
+	pullOpts := docker.PullImageOptions{
+		Repository: task.Image,
+	}
+
+	authOpts := docker.AuthConfiguration{}
+
+	err := c.client.PullImage(pullOpts, authOpts)
+	if err != nil {
+		log.Printf("Failed to pull image %s: %v", task.Image, err)
+	}
+
+	return err
 }
 
 // startTask creates the container and then starts it

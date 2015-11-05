@@ -79,6 +79,10 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 		return nil, fmt.Errorf("Bad value for F12_SCHEDULER: %s", st.schedulerType)
 	}
 
+	if s == nil {
+		return nil, fmt.Errorf("No scheduler")
+	}
+
 	return s, nil
 }
 
