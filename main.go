@@ -155,18 +155,15 @@ func main() {
 			}
 
 		case <-sendMetricsTimeout.C:
-			// Find out how many instances of each task are running
-			err = s.CountAllTasks(tasks)
-			if err != nil {
-				log.Printf("Failed to count containers. %v", err)
-			}
-
-			if !sendMetrics_ready {
-				log.Printf("Send metrics still outstanding - can't send again yet!")
-				// This isn't an error - we simply don't try to send another API call until the last response comes back
-			} else {
+			if sendMetrics_ready {
 				sendMetrics_ready = false
 				go func() {
+					// Find out how many instances of each task are running
+					err = s.CountAllTasks(tasks)
+					if err != nil {
+						log.Printf("Failed to count containers. %v", err)
+					}
+
 					err = api.SendMetrics(st.userID, tasks)
 					if err != nil {
 						log.Printf("Failed to send metrics. %v", err)
@@ -184,7 +181,7 @@ func main() {
 			}
 			// An outstanding scale command has finished so we are OK to send another one
 			if cleanup_when_ready {
-				log.Printf("Scale command finished - now we can start cleaning up")
+				log.Printf("Cleaning up")
 				exit_when_ready = true
 				go func() {
 					cleanup(s, tasks)
@@ -199,14 +196,11 @@ func main() {
 			sendMetrics_ready = true
 
 		case <-closedown:
+			log.Printf("Clean up when ready")
 			cleanup_when_ready = true
-
 			if scaling_ready {
 				// Trigger it now
-				log.Printf("Closing down - start cleanup")
 				ready <- struct{}{}
-			} else {
-				log.Printf("Closing down - wait till we've completed the previous scale command")
 			}
 		}
 	}
