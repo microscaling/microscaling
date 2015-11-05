@@ -28,7 +28,7 @@ type settings struct {
 
 func get_settings() settings {
 	var st settings
-	st.demandModelType = getEnvOrDefault("F12_DEMAND_MODEL", "RNG")
+	st.demandModelType = getEnvOrDefault("F12_DEMAND_MODEL", "API")
 	st.schedulerType = getEnvOrDefault("F12_SCHEDULER", "DOCKER")
 	st.userID = getEnvOrDefault("F12_USER_ID", "5k5gk")
 	st.sendMetrics = (getEnvOrDefault("F12_SEND_METRICS_TO_API", "true") == "true")
@@ -46,12 +46,17 @@ func get_demand_input(st settings) (demand.Input, error) {
 	case "CONSUL":
 		return nil, fmt.Errorf("Demand metric from Consul not yet supported")
 	case "RNG":
-		log.Println("Random demand generation")
+		log.Println("Local random demand generation")
 		di = rng.NewDemandModel(st.demandDelta, st.maxContainers)
 	case "API":
+		log.Println("Demand from the API")
 		di = demandapi.NewDemandModel(st.userID)
 	default:
 		return nil, fmt.Errorf("Bad value for F12_DEMAND_MODEL: %s", st.demandModelType)
+	}
+
+	if di == nil {
+		return nil, fmt.Errorf("No demand input")
 	}
 
 	return di, nil
