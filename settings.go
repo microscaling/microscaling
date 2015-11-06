@@ -7,7 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/force12io/force12/api"
 	"github.com/force12io/force12/demand"
+	"github.com/force12io/force12/demandapi"
 	"github.com/force12io/force12/docker"
 	"github.com/force12io/force12/rng"
 	"github.com/force12io/force12/scheduler"
@@ -17,23 +19,25 @@ import (
 type settings struct {
 	demandModelType string
 	schedulerType   string
-	sendstate       bool
+	sendMetrics     bool
 	userID          string
 	demandInterval  time.Duration
 	demandDelta     int
 	maxContainers   int
+	pullImages      bool
 }
 
 func get_settings() settings {
 	var st settings
-	st.demandModelType = getEnvOrDefault("F12_DEMAND_MODEL", "RNG")
+	st.demandModelType = getEnvOrDefault("F12_DEMAND_MODEL", "API")
 	st.schedulerType = getEnvOrDefault("F12_SCHEDULER", "DOCKER")
 	st.userID = getEnvOrDefault("F12_USER_ID", "5k5gk")
-	st.sendstate = (getEnvOrDefault("F12_SEND_STATE_TO_API", "true") == "true")
+	st.sendMetrics = (getEnvOrDefault("F12_SEND_METRICS_TO_API", "true") == "true")
 	st.demandDelta, _ = strconv.Atoi(getEnvOrDefault("F12_DEMAND_DELTA", "3"))
 	st.maxContainers, _ = strconv.Atoi(getEnvOrDefault("F12_MAXIMUM_CONTAINERS", "9"))
 	demandIntervalMs, _ := strconv.Atoi(getEnvOrDefault("F12_DEMAND_CHANGE_INTERVAL_MS", "3000"))
 	st.demandInterval = time.Duration(demandIntervalMs) * time.Millisecond
+	st.pullImages = (getEnvOrDefault("F12_PULL_IMAGES", "true") == "true")
 	return st
 }
 
@@ -44,10 +48,18 @@ func get_demand_input(st settings) (demand.Input, error) {
 	case "CONSUL":
 		return nil, fmt.Errorf("Demand metric from Consul not yet supported")
 	case "RNG":
-		log.Println("Random demand generation")
+		log.Println("Local random demand generation")
 		di = rng.NewDemandModel(st.demandDelta, st.maxContainers)
+		log.Printf("Vary tasks with delta %d up to max %d containers", st.demandDelta, st.maxContainers)
+	case "API":
+		log.Println("Demand from the API")
+		di = demandapi.NewDemandModel(st.userID)
 	default:
 		return nil, fmt.Errorf("Bad value for F12_DEMAND_MODEL: %s", st.demandModelType)
+	}
+
+	if di == nil {
+		return nil, fmt.Errorf("No demand input")
 	}
 
 	return di, nil
@@ -59,7 +71,7 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 	switch st.schedulerType {
 	case "DOCKER":
 		log.Println("Scheduling with Docker remote API")
-		s = docker.NewScheduler()
+		s = docker.NewScheduler(st.pullImages)
 	case "ECS":
 		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #F12ECS if you'd like us to add this next!")
 	case "KUBERNETES":
@@ -75,35 +87,23 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 		return nil, fmt.Errorf("Bad value for F12_SCHEDULER: %s", st.schedulerType)
 	}
 
+	if s == nil {
+		return nil, fmt.Errorf("No scheduler")
+	}
+
 	return s, nil
 }
 
 func get_tasks(st settings) map[string]demand.Task {
 	var t map[string]demand.Task
 
-	p1TaskName = getEnvOrDefault("F12_PRIORITY1_TASK", p1TaskName)
-	p2TaskName = getEnvOrDefault("F12_PRIORITY2_TASK", p2TaskName)
-	p1FamilyName = getEnvOrDefault("F12_PRIORITY1_FAMILY", p1FamilyName)
-	p2FamilyName = getEnvOrDefault("F12_PRIORITY2_FAMILY", p2FamilyName)
-	p1Image = getEnvOrDefault("F12_PRIORITY1_IMAGE", p1Image)
-	p2Image = getEnvOrDefault("F12_PRIORITY2_IMAGE", p2Image)
-
-	t = make(map[string]demand.Task)
-
-	t[p1TaskName] = demand.Task{
-		FamilyName: p1FamilyName,
-		Demand:     st.maxContainers / 2,
-		Requested:  0,
-		Image:      p1Image,
+	// Get the tasks that have been configured by this user
+	t, err := api.GetApps(st.userID)
+	if err != nil {
+		log.Printf("Error getting tasks: %v", err)
 	}
 
-	t[p2TaskName] = demand.Task{
-		FamilyName: p2FamilyName,
-		Demand:     st.maxContainers - (st.maxContainers / 2),
-		Requested:  0,
-		Image:      p2Image,
-	}
-
+	log.Println(t)
 	return t
 }
 

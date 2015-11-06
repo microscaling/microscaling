@@ -10,8 +10,7 @@ type Scheduler interface {
 	InitScheduler(appId string, task *demand.Task) error
 
 	// StopStartTasks changes the count of containers to match task.Demand
-	// Must notify the ready channel when the tasks are complete
-	StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) error
+	StopStartTasks(tasks map[string]demand.Task) error
 
 	// CountAllTasks updates task.Running to tell us how many instances of each task are currently running
 	CountAllTasks(tasks map[string]demand.Task) error

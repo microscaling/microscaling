@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/force12io/force12/demand"
 	"github.com/force12io/force12/scheduler"
@@ -17,27 +18,48 @@ const f12_map string = "io.force12.microscaling-in-a-box"
 type DockerScheduler struct {
 	client     *docker.Client
 	hostConfig docker.HostConfig
+	pullImages bool
 	containers map[string][]string
 }
 
-func NewScheduler() *DockerScheduler {
-	client, _ := docker.NewClient(os.Getenv("DOCKER_HOST"))
+func NewScheduler(pullImages bool) *DockerScheduler {
+	client, err := docker.NewClient(os.Getenv("DOCKER_HOST"))
+	if err != nil {
+		log.Printf("Error starting Docker client: %v", err)
+		return nil
+	}
 
 	return &DockerScheduler{
 		client:     client,
 		containers: make(map[string][]string),
+		pullImages: pullImages,
 	}
 }
 
 // compile-time assert that we implement the right interface
 var _ scheduler.Scheduler = (*DockerScheduler)(nil)
 
-func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) error {
+func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err error) {
 	log.Printf("Docker initializing task %s", appId)
 
-	// TODO Size of this should be max containers
 	c.containers[appId] = make([]string, 100)
-	return nil
+
+	// We may need to pull the image for this container
+	if c.pullImages {
+		pullOpts := docker.PullImageOptions{
+			Repository: task.Image,
+		}
+
+		authOpts := docker.AuthConfiguration{}
+
+		log.Printf("Pulling image: %v", task.Image)
+		err = c.client.PullImage(pullOpts, authOpts)
+		if err != nil {
+			log.Printf("Failed to pull image %s: %v", task.Image, err)
+		}
+	}
+
+	return err
 }
 
 // startTask creates the container and then starts it
@@ -47,9 +69,12 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 		f12_map: name,
 	}
 
+	var cmds []string = strings.Fields(task.Command)
+
 	createOpts := docker.CreateContainerOptions{
 		Config: &docker.Config{
 			Image:        task.Image,
+			Cmd:          cmds,
 			AttachStdout: true,
 			AttachStdin:  true,
 			Labels:       labels,
@@ -62,7 +87,7 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 	}
 
 	c.containers[name] = append(c.containers[name], container.ID[:12])
-	log.Printf("Created task %s with image %s, ID %s", name, task.Image, container.ID)
+	log.Printf("Created task %s with image %s, ID %s", name, task.Image, container.ID[:12])
 
 	// Start it
 	err = c.client.StartContainer(container.ID, &c.hostConfig)
@@ -93,7 +118,7 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 	return err
 }
 
-func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task, ready chan struct{}) error {
+func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 	// Create containers if there aren't enough of them, and stop them if there are too many
 	var too_many []string
 	var too_few []string
@@ -113,41 +138,35 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task, ready cha
 		}
 	}
 
-	go func() {
-
-		// Scale down first to free up resources
-		for _, name := range too_many {
-			task := tasks[name]
-			diff = task.Requested - task.Demand
-			log.Printf("Stop %d of task %s", diff, name)
-			for i := 0; i < diff; i++ {
-				err = c.stopTask(name, &task)
-				if err != nil {
-					log.Printf("Couldn't stop %s: %v ", name, err)
-				}
-				task.Requested -= 1
+	// Scale down first to free up resources
+	for _, name := range too_many {
+		task := tasks[name]
+		diff = task.Requested - task.Demand
+		log.Printf("Stop %d of task %s", diff, name)
+		for i := 0; i < diff; i++ {
+			err = c.stopTask(name, &task)
+			if err != nil {
+				log.Printf("Couldn't stop %s: %v ", name, err)
 			}
-			tasks[name] = task
+			task.Requested -= 1
 		}
+		tasks[name] = task
+	}
 
-		// Now we can scale up
-		for _, name := range too_few {
-			task := tasks[name]
-			diff = task.Demand - task.Requested
-			log.Printf("Start %d of task %s", diff, name)
-			for i := 0; i < diff; i++ {
-				err = c.startTask(name, &task)
-				if err != nil {
-					log.Printf("Couldn't start %s: %v ", name, err)
-				}
-				task.Requested += 1
+	// Now we can scale up
+	for _, name := range too_few {
+		task := tasks[name]
+		diff = task.Demand - task.Requested
+		log.Printf("Start %d of task %s", diff, name)
+		for i := 0; i < diff; i++ {
+			err = c.startTask(name, &task)
+			if err != nil {
+				log.Printf("Couldn't start %s: %v ", name, err)
 			}
-			tasks[name] = task
+			task.Requested += 1
 		}
-
-		// Notify the channel when the scaling command has completed
-		ready <- struct{}{}
-	}()
+		tasks[name] = task
+	}
 
 	return err
 }

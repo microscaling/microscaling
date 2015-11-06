@@ -27,7 +27,7 @@ func TestDemandUpdate(t *testing.T) {
 
 	di := rng.NewDemandModel(4, 10)
 
-	demandchange, _ = update(di, tasks)
+	demandchange, _ = di.Update(tasks)
 	if !demandchange {
 		// Note this test relies on us not seeding random numbers. Not very nice but OK for our purposes.
 		t.Fatalf("Expected demand to have changed but it didn't")
@@ -48,21 +48,11 @@ func TestHandleDemandChange(t *testing.T) {
 		Requested:  0,
 	}
 
-	// We might see our own task when we look at Docker, we shouldn't be scaling it!
-	tasks["force12"] = demand.Task{
-		FamilyName: "force12",
-		Demand:     1,
-		Requested:  1,
-	}
-
 	di := rng.NewDemandModel(3, 9)
 	s := toy_scheduler.NewScheduler()
 
-	ready := make(chan struct{}, 1)
-
 	for i := 0; i < 5; i++ {
-		err := handleDemandChange(di, s, ready, tasks)
-		<-ready
+		_, err := handleDemandChange(di, s, tasks)
 		if err != nil {
 			t.Fatalf("handleDemandChange failed")
 		}

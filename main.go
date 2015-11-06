@@ -40,20 +40,13 @@ import (
 	"github.com/force12io/force12/scheduler"
 )
 
-const const_sleep = 100           // milliseconds - delay before we check for demand. TODO! Make this driven by webhooks rather than simply a delay
-const const_sendstate_sleep = 500 // milliseconds - delay before we send state on the metrics API
-
-var p1TaskName string = "priority1"
-var p2TaskName string = "priority2"
-var p1FamilyName string = "p1-family"
-var p2FamilyName string = "p2-family"
-var p1Image string = "force12io/priority-1:latest"
-var p2Image string = "force12io/priority-2:latest"
+const const_sleep = 100             // milliseconds - delay before we check for demand. TODO! Make this driven by webhooks rather than simply a delay
+const const_sendMetrics_sleep = 500 // milliseconds - delay before we send state on the metrics API
 
 var tasks map[string]demand.Task
 
 // cleanup resets demand for all tasks to 0 before we quit
-func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task, ready chan struct{}) {
+func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
 	var err error
 
 	for name, task := range tasks {
@@ -62,7 +55,7 @@ func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task, ready chan str
 	}
 
 	log.Printf("Reset tasks to 0 for cleanup")
-	err = s.StopStartTasks(tasks, ready)
+	err = s.StopStartTasks(tasks)
 	if err != nil {
 		log.Printf("Failed to cleanup tasks. %v", err)
 	}
@@ -86,7 +79,6 @@ func main() {
 	}
 
 	tasks := get_tasks(st)
-	log.Printf("Vary tasks with delta %d up to max %d containers every %d s", st.demandDelta, st.maxContainers, int(st.demandInterval.Seconds()))
 
 	// Let the scheduler know about the task types. For the moment the actual container information is hard-coded
 	for name, task := range tasks {
@@ -114,16 +106,19 @@ func main() {
 	lastDemandUpdate := time.Now()
 
 	// Periodically send state to the API if required
-	var sendstateTimeout *time.Ticker
-	if st.sendstate {
-		sendstateTimeout = time.NewTicker(const_sendstate_sleep * time.Millisecond)
+	var sendMetricsTimeout *time.Ticker
+	if st.sendMetrics {
+		sendMetricsTimeout = time.NewTicker(const_sendMetrics_sleep * time.Millisecond)
 	}
 
-	// Only allow one scaling command to be outstanding at a time
+	// Only allow one scaling command and one Send State API call to be outstanding at a time
 	ready := make(chan struct{}, 1)
+	metrics_ready := make(chan struct{}, 1)
 	var scaling_ready bool = true
+	var sendMetrics_ready bool = true
 	var cleanup_when_ready bool = false
 	var exit_when_ready bool = false
+	var demandChanged bool = false
 
 	// Loop, continually checking for changes in demand that need to be scheduled
 	// At the moment we plough on regardless in the face of errors, simply logging them out
@@ -139,54 +134,72 @@ func main() {
 			// We check for changes in demand more often because we want to react quickly if there hasn't been a recent change
 			if time.Since(lastDemandUpdate) > st.demandInterval {
 				// If we already have a scaling change outstanding, we can't do another one
-				if !scaling_ready {
-					log.Printf("Scale change still outstanding - demand changes coming too fast to handle!")
-					// This isn't an error - we simply don't try to update scale until the scheduler is ready
-				} else {
+				// We also don't count as ready if we're still checking the API for demand changes
+				if scaling_ready {
 					scaling_ready = false
-					err = handleDemandChange(di, s, ready, tasks)
-					if err != nil {
-						log.Printf("Failed to handle demand change. %v", err)
-						scaling_ready = true
-					}
-					lastDemandUpdate = time.Now()
+					go func() {
+						demandChanged, err = handleDemandChange(di, s, tasks)
+						if err != nil {
+							log.Printf("Failed to handle demand change. %v", err)
+						}
+
+						if demandChanged {
+							lastDemandUpdate = time.Now()
+						}
+
+						// Notify the channel when the scaling command has completed
+						ready <- struct{}{}
+					}()
 				}
 			}
 
-		case <-sendstateTimeout.C:
-			// Find out how many isntances of each task are running
-			err = s.CountAllTasks(tasks)
-			if err != nil {
-				log.Printf("Failed to count containers. %v", err)
-			}
+		case <-sendMetricsTimeout.C:
+			if sendMetrics_ready {
+				sendMetrics_ready = false
+				go func() {
+					// Find out how many instances of each task are running
+					err = s.CountAllTasks(tasks)
+					if err != nil {
+						log.Printf("Failed to count containers. %v", err)
+					}
 
-			err = api.SendState(st.userID, tasks, st.maxContainers)
-			if err != nil {
-				log.Printf("Failed to send state. %v", err)
+					err = api.SendMetrics(st.userID, tasks)
+					if err != nil {
+						log.Printf("Failed to send metrics. %v", err)
+					}
+
+					// Notify the channel when the API call has completed
+					metrics_ready <- struct{}{}
+				}()
 			}
 
 		case <-ready:
-			// An outstanding scale command has finished so we are OK to send another one
-			scaling_ready = true
-
 			if exit_when_ready {
+				log.Printf("All finished")
 				os.Exit(1)
 			}
-
+			// An outstanding scale command has finished so we are OK to send another one
 			if cleanup_when_ready {
+				log.Printf("Cleaning up")
 				exit_when_ready = true
-				// cleanup_when_ready = false
-				cleanup(s, tasks, ready)
+				go func() {
+					cleanup(s, tasks)
+					ready <- struct{}{}
+				}()
+			} else {
+				scaling_ready = true
 			}
 
+		case <-metrics_ready:
+			// An outstanding API call sending state has finished so we are OK to send another one
+			sendMetrics_ready = true
+
 		case <-closedown:
-			if !scaling_ready {
-				log.Printf("Closing down - wait till we've completed the previous scale command")
-				cleanup_when_ready = true
-			} else {
-				log.Printf("Closing down - start cleanup")
-				exit_when_ready = true
-				cleanup(s, tasks, ready)
+			log.Printf("Clean up when ready")
+			cleanup_when_ready = true
+			if scaling_ready {
+				// Trigger it now
+				ready <- struct{}{}
 			}
 		}
 	}
