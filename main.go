@@ -40,7 +40,6 @@ import (
 	"github.com/force12io/force12/scheduler"
 )
 
-const const_sleep = 100             // milliseconds - delay before we check for demand. TODO! Make this driven by webhooks rather than simply a delay
 const const_sendMetrics_sleep = 500 // milliseconds - delay before we send state on the metrics API
 
 var tasks map[string]demand.Task
@@ -66,11 +65,6 @@ func main() {
 	var err error
 
 	st := get_settings()
-	di, err := get_demand_input(st)
-	if err != nil {
-		log.Printf("Failed to get demand input: %v", err)
-		return
-	}
 
 	s, err := get_scheduler(st)
 	if err != nil {
@@ -80,7 +74,7 @@ func main() {
 
 	tasks := get_tasks(st)
 
-	// Let the scheduler know about the task types. For the moment the actual container information is hard-coded
+	// Let the scheduler know about the task types.
 	for name, task := range tasks {
 		err = s.InitScheduler(name, &task)
 		if err != nil {
@@ -88,8 +82,6 @@ func main() {
 			return
 		}
 	}
-
-	ws, err := api.InitWebSocket()
 
 	// Check if there are already any of these containers running
 	err = s.CountAllTasks(tasks)
@@ -102,10 +94,10 @@ func main() {
 	signal.Notify(closedown, os.Interrupt)
 	signal.Notify(closedown, syscall.SIGTERM)
 
-	// Periodically check for changes in demand
-	// TODO: In future demand changes should come in through a channel rather than on a timer
-	timeout := time.NewTicker(const_sleep * time.Millisecond)
-	lastDemandUpdate := time.Now()
+	// Listen for demand on a websocket (we'll also use this to send metrics)
+	demandUpdate := make(chan []api.TaskDemand, 1)
+	ws, err := api.InitWebSocket()
+	go api.Listen(ws, demandUpdate)
 
 	// Periodically send state to the API if required
 	var sendMetricsTimeout *time.Ticker
@@ -113,46 +105,38 @@ func main() {
 		sendMetricsTimeout = time.NewTicker(const_sendMetrics_sleep * time.Millisecond)
 	}
 
-	// Only allow one scaling command and one Send State API call to be outstanding at a time
+	// Only allow one scaling command and one metrics send to be outstanding at a time
 	ready := make(chan struct{}, 1)
 	metrics_ready := make(chan struct{}, 1)
 	var scaling_ready bool = true
 	var sendMetrics_ready bool = true
 	var cleanup_when_ready bool = false
 	var exit_when_ready bool = false
-	var demandChanged bool = false
 
 	// Loop, continually checking for changes in demand that need to be scheduled
 	// At the moment we plough on regardless in the face of errors, simply logging them out
 	for {
 		select {
-		case <-timeout.C:
+		case td := <-demandUpdate:
 			// Don't do anything if we're about to exit
 			if cleanup_when_ready || exit_when_ready {
 				break
 			}
 
-			// Don't change demand more often than defined by demandInterval
-			// We check for changes in demand more often because we want to react quickly if there hasn't been a recent change
-			if time.Since(lastDemandUpdate) > st.demandInterval {
-				// If we already have a scaling change outstanding, we can't do another one
-				// We also don't count as ready if we're still checking the API for demand changes
-				if scaling_ready {
-					scaling_ready = false
-					go func() {
-						demandChanged, err = handleDemandChange(di, s, tasks)
-						if err != nil {
-							log.Printf("Failed to handle demand change. %v", err)
-						}
+			// If we already have a scaling change outstanding, we can't do another one
+			if scaling_ready {
+				scaling_ready = false
+				go func() {
+					err = handleDemandChange(td, s, tasks)
+					if err != nil {
+						log.Printf("Failed to handle demand change. %v", err)
+					}
 
-						if demandChanged {
-							lastDemandUpdate = time.Now()
-						}
-
-						// Notify the channel when the scaling command has completed
-						ready <- struct{}{}
-					}()
-				}
+					// Notify the channel when the scaling command has completed
+					ready <- struct{}{}
+				}()
+			} else {
+				log.Println("Scale still outstanding")
 			}
 
 		case <-sendMetricsTimeout.C:
@@ -180,6 +164,7 @@ func main() {
 				log.Printf("All finished")
 				os.Exit(1)
 			}
+
 			// An outstanding scale command has finished so we are OK to send another one
 			if cleanup_when_ready {
 				log.Printf("Cleaning up")
@@ -193,7 +178,7 @@ func main() {
 			}
 
 		case <-metrics_ready:
-			// An outstanding API call sending state has finished so we are OK to send another one
+			// Finished sending metrics so we are OK to send another one
 			sendMetrics_ready = true
 
 		case <-closedown:
