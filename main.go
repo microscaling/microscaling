@@ -79,7 +79,6 @@ func main() {
 	}
 
 	tasks := get_tasks(st)
-	log.Printf("Vary tasks with delta %d up to max %d containers every %d s", st.demandDelta, st.maxContainers, int(st.demandInterval.Seconds()))
 
 	// Let the scheduler know about the task types. For the moment the actual container information is hard-coded
 	for name, task := range tasks {

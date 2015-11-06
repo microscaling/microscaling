@@ -52,6 +52,7 @@ func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err er
 
 		authOpts := docker.AuthConfiguration{}
 
+		log.Printf("Pulling image: %v", task.Image)
 		err = c.client.PullImage(pullOpts, authOpts)
 		if err != nil {
 			log.Printf("Failed to pull image %s: %v", task.Image, err)
@@ -86,7 +87,7 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 	}
 
 	c.containers[name] = append(c.containers[name], container.ID[:12])
-	log.Printf("Created task %s with image %s, ID %s", name, task.Image, container.ID)
+	log.Printf("Created task %s with image %s, ID %s", name, task.Image, container.ID[:12])
 
 	// Start it
 	err = c.client.StartContainer(container.ID, &c.hostConfig)

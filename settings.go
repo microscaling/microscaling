@@ -50,6 +50,7 @@ func get_demand_input(st settings) (demand.Input, error) {
 	case "RNG":
 		log.Println("Local random demand generation")
 		di = rng.NewDemandModel(st.demandDelta, st.maxContainers)
+		log.Printf("Vary tasks with delta %d up to max %d containers", st.demandDelta, st.maxContainers)
 	case "API":
 		log.Println("Demand from the API")
 		di = demandapi.NewDemandModel(st.userID)
