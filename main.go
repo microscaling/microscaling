@@ -89,6 +89,8 @@ func main() {
 		}
 	}
 
+	ws, err := api.InitWebSocket()
+
 	// Check if there are already any of these containers running
 	err = s.CountAllTasks(tasks)
 	if err != nil {
@@ -163,7 +165,7 @@ func main() {
 						log.Printf("Failed to count containers. %v", err)
 					}
 
-					err = api.SendMetrics(st.userID, tasks)
+					err = api.SendMetrics(ws, st.userID, tasks)
 					if err != nil {
 						log.Printf("Failed to send metrics. %v", err)
 					}

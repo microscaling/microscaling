@@ -2,17 +2,19 @@
 package api
 
 import (
-	"bytes"
+	// "bytes"
 	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
+	// "log"
+	// "net/http"
 	"time"
 
 	"github.com/force12io/force12/demand"
+	"golang.org/x/net/websocket"
 )
 
 type metricsPayload struct {
+	User      string       `json:"user"`
 	CreatedAt int64        `json:"createdAt"`
 	Tasks     []appMetrics `json:"tasks"`
 }
@@ -24,13 +26,14 @@ type appMetrics struct {
 }
 
 // sendMetrics sends the current state of tasks to the F12 API
-func SendMetrics(userID string, tasks map[string]demand.Task) error {
+func SendMetrics(ws *websocket.Conn, userID string, tasks map[string]demand.Task) error {
 	var err error = nil
 	var index int = 0
 
-	url := baseF12APIUrl + "/metrics/" + userID
+	// url := baseF12APIUrl + "/metrics/" + userID
 
 	payload := metricsPayload{
+		User:      userID,
 		CreatedAt: time.Now().Unix(),
 		Tasks:     make([]appMetrics, len(tasks)),
 	}
@@ -40,38 +43,15 @@ func SendMetrics(userID string, tasks map[string]demand.Task) error {
 		index++
 	}
 
-	// Submit a PUT request to the API
-	w, err := json.Marshal(payload)
+	b, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("Failed to encode API json. %v", err)
 	}
 
-	b := bytes.NewBuffer(w)
-	req, err := http.NewRequest("PUT", url, b)
+	_, err = ws.Write(b)
 	if err != nil {
-		return fmt.Errorf("Failed to build API PUT request err %v", err)
+		return fmt.Errorf("Failed to send metrics: %v", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := timeHttpClientDo(req)
-
-	if err != nil {
-		if err.Error() == "EOF" {
-			// See http://stackoverflow.com/questions/17714494/golang-http-request-results-in-eof-errors-when-making-multiple-requests-successi
-			// We will silently ignore this EOF issue for now
-			log.Printf("Ignoring EOF")
-			return nil
-		}
-		return fmt.Errorf("API send state error %v", err)
-	}
-
-	if resp == nil || resp.Body == nil {
-		log.Printf("Http response is unexpectedly nil")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode > 204 {
-		return fmt.Errorf("error response from API. %s", resp.Status)
-	}
 	return err
 }
