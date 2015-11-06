@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/force12io/force12/api/apitest"
@@ -76,7 +77,7 @@ func TestGetTasks(t *testing.T) {
 		server := apitest.DoTestGetJson(t, test.expUrl, test.success, test.json)
 		defer server.Close()
 
-		baseF12APIUrl = server.URL
+		baseF12APIUrl = strings.Replace(server.URL, "http://", "", 1)
 		td, err := GetTasks("hello")
 		baseF12APIUrl = GetBaseF12APIUrl()
 

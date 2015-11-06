@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/force12io/force12/api/apitest"
@@ -89,7 +90,7 @@ func TestGetApps(t *testing.T) {
 
 		defer server.Close()
 
-		baseF12APIUrl = server.URL
+		baseF12APIUrl = strings.Replace(server.URL, "http://", "", 1)
 		returned_tasks, err := GetApps("hello")
 		baseF12APIUrl = GetBaseF12APIUrl()
 

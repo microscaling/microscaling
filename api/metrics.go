@@ -2,11 +2,8 @@
 package api
 
 import (
-	// "bytes"
 	"encoding/json"
 	"fmt"
-	// "log"
-	// "net/http"
 	"time"
 
 	"github.com/force12io/force12/demand"
@@ -14,15 +11,19 @@ import (
 )
 
 type metricsPayload struct {
-	User      string       `json:"user"`
-	CreatedAt int64        `json:"createdAt"`
-	Tasks     []appMetrics `json:"tasks"`
+	User    string  `json:"user"`
+	Metrics metrics `json:"metrics"`
 }
 
-type appMetrics struct {
+type metrics struct {
+	Tasks     []taskMetrics `json:"tasks"`
+	CreatedAt int64         `json:"createdAt"`
+}
+
+type taskMetrics struct {
 	App          string `json:"app"`
 	RunningCount int    `json:"runningCount"`
-	PendingCount int    `json: "pendingCount"`
+	PendingCount int    `json:"pendingCount"`
 }
 
 // sendMetrics sends the current state of tasks to the F12 API
@@ -30,17 +31,19 @@ func SendMetrics(ws *websocket.Conn, userID string, tasks map[string]demand.Task
 	var err error = nil
 	var index int = 0
 
-	// url := baseF12APIUrl + "/metrics/" + userID
-
-	payload := metricsPayload{
-		User:      userID,
+	metrics := metrics{
+		Tasks:     make([]taskMetrics, len(tasks)),
 		CreatedAt: time.Now().Unix(),
-		Tasks:     make([]appMetrics, len(tasks)),
 	}
 
 	for name, task := range tasks {
-		payload.Tasks[index] = appMetrics{App: name, RunningCount: task.Running, PendingCount: task.Requested}
+		metrics.Tasks[index] = taskMetrics{App: name, RunningCount: task.Running, PendingCount: task.Requested}
 		index++
+	}
+
+	payload := metricsPayload{
+		User:    userID,
+		Metrics: metrics,
 	}
 
 	b, err := json.Marshal(payload)
