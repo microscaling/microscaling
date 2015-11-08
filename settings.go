@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/force12io/force12/api"
 	"github.com/force12io/force12/demand"

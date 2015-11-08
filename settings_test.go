@@ -1,11 +1,11 @@
 package main
 
 import (
-	"log"
+	// "log"
 	"os"
-	"strconv"
+	// "strconv"
 	"testing"
-	"time"
+	// "time"
 )
 
 func TestSettings(t *testing.T) {
