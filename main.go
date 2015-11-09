@@ -141,6 +141,7 @@ func main() {
 
 		case <-sendMetricsTimeout.C:
 			if sendMetrics_ready {
+				log.Println("Sending metrics")
 				sendMetrics_ready = false
 				go func() {
 					// Find out how many instances of each task are running
@@ -157,6 +158,8 @@ func main() {
 					// Notify the channel when the API call has completed
 					metrics_ready <- struct{}{}
 				}()
+			} else {
+				log.Println("Not ready to send metrics")
 			}
 
 		case <-ready:
