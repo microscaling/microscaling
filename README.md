@@ -28,7 +28,6 @@ We've got lots of ideas for improvements - here are a few headlines:
 - We're planning to add support for a number of different schedulers. If there's one you'd particularly like to see us support, please let us know.
 - We can improve performance by parallelizing requests to the Docker remote API.
 - In this demo we simply randomize demand, but we'll add support for real-work demand models.
-- The state API is currently hard-coded to our demo priority1 & priority2 tasks. We'll make it much more generic to support any task more complex scenarios.
 
 ## Contact Us
 
