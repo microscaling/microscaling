@@ -4,7 +4,6 @@ package docker
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/force12io/force12/demand"
@@ -22,8 +21,8 @@ type DockerScheduler struct {
 	containers map[string][]string
 }
 
-func NewScheduler(pullImages bool) *DockerScheduler {
-	client, err := docker.NewClient(os.Getenv("DOCKER_HOST"))
+func NewScheduler(pullImages bool, dockerHost string) *DockerScheduler {
+	client, err := docker.NewClient(dockerHost)
 	if err != nil {
 		log.Printf("Error starting Docker client: %v", err)
 		return nil

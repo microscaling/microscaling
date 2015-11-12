@@ -17,6 +17,7 @@ type settings struct {
 	sendMetrics   bool
 	userID        string
 	pullImages    bool
+	dockerHost    string
 }
 
 func get_settings() settings {
@@ -25,6 +26,7 @@ func get_settings() settings {
 	st.userID = getEnvOrDefault("F12_USER_ID", "5k5gk")
 	st.sendMetrics = (getEnvOrDefault("F12_SEND_METRICS_TO_API", "true") == "true")
 	st.pullImages = (getEnvOrDefault("F12_PULL_IMAGES", "true") == "true")
+	st.dockerHost = getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
 	return st
 }
 
@@ -34,7 +36,7 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 	switch st.schedulerType {
 	case "DOCKER":
 		log.Println("Scheduling with Docker remote API")
-		s = docker.NewScheduler(st.pullImages)
+		s = docker.NewScheduler(st.pullImages, st.dockerHost)
 	case "ECS":
 		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #F12ECS if you'd like us to add this next!")
 	case "KUBERNETES":

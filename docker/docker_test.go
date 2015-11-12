@@ -26,7 +26,7 @@ func TestDockerInitScheduler(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		d := NewScheduler(test.pullImages)
+		d := NewScheduler(test.pullImages, "unix:///var/run/docker.sock")
 		log.Printf("Should I pull images? %v", test.pullImages)
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Received something %v", r)
@@ -51,7 +51,7 @@ func TestDockerInitScheduler(t *testing.T) {
 }
 
 func TestDockerScheduler(t *testing.T) {
-	d := NewScheduler(true)
+	d := NewScheduler(true, "unix:///var/run/docker.sock")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}))
 
