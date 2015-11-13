@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"golang.org/x/net/websocket"
 )
 
 func GetBaseF12APIUrl() string {
 	baseUrl := os.Getenv("F12_API_ADDRESS")
 	if baseUrl == "" {
-		baseUrl = "http://app.force12.io"
+		baseUrl = "app.force12.io"
 	}
 
 	log.Printf("Sending results to %s", baseUrl)
@@ -32,7 +34,7 @@ var httpClient *http.Client = &http.Client{
 var debugTimeHttpClient bool = (os.Getenv("F12_TIME_HTTP_CLIENT") == "true")
 
 func getJsonGet(userID string, endpoint string) (body []byte, err error) {
-	url := baseF12APIUrl + endpoint + userID
+	url := "http://" + baseF12APIUrl + endpoint + userID
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -69,4 +71,15 @@ func timeHttpClientDo(req *http.Request) (resp *http.Response, err error) {
 	}
 
 	return
+}
+
+func InitWebSocket() (ws *websocket.Conn, err error) {
+	origin := "http://localhost/"
+	url := "ws://" + baseF12APIUrl
+	ws, err = websocket.Dial(url, "", origin)
+	if err != nil {
+		log.Printf("Error getting the web socket: %v", err)
+	}
+
+	return ws, err
 }

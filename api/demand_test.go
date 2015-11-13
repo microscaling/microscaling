@@ -1,72 +1,38 @@
 package api
 
 import (
-	// "encoding/json"
-	// "io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"sync"
+	// "sync"
 	"testing"
 
 	"github.com/force12io/force12/demand"
 	"golang.org/x/net/websocket"
 )
 
-var serverAddr string
-var once sync.Once
+// var once sync.Once
 
-func testServer(ws *websocket.Conn) {
-	log.Printf("Received something")
-}
-
-func startServer() {
-	http.Handle("/", websocket.Handler(testServer))
-	server := httptest.NewServer(nil)
-	serverAddr = server.Listener.Addr().String()
-	log.Print("Test WebSocket server listening on ", serverAddr)
-}
-
-func TestInitWebSocket(t *testing.T) {
-	once.Do(startServer)
-
-	baseF12APIUrl = serverAddr
-	ws, err := InitWebSocket()
-	if err != nil {
-		t.Fatal("dialing", err)
-	}
-
-	msg := []byte("hello, world\n")
-	if _, err := ws.Write(msg); err != nil {
-		t.Errorf("Write: %v", err)
-	}
-	ws.Close()
-}
-
-func TestSendMetrics(t *testing.T) {
+func TestGetDemand(t *testing.T) {
 	var tasks map[string]demand.Task = make(map[string]demand.Task)
 
-	tasks["priority1"] = demand.Task{Demand: 8, Requested: 3, Running: 4}
-	tasks["priority2"] = demand.Task{Demand: 2, Requested: 7, Running: 5}
+	tasks["priority1"] = demand.Task{Demand: 7, Requested: 3, Running: 4}
+	tasks["priority2"] = demand.Task{Demand: 3, Requested: 7, Running: 5}
 
 	tests := []struct {
 		expJson string
 	}{
 		{
 			expJson: `{
-			   "user": "5k4ek",
-			   "createdAt": 1435071103,
-			   "metrics": {
+			   "demand": {
 			       "tasks": [
 			           {
 			               "app": "priority1",
-			               "runningCount": 4,
-			               "pendingCount": 3
+			               "demandCount": 7
 			           },
 			           {
 			               "app": "priority2",
-			               "runningCount": 5,
-			               "pendingCount": 7
+			               "demandCount": 3
 			           }
 			       ]
 			   }
