@@ -1,5 +1,5 @@
 
-# 0.1.0
+# 0.5.0
 
 - In the initial release we generated randomized demand locally at the client. Demand is now passed to the client from the server. 
 - We're now using a web socket to communicate metrics to the server and receive demand instructions from the server.
