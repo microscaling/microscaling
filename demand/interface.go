@@ -7,9 +7,5 @@ type Task struct {
 	Running    int
 	FamilyName string
 	Image      string
-}
-
-type Input interface {
-	// Get the current demand for this type of container
-	GetDemand(containerType string) (int, error)
+	Command    string
 }

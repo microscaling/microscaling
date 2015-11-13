@@ -2,37 +2,13 @@ package main
 
 import (
 	"log"
+	"reflect"
 	"testing"
 
+	"github.com/force12io/force12/api"
 	"github.com/force12io/force12/demand"
-	"github.com/force12io/force12/rng"
 	"github.com/force12io/force12/toy_scheduler"
 )
-
-func TestDemandUpdate(t *testing.T) {
-	var demandchange bool
-
-	tasks = make(map[string]demand.Task)
-	tasks["priority1"] = demand.Task{
-		FamilyName: "p1family",
-		Demand:     3,
-		Requested:  0,
-	}
-
-	tasks["priority2"] = demand.Task{
-		FamilyName: "p2family",
-		Demand:     5,
-		Requested:  0,
-	}
-
-	di := rng.NewDemandModel(4, 10)
-
-	demandchange, _ = update(di, tasks)
-	if !demandchange {
-		// Note this test relies on us not seeding random numbers. Not very nice but OK for our purposes.
-		t.Fatalf("Expected demand to have changed but it didn't")
-	}
-}
 
 func TestHandleDemandChange(t *testing.T) {
 	tasks = make(map[string]demand.Task)
@@ -48,24 +24,50 @@ func TestHandleDemandChange(t *testing.T) {
 		Requested:  0,
 	}
 
-	// We might see our own task when we look at Docker, we shouldn't be scaling it!
-	tasks["force12"] = demand.Task{
-		FamilyName: "force12",
-		Demand:     1,
-		Requested:  1,
-	}
-
-	di := rng.NewDemandModel(3, 9)
 	s := toy_scheduler.NewScheduler()
 
-	ready := make(chan struct{}, 1)
+	tests := []struct {
+		td       []api.TaskDemand
+		newtasks map[string]demand.Task
+	}{
+		{
+			td: []api.TaskDemand{
+				{
+					App:         "priority1",
+					DemandCount: 5,
+				},
+			},
+			newtasks: map[string]demand.Task{
+				"priority1": {FamilyName: "p1family", Demand: 5, Requested: 5},
+				"priority2": {FamilyName: "p2family", Demand: 3, Requested: 3},
+			},
+		},
+		{
+			// We just ignore any tasks that we didn't know about
+			td: []api.TaskDemand{
+				{
+					App:         "priority1",
+					DemandCount: 5,
+				}, {
+					App:         "priority3",
+					DemandCount: 5,
+				},
+			},
+			newtasks: map[string]demand.Task{
+				"priority1": {FamilyName: "p1family", Demand: 5, Requested: 5},
+				"priority2": {FamilyName: "p2family", Demand: 3, Requested: 3},
+			},
+		},
+	}
 
-	for i := 0; i < 5; i++ {
-		err := handleDemandChange(di, s, ready, tasks)
-		<-ready
+	for _, test := range tests {
+		err := handleDemandChange(test.td, s, tasks)
 		if err != nil {
 			t.Fatalf("handleDemandChange failed")
 		}
 		log.Println(tasks)
+		if !reflect.DeepEqual(tasks, test.newtasks) {
+			t.Fatalf("Expected %v tasks, got %v", test.newtasks, tasks)
+		}
 	}
 }
