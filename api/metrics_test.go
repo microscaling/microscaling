@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 
 	"github.com/force12io/force12/demand"
@@ -65,10 +64,6 @@ func testServerMetrics(ws *websocket.Conn) {
 		if !appFound {
 			global_t.Fatalf("Received unexpected metric for %s", v.App)
 		}
-	}
-
-	if !reflect.DeepEqual(m.Metrics.Tasks, test.expMetrics.Metrics.Tasks) {
-		global_t.Fatalf("Unexpected metrics")
 	}
 }
 
