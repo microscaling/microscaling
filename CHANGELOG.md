@@ -1,3 +1,6 @@
+# 0.5.1 
+
+Get those pesky UTs running
 
 # 0.5.0
 

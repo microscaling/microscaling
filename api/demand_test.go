@@ -2,28 +2,19 @@ package api
 
 import (
 	"log"
-	"net/http"
 	"net/http/httptest"
-	// "sync"
+	"reflect"
 	"testing"
 
-	"github.com/force12io/force12/demand"
 	"golang.org/x/net/websocket"
 )
 
-// var once sync.Once
-
-func TestGetDemand(t *testing.T) {
-	var tasks map[string]demand.Task = make(map[string]demand.Task)
-
-	tasks["priority1"] = demand.Task{Demand: 7, Requested: 3, Running: 4}
-	tasks["priority2"] = demand.Task{Demand: 3, Requested: 7, Running: 5}
-
-	tests := []struct {
-		expJson string
-	}{
-		{
-			expJson: `{
+var tests = []struct {
+	testJson  string
+	expDemand []TaskDemand
+}{
+	{
+		testJson: `{
 			   "demand": {
 			       "tasks": [
 			           {
@@ -37,35 +28,68 @@ func TestGetDemand(t *testing.T) {
 			       ]
 			   }
 			}`,
+		expDemand: []TaskDemand{
+			{
+				App:         "priority2",
+				DemandCount: 3,
+			},
+			{
+				App:         "priority1",
+				DemandCount: 7,
+			},
 		},
+	},
+}
+
+var testIndex int
+var du chan []TaskDemand = make(chan []TaskDemand, 1)
+
+func testServerDemand(ws *websocket.Conn) {
+	err := Listen(ws, du)
+
+	if err != nil {
+		log.Printf("Error %v", err)
 	}
+}
+
+func TestGetDemand(t *testing.T) {
+	server := httptest.NewServer(websocket.Handler(testServerDemand))
+	serverAddr = server.Listener.Addr().String()
+
+	baseF12APIUrl = serverAddr
+	ws, err := InitWebSocket()
+	if err != nil {
+		t.Fatal("dialing", err)
+	}
+
+	var result []TaskDemand
 
 	for _, test := range tests {
+		// Send message as if it were from the server
+		_, err = ws.Write([]byte(test.testJson))
 
-		once.Do(func() {
-			http.Handle("/", websocket.Handler(func(ws *websocket.Conn) {
-				b := make([]byte, 1000)
+		// Listener function should send the received result here
+		result = <-du
+		expected := test.expDemand
 
-				_, err := ws.Read(b)
-				if err != nil {
-					t.Fatalf("Error reading from web socket %v", err)
-				}
-				if string(b) != test.expJson {
-					log.Printf("Got %v", b)
-					t.Fatalf("Unexpected JSON %v", b)
-				}
-			}))
-			server := httptest.NewServer(nil)
-			serverAddr = server.Listener.Addr().String()
-		})
+		var rr map[string]int = make(map[string]int, 10)
+		var ee map[string]int = make(map[string]int, 10)
 
-		baseF12APIUrl = serverAddr
-		ws, err := InitWebSocket()
-		if err != nil {
-			t.Fatal("dialing", err)
+		for _, v := range result {
+			rr[v.App] = v.DemandCount
 		}
 
-		SendMetrics(ws, "hello", tasks)
-		ws.Close()
+		for _, v := range expected {
+			ee[v.App] = v.DemandCount
+		}
+
+		if !reflect.DeepEqual(rr, ee) {
+			log.Printf("Received %#v", result)
+			log.Printf("Expected %#v", expected)
+			t.Fatalf("Unexpected demand")
+		}
 	}
+
+	ws.Close()
+	server.Close()
 }

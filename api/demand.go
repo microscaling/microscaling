@@ -28,6 +28,7 @@ func Listen(ws *websocket.Conn, demandUpdate chan []TaskDemand) error {
 			err := websocket.JSON.Receive(ws, &dp)
 			if err != nil {
 				log.Printf("Error reading from web socket: %v", err)
+				return err
 			} else {
 				log.Printf("Received demand %v", dp)
 				demandUpdate <- dp.Demand.Tasks
