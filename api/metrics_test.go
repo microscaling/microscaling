@@ -1,46 +1,75 @@
 package api
 
 import (
-	// "encoding/json"
-	// "io/ioutil"
+	"encoding/json"
 	"log"
-	"net/http"
 	"net/http/httptest"
-	"sync"
+	"reflect"
 	"testing"
 
 	"github.com/force12io/force12/demand"
 	"golang.org/x/net/websocket"
 )
 
-var serverAddr string
-var once sync.Once
+var global_t *testing.T
 
-func testServer(ws *websocket.Conn) {
-	log.Printf("Received something")
+var mtests = []struct {
+	expMetrics metricsPayload
+}{
+	{expMetrics: metricsPayload{
+		User: "hello",
+		Metrics: metrics{
+			Tasks: []taskMetrics{
+				{App: "priority1",
+					RunningCount: 4,
+					PendingCount: 3,
+				},
+				{App: "priority2",
+					RunningCount: 5,
+					PendingCount: 7},
+			},
+		},
+	},
+	},
 }
 
-func startServer() {
-	http.Handle("/", websocket.Handler(testServer))
-	server := httptest.NewServer(nil)
-	serverAddr = server.Listener.Addr().String()
-	log.Print("Test WebSocket server listening on ", serverAddr)
-}
+var currentTest int = 0
 
-func TestInitWebSocket(t *testing.T) {
-	once.Do(startServer)
+func testServerMetrics(ws *websocket.Conn) {
+	var b []byte
+	b = make([]byte, 1000)
+	length, _ := ws.Read(b)
 
-	baseF12APIUrl = serverAddr
-	ws, err := InitWebSocket()
-	if err != nil {
-		t.Fatal("dialing", err)
+	var m metricsPayload
+	_ = json.Unmarshal(b[:length], &m)
+
+	test := mtests[currentTest]
+
+	if m.User != test.expMetrics.User {
+		global_t.Fatalf("Unexpected user")
 	}
 
-	msg := []byte("hello, world\n")
-	if _, err := ws.Write(msg); err != nil {
-		t.Errorf("Write: %v", err)
+	for _, v := range m.Metrics.Tasks {
+		appFound := false
+		for _, vv := range test.expMetrics.Metrics.Tasks {
+			if vv.App == v.App {
+				appFound = true
+				if v.PendingCount != vv.PendingCount || v.RunningCount != vv.RunningCount {
+					log.Printf("%#v", test.expMetrics.Metrics.Tasks)
+					log.Printf("%#v", m.Metrics.Tasks)
+					global_t.Fatalf("Unexpected values")
+				}
+			}
+		}
+
+		if !appFound {
+			global_t.Fatalf("Received unexpected metric for %s", v.App)
+		}
 	}
-	ws.Close()
+
+	if !reflect.DeepEqual(m.Metrics.Tasks, test.expMetrics.Metrics.Tasks) {
+		global_t.Fatalf("Unexpected metrics")
+	}
 }
 
 func TestSendMetrics(t *testing.T) {
@@ -49,49 +78,11 @@ func TestSendMetrics(t *testing.T) {
 	tasks["priority1"] = demand.Task{Demand: 8, Requested: 3, Running: 4}
 	tasks["priority2"] = demand.Task{Demand: 2, Requested: 7, Running: 5}
 
-	tests := []struct {
-		expJson string
-	}{
-		{
-			expJson: `{
-			   "user": "5k4ek",
-			   "createdAt": 1435071103,
-			   "metrics": {
-			       "tasks": [
-			           {
-			               "app": "priority1",
-			               "runningCount": 4,
-			               "pendingCount": 3
-			           },
-			           {
-			               "app": "priority2",
-			               "runningCount": 5,
-			               "pendingCount": 7
-			           }
-			       ]
-			   }
-			}`,
-		},
-	}
+	global_t = t
 
-	for _, test := range tests {
-
-		once.Do(func() {
-			http.Handle("/", websocket.Handler(func(ws *websocket.Conn) {
-				b := make([]byte, 1000)
-
-				_, err := ws.Read(b)
-				if err != nil {
-					t.Fatalf("Error reading from web socket %v", err)
-				}
-				if string(b) != test.expJson {
-					log.Printf("Got %v", b)
-					t.Fatalf("Unexpected JSON %v", b)
-				}
-			}))
-			server := httptest.NewServer(nil)
-			serverAddr = server.Listener.Addr().String()
-		})
+	for testIndex, _ = range tests {
+		server := httptest.NewServer(websocket.Handler(testServerMetrics))
+		serverAddr = server.Listener.Addr().String()
 
 		baseF12APIUrl = serverAddr
 		ws, err := InitWebSocket()
@@ -100,6 +91,8 @@ func TestSendMetrics(t *testing.T) {
 		}
 
 		SendMetrics(ws, "hello", tasks)
+
 		ws.Close()
+		server.Close()
 	}
 }
