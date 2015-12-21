@@ -15,20 +15,12 @@ type AppDescription struct {
 }
 
 type DockerAppConfig struct {
-	Image   string `json:"image"`
-	Command string `json:"command"`
+	Image           string `json:"image"`
+	Command         string `json:"command"`
+	PublishAllPorts bool   `json:"publish_all_ports"`
 }
 
 type dockerAppConfig DockerAppConfig
-
-// func Decode(r io.Reader) (x *AppDescription, err error) {
-// 	x = new(AppDescription)
-// 	err = json.NewDecoder(r).Decode(x)
-// 	if err != nil {
-// 		log.Printf("Error %v", err)
-// 	}
-// 	return
-// }
 
 func (d *DockerAppConfig) UnmarshalJSON(b []byte) (err error) {
 	c := dockerAppConfig{}
@@ -50,6 +42,8 @@ func appsFromResponse(b []byte) (tasks map[string]demand.Task, err error) {
 		task := demand.Task{
 			Image:   a.Config.Image,
 			Command: a.Config.Command,
+			// TODO!! For now we will default turning on publishAllPorts, until we add this to the client-server interface
+			PublishAllPorts: true,
 		}
 
 		tasks[name] = task
