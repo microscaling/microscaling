@@ -1,3 +1,8 @@
+# 0.5.2
+
+- Remove container volumes when we remove containers
+- Set the PublishAllPorts flag on (eventually this will be configurable)
+
 # 0.5.1 
 
 Get those pesky UTs running
