@@ -16,7 +16,6 @@ const f12_map string = "io.force12.microscaling-in-a-box"
 
 type DockerScheduler struct {
 	client     *docker.Client
-	hostConfig docker.HostConfig
 	pullImages bool
 	containers map[string][]string
 }
@@ -88,8 +87,12 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 	c.containers[name] = append(c.containers[name], container.ID[:12])
 	log.Printf("Created task %s with image %s, ID %s", name, task.Image, container.ID[:12])
 
+	hostConfig := docker.HostConfig{
+		PublishAllPorts: task.PublishAllPorts,
+	}
+
 	// Start it
-	err = c.client.StartContainer(container.ID, &c.hostConfig)
+	err = c.client.StartContainer(container.ID, &hostConfig)
 
 	return err
 }
