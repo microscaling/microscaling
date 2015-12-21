@@ -110,7 +110,8 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 	}
 
 	removeOpts := docker.RemoveContainerOptions{
-		ID: container_to_kill,
+		ID:            container_to_kill,
+		RemoveVolumes: true,
 	}
 
 	err = c.client.RemoveContainer(removeOpts)
