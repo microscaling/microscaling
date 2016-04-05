@@ -5,7 +5,7 @@ import (
 	// "io"
 	"log"
 
-	"github.com/force12io/force12/demand"
+	"github.com/microscaling/microscaling/demand"
 )
 
 type AppDescription struct {

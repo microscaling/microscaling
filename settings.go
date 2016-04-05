@@ -5,11 +5,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/force12io/force12/api"
-	"github.com/force12io/force12/demand"
-	"github.com/force12io/force12/docker"
-	"github.com/force12io/force12/scheduler"
-	"github.com/force12io/force12/toy_scheduler"
+	"github.com/microscaling/microscaling/api"
+	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/docker"
+	"github.com/microscaling/microscaling/scheduler"
+	"github.com/microscaling/microscaling/toy_scheduler"
 )
 
 type settings struct {

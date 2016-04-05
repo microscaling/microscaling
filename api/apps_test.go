@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/force12io/force12/demand"
+	"github.com/microscaling/microscaling/demand"
 )
 
 func TestGetAppsDecode(t *testing.T) {
@@ -20,7 +20,7 @@ func TestGetAppsDecode(t *testing.T) {
 		t.Fatalf("Didn't decode command")
 	}
 
-	var response string = `[{"name":"priority1","type":"Docker","config":{"image":"force12io/priority-1:latest","command":"/run.sh"}},{"name":"priority2","type":"Docker","config":{"image":"force12io/priority-2:latest","command":"/run.sh"}}]`
+	var response string = `[{"name":"priority1","type":"Docker","config":{"image":"microscaling/priority-1:latest","command":"/run.sh"}},{"name":"priority2","type":"Docker","config":{"image":"microscaling/priority-2:latest","command":"/run.sh"}}]`
 	var b = []byte(response)
 
 	var a []AppDescription
@@ -30,11 +30,11 @@ func TestGetAppsDecode(t *testing.T) {
 	apps, _ = appsFromResponse(b)
 
 	p1 := apps["priority1"]
-	if p1.Image != "force12io/priority-1:latest" {
+	if p1.Image != "microscaling/priority-1:latest" {
 		t.Fatalf("Bad image")
 	}
 	p2 := apps["priority2"]
-	if p2.Image != "force12io/priority-2:latest" {
+	if p2.Image != "microscaling/priority-2:latest" {
 		t.Fatalf("Bad image")
 	}
 }

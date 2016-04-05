@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"github.com/force12io/force12/api"
-	"github.com/force12io/force12/demand"
-	"github.com/force12io/force12/scheduler"
+	"github.com/microscaling/microscaling/api"
+	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/scheduler"
 )
 
 // handleDemandChange updates to changed demand

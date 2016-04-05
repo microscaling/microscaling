@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/force12io/force12/api"
-	"github.com/force12io/force12/demand"
-	"github.com/force12io/force12/toy_scheduler"
+	"github.com/microscaling/microscaling/api"
+	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/toy_scheduler"
 )
 
 func TestHandleDemandChange(t *testing.T) {

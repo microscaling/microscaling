@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/force12io/force12/demand"
+	"github.com/microscaling/microscaling/demand"
 )
 
 func TestToyScheduler(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/force12io/force12/demand"
+	"github.com/microscaling/microscaling/demand"
 	"golang.org/x/net/websocket"
 )
 

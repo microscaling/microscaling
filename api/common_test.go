@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/force12io/force12/demand"
+	"github.com/microscaling/microscaling/demand"
 	"golang.org/x/net/websocket"
 )
 
@@ -14,7 +14,7 @@ var serverAddr string
 
 func TestGetBaseUrl(t *testing.T) {
 	base := GetBaseF12APIUrl()
-	if base != "app.force12.io" || base != baseF12APIUrl {
+	if base != "app.microscaling.com" || base != baseF12APIUrl {
 		t.Fatalf("Maybe F12_API_ADDRESS is set: %v | %v", base, baseF12APIUrl)
 	}
 }

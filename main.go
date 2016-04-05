@@ -35,9 +35,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/force12io/force12/api"
-	"github.com/force12io/force12/demand"
-	"github.com/force12io/force12/scheduler"
+	"github.com/microscaling/microscaling/api"
+	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/scheduler"
 )
 
 const const_sendMetrics_sleep = 500 // milliseconds - delay before we send state on the metrics API
