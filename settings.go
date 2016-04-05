@@ -20,7 +20,7 @@ type settings struct {
 	dockerHost    string
 }
 
-func get_settings() settings {
+func getSettings() settings {
 	var st settings
 	st.schedulerType = getEnvOrDefault("F12_SCHEDULER", "DOCKER")
 	st.userID = getEnvOrDefault("F12_USER_ID", "5k5gk")
@@ -30,7 +30,7 @@ func get_settings() settings {
 	return st
 }
 
-func get_scheduler(st settings) (scheduler.Scheduler, error) {
+func getScheduler(st settings) (scheduler.Scheduler, error) {
 	var s scheduler.Scheduler
 
 	switch st.schedulerType {
@@ -59,7 +59,7 @@ func get_scheduler(st settings) (scheduler.Scheduler, error) {
 	return s, nil
 }
 
-func get_tasks(st settings) map[string]demand.Task {
+func getTasks(st settings) map[string]demand.Task {
 	var t map[string]demand.Task
 
 	// Get the tasks that have been configured by this user

@@ -10,10 +10,10 @@ import (
 
 func TestSettings(t *testing.T) {
 	var s settings
-	var testid string = "hello"
+	var testid = "hello"
 	os.Setenv("F12_USER_ID", testid)
 
-	s = get_settings()
+	s = getSettings()
 	if s.userID != testid {
 		t.Fatalf("Unexpected userID")
 	}
@@ -39,8 +39,8 @@ func TestInitScheduler(t *testing.T) {
 
 	for _, test := range tests {
 		os.Setenv("F12_SCHEDULER", test.sched)
-		st := get_settings()
-		_, err = get_scheduler(st)
+		st := getSettings()
+		_, err = getScheduler(st)
 		if err != nil && test.pass {
 			t.Fatalf("Should have been able to create %s", test.sched)
 		}
