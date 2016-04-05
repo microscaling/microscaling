@@ -11,7 +11,7 @@ import (
 func TestSettings(t *testing.T) {
 	var s settings
 	var testid = "hello"
-	os.Setenv("F12_USER_ID", testid)
+	os.Setenv("MSS_USER_ID", testid)
 
 	s = getSettings()
 	if s.userID != testid {
@@ -38,7 +38,7 @@ func TestInitScheduler(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		os.Setenv("F12_SCHEDULER", test.sched)
+		os.Setenv("MSS_SCHEDULER", test.sched)
 		st := getSettings()
 		_, err = getScheduler(st)
 		if err != nil && test.pass {

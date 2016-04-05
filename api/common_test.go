@@ -13,9 +13,9 @@ import (
 var serverAddr string
 
 func TestGetBaseUrl(t *testing.T) {
-	base := GetBaseF12APIUrl()
-	if base != "app.microscaling.com" || base != baseF12APIUrl {
-		t.Fatalf("Maybe F12_API_ADDRESS is set: %v | %v", base, baseF12APIUrl)
+	base := GetBaseAPIUrl()
+	if base != "app.microscaling.com" || base != baseAPIUrl {
+		t.Fatalf("Maybe MSS_API_ADDRESS is set: %v | %v", base, baseAPIUrl)
 	}
 }
 
@@ -27,7 +27,7 @@ func TestInitWebSocket(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(testServer))
 	serverAddr = server.Listener.Addr().String()
 
-	baseF12APIUrl = serverAddr
+	baseAPIUrl = serverAddr
 	ws, err := InitWebSocket()
 	if err != nil {
 		t.Fatal("dialing", err)

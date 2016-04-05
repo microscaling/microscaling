@@ -12,4 +12,4 @@ services:
   - docker
 
 before_install:
-  - docker pull force12io/force12-demo:latest
+  - docker pull microscaling/priority-1:latest

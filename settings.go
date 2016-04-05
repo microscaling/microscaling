@@ -22,10 +22,10 @@ type settings struct {
 
 func getSettings() settings {
 	var st settings
-	st.schedulerType = getEnvOrDefault("F12_SCHEDULER", "DOCKER")
-	st.userID = getEnvOrDefault("F12_USER_ID", "5k5gk")
-	st.sendMetrics = (getEnvOrDefault("F12_SEND_METRICS_TO_API", "true") == "true")
-	st.pullImages = (getEnvOrDefault("F12_PULL_IMAGES", "true") == "true")
+	st.schedulerType = getEnvOrDefault("MSS_SCHEDULER", "DOCKER")
+	st.userID = getEnvOrDefault("MSS_USER_ID", "5k5gk")
+	st.sendMetrics = (getEnvOrDefault("MSS_SEND_METRICS_TO_API", "true") == "true")
+	st.pullImages = (getEnvOrDefault("MSS_PULL_IMAGES", "true") == "true")
 	st.dockerHost = getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
 	return st
 }
@@ -38,18 +38,18 @@ func getScheduler(st settings) (scheduler.Scheduler, error) {
 		log.Println("Scheduling with Docker remote API")
 		s = docker.NewScheduler(st.pullImages, st.dockerHost)
 	case "ECS":
-		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #F12ECS if you'd like us to add this next!")
+		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #MicroscaleECS if you'd like us to add this next!")
 	case "KUBERNETES":
-		return nil, fmt.Errorf("Scheduling with Kubernetes not yet supported. Tweet with hashtag #F12Kubernetes if you'd like us to add this next!")
+		return nil, fmt.Errorf("Scheduling with Kubernetes not yet supported. Tweet with hashtag #MicroscaleK8S if you'd like us to add this next!")
 	case "MESOS":
-		return nil, fmt.Errorf("Scheduling with Mesos / Marathon not yet supported. Tweet with hashtag #F12Mesos if you'd like us to add this next!")
+		return nil, fmt.Errorf("Scheduling with Mesos / Marathon not yet supported. Tweet with hashtag #MicroscaleMesos if you'd like us to add this next!")
 	case "NOMAD":
-		return nil, fmt.Errorf("Scheduling with Nomad not yet supported. Tweet with hashtag #F12Nomad if you'd like us to add this next!")
+		return nil, fmt.Errorf("Scheduling with Nomad not yet supported. Tweet with hashtag #MicroscaleNomad if you'd like us to add this next!")
 	case "TOY":
 		log.Println("Scheduling with toy scheduler")
 		s = toy_scheduler.NewScheduler()
 	default:
-		return nil, fmt.Errorf("Bad value for F12_SCHEDULER: %s", st.schedulerType)
+		return nil, fmt.Errorf("Bad value for MSS_SCHEDULER: %s", st.schedulerType)
 	}
 
 	if s == nil {

@@ -88,9 +88,9 @@ func TestGetApps(t *testing.T) {
 		server := DoTestGetJson(t, test.expUrl, test.success, test.json)
 		defer server.Close()
 
-		baseF12APIUrl = strings.Replace(server.URL, "http://", "", 1)
+		baseAPIUrl = strings.Replace(server.URL, "http://", "", 1)
 		returned_tasks, err := GetApps("hello")
-		baseF12APIUrl = GetBaseF12APIUrl()
+		baseAPIUrl = GetBaseAPIUrl()
 
 		if test.success {
 			CheckReturnedTasks(t, test.tasks, returned_tasks)

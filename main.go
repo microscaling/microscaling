@@ -1,26 +1,26 @@
-// Force12.io is a package that monitors demand for resource in a system and then scales and repurposes
+// Microscaling is a package that monitors demand for resource in a system and then scales and repurposes
 // containers, based on agreed "quality of service" contracts, to best handle that demand within the constraints of your existing VM
 // or physical infrastructure (for v1).
 //
-// Force12 is defined to optimize the use of existing physical and VM resources instantly. VMs cannot be scaled in real time (it takes
+// Microscaling is defined to optimize the use of existing physical and VM resources instantly. VMs cannot be scaled in real time (it takes
 // several minutes) and new physical machines take even longer. However, containers can be started or stopped at sub-second speeds,
 // allowing your infrastructure to adapt itself in real time to meet system demands.
 //
-// Force12 is aimed at effectively using the resources you have right now - your existing VMs or physical servers - by using them as
+// Microscaling is aimed at effectively using the resources you have right now - your existing VMs or physical servers - by using them as
 // optimally as possible.
 //
-// The Force12 approach is analogous to the way that a router dynamically optimises the use of a physical network. A router is limited
+// The microscaling approach is analogous to the way that a router dynamically optimises the use of a physical network. A router is limited
 // by the capacity of the lines physically connected to it. Adding additional capacity is a physical process and takes time. Routers
 // therefore make decisions in real time about which packets will be prioritized on a particular line based on the packet's priority
 // (defined by a "quality of service" contract).
 //
 // For example, at times of high bandwidth usage a router might prioritize VOIP traffic over web browsing in real time.
 //
-// Containers allow Force12 to make similar "instant" judgements on service prioritisation within your existing infrastructure. Routers
-// make very simplistic judgments because they have limited time and cpu and they act at a per packet level. Force12 has the capability
+// Containers allow microscaling to make similar "instant" judgements on service prioritisation within your existing infrastructure. Routers
+// make very simplistic judgments because they have limited time and cpu and they act at a per packet level. Microscaling has the capability
 // of making far more sophisticated judgements, although even fairly simple ones will still provide a significant new service.
 //
-// This prototype is a bare bones implementation of Force12.io that recognises only 1 demand type:
+// This prototype is a bare bones implementation of microscaling that recognises only 1 demand type:
 // randomised demand for a priority 1 service. Resources are allocated to meet this demand for priority 1, and spare resource can
 // be used for a priority 2 service.
 //
@@ -60,7 +60,7 @@ func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
 	}
 }
 
-// For this simple prototype, Force12.io sits in a loop checking for demand changes every X milliseconds
+// For this simple prototype, Microscaling sits in a loop checking for demand changes every X milliseconds
 func main() {
 	var err error
 
