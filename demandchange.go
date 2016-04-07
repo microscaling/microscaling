@@ -3,23 +3,23 @@ package main
 import (
 	"log"
 
-	"github.com/force12io/force12/api"
-	"github.com/force12io/force12/demand"
-	"github.com/force12io/force12/scheduler"
+	"github.com/microscaling/microscaling/api"
+	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/scheduler"
 )
 
 // handleDemandChange updates to changed demand
 func handleDemandChange(td []api.TaskDemand, s scheduler.Scheduler, tasks map[string]demand.Task) (err error) {
-	var demandChanged bool = false
+	var demandChanged = false
 	for _, task := range td {
 		name := task.App
 
-		if existing_task, ok := tasks[name]; ok {
-			if existing_task.Demand != task.DemandCount {
+		if existingTask, ok := tasks[name]; ok {
+			if existingTask.Demand != task.DemandCount {
 				demandChanged = true
 			}
-			existing_task.Demand = task.DemandCount
-			tasks[name] = existing_task
+			existingTask.Demand = task.DemandCount
+			tasks[name] = existingTask
 		}
 	}
 

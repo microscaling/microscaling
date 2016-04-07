@@ -1,3 +1,7 @@
+# 0.5.3
+
+- Rename from force12io/force12 to microscaling/microscaling
+
 # 0.5.2
 
 - Remove container volumes when we remove containers

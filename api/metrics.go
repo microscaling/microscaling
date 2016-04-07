@@ -1,4 +1,4 @@
-// API between Force12 agent and server
+// API between Microscaling agent and server
 package api
 
 import (
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/force12io/force12/demand"
+	"github.com/microscaling/microscaling/demand"
 	"golang.org/x/net/websocket"
 )
 
@@ -26,7 +26,7 @@ type taskMetrics struct {
 	PendingCount int    `json:"pendingCount"`
 }
 
-// sendMetrics sends the current state of tasks to the F12 API
+// sendMetrics sends the current state of tasks to the API
 func SendMetrics(ws *websocket.Conn, userID string, tasks map[string]demand.Task) error {
 	var err error = nil
 	var index int = 0
