@@ -6,13 +6,13 @@ import (
 	"log"
 	"strings"
 
-	"github.com/force12io/force12/demand"
-	"github.com/force12io/force12/scheduler"
+	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/scheduler"
 
 	"github.com/fsouza/go-dockerclient"
 )
 
-const f12_map string = "io.force12.microscaling-in-a-box"
+const f12_map string = "com.microscaling.microscaling-in-a-box"
 
 type DockerScheduler struct {
 	client     *docker.Client

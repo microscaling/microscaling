@@ -4,8 +4,8 @@ package toy_scheduler
 import (
 	"log"
 
-	"github.com/force12io/force12/demand"
-	"github.com/force12io/force12/scheduler"
+	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/scheduler"
 )
 
 type ToyScheduler struct {

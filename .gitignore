@@ -2,7 +2,7 @@
 *.o
 *.a
 *.so
-force12
+microscaling
 
 # Folders
 _obj
