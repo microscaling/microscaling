@@ -1,26 +1,26 @@
-// Force12.io is a package that monitors demand for resource in a system and then scales and repurposes
+// Microscaling is a package that monitors demand for resource in a system and then scales and repurposes
 // containers, based on agreed "quality of service" contracts, to best handle that demand within the constraints of your existing VM
 // or physical infrastructure (for v1).
 //
-// Force12 is defined to optimize the use of existing physical and VM resources instantly. VMs cannot be scaled in real time (it takes
+// Microscaling is defined to optimize the use of existing physical and VM resources instantly. VMs cannot be scaled in real time (it takes
 // several minutes) and new physical machines take even longer. However, containers can be started or stopped at sub-second speeds,
 // allowing your infrastructure to adapt itself in real time to meet system demands.
 //
-// Force12 is aimed at effectively using the resources you have right now - your existing VMs or physical servers - by using them as
+// Microscaling is aimed at effectively using the resources you have right now - your existing VMs or physical servers - by using them as
 // optimally as possible.
 //
-// The Force12 approach is analogous to the way that a router dynamically optimises the use of a physical network. A router is limited
+// The microscaling approach is analogous to the way that a router dynamically optimises the use of a physical network. A router is limited
 // by the capacity of the lines physically connected to it. Adding additional capacity is a physical process and takes time. Routers
 // therefore make decisions in real time about which packets will be prioritized on a particular line based on the packet's priority
 // (defined by a "quality of service" contract).
 //
 // For example, at times of high bandwidth usage a router might prioritize VOIP traffic over web browsing in real time.
 //
-// Containers allow Force12 to make similar "instant" judgements on service prioritisation within your existing infrastructure. Routers
-// make very simplistic judgments because they have limited time and cpu and they act at a per packet level. Force12 has the capability
+// Containers allow microscaling to make similar "instant" judgements on service prioritisation within your existing infrastructure. Routers
+// make very simplistic judgments because they have limited time and cpu and they act at a per packet level. Microscaling has the capability
 // of making far more sophisticated judgements, although even fairly simple ones will still provide a significant new service.
 //
-// This prototype is a bare bones implementation of Force12.io that recognises only 1 demand type:
+// This prototype is a bare bones implementation of microscaling that recognises only 1 demand type:
 // randomised demand for a priority 1 service. Resources are allocated to meet this demand for priority 1, and spare resource can
 // be used for a priority 2 service.
 //
@@ -35,12 +35,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/force12io/force12/api"
-	"github.com/force12io/force12/demand"
-	"github.com/force12io/force12/scheduler"
+	"github.com/microscaling/microscaling/api"
+	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/scheduler"
 )
 
-const const_sendMetrics_sleep = 500 // milliseconds - delay before we send state on the metrics API
+const constSendMetricsSleep = 500 // milliseconds - delay before we send state on the metrics API
 
 var tasks map[string]demand.Task
 
@@ -60,19 +60,19 @@ func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
 	}
 }
 
-// For this simple prototype, Force12.io sits in a loop checking for demand changes every X milliseconds
+// For this simple prototype, Microscaling sits in a loop checking for demand changes every X milliseconds
 func main() {
 	var err error
 
-	st := get_settings()
+	st := getSettings()
 
-	s, err := get_scheduler(st)
+	s, err := getScheduler(st)
 	if err != nil {
 		log.Printf("Failed to get scheduler: %v", err)
 		return
 	}
 
-	tasks := get_tasks(st)
+	tasks := getTasks(st)
 
 	// Let the scheduler know about the task types.
 	for name, task := range tasks {
@@ -102,16 +102,16 @@ func main() {
 	// Periodically send state to the API if required
 	var sendMetricsTimeout *time.Ticker
 	if st.sendMetrics {
-		sendMetricsTimeout = time.NewTicker(const_sendMetrics_sleep * time.Millisecond)
+		sendMetricsTimeout = time.NewTicker(constSendMetricsSleep * time.Millisecond)
 	}
 
 	// Only allow one scaling command and one metrics send to be outstanding at a time
 	ready := make(chan struct{}, 1)
-	metrics_ready := make(chan struct{}, 1)
-	var scaling_ready bool = true
-	var sendMetrics_ready bool = true
-	var cleanup_when_ready bool = false
-	var exit_when_ready bool = false
+	metricsReady := make(chan struct{}, 1)
+	var scalingReady = true
+	var sendMetricsReady = true
+	var cleanupWhenReady = false
+	var exitWhenReady = false
 
 	// Loop, continually checking for changes in demand that need to be scheduled
 	// At the moment we plough on regardless in the face of errors, simply logging them out
@@ -119,13 +119,13 @@ func main() {
 		select {
 		case td := <-demandUpdate:
 			// Don't do anything if we're about to exit
-			if cleanup_when_ready || exit_when_ready {
+			if cleanupWhenReady || exitWhenReady {
 				break
 			}
 
 			// If we already have a scaling change outstanding, we can't do another one
-			if scaling_ready {
-				scaling_ready = false
+			if scalingReady {
+				scalingReady = false
 				go func() {
 					err = handleDemandChange(td, s, tasks)
 					if err != nil {
@@ -140,9 +140,9 @@ func main() {
 			}
 
 		case <-sendMetricsTimeout.C:
-			if sendMetrics_ready {
+			if sendMetricsReady {
 				log.Println("Sending metrics")
-				sendMetrics_ready = false
+				sendMetricsReady = false
 				go func() {
 					// Find out how many instances of each task are running
 					err = s.CountAllTasks(tasks)
@@ -156,38 +156,38 @@ func main() {
 					}
 
 					// Notify the channel when the API call has completed
-					metrics_ready <- struct{}{}
+					metricsReady <- struct{}{}
 				}()
 			} else {
 				log.Println("Not ready to send metrics")
 			}
 
 		case <-ready:
-			if exit_when_ready {
+			if exitWhenReady {
 				log.Printf("All finished")
 				os.Exit(1)
 			}
 
 			// An outstanding scale command has finished so we are OK to send another one
-			if cleanup_when_ready {
+			if cleanupWhenReady {
 				log.Printf("Cleaning up")
-				exit_when_ready = true
+				exitWhenReady = true
 				go func() {
 					cleanup(s, tasks)
 					ready <- struct{}{}
 				}()
 			} else {
-				scaling_ready = true
+				scalingReady = true
 			}
 
-		case <-metrics_ready:
+		case <-metricsReady:
 			// Finished sending metrics so we are OK to send another one
-			sendMetrics_ready = true
+			sendMetricsReady = true
 
 		case <-closedown:
 			log.Printf("Clean up when ready")
-			cleanup_when_ready = true
-			if scaling_ready {
+			cleanupWhenReady = true
+			if scalingReady {
 				// Trigger it now
 				ready <- struct{}{}
 			}

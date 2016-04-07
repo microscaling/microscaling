@@ -2,7 +2,7 @@
 package scheduler
 
 import (
-	"github.com/force12io/force12/demand"
+	"github.com/microscaling/microscaling/demand"
 )
 
 type Scheduler interface {

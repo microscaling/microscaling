@@ -8,9 +8,9 @@ import (
 	// "strings"
 	"testing"
 
-	// "github.com/force12io/force12/api/apitest"
-	"github.com/force12io/force12/demand"
+	// "github.com/microscaling/microscaling/api/apitest"
 	"github.com/fsouza/go-dockerclient"
+	"github.com/microscaling/microscaling/demand"
 )
 
 func TestDockerInitScheduler(t *testing.T) {
@@ -40,7 +40,7 @@ func TestDockerInitScheduler(t *testing.T) {
 
 		var task demand.Task
 		task.Demand = 5
-		task.Image = "force12io/force12-demo:latest"
+		task.Image = "microscaling/priority-1:latest"
 
 		d.InitScheduler("anything", &task)
 		err := d.startTask("anything", &task)
@@ -59,7 +59,7 @@ func TestDockerScheduler(t *testing.T) {
 
 	var task demand.Task
 	task.Demand = 5
-	task.Image = "force12io/force12-demo:latest"
+	task.Image = "microscaling/priority-1:latest"
 
 	d.InitScheduler("anything", &task)
 

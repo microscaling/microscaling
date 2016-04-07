@@ -56,7 +56,7 @@ func TestGetDemand(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(testServerDemand))
 	serverAddr = server.Listener.Addr().String()
 
-	baseF12APIUrl = serverAddr
+	baseAPIUrl = serverAddr
 	ws, err := InitWebSocket()
 	if err != nil {
 		t.Fatal("dialing", err)

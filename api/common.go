@@ -1,4 +1,4 @@
-// API between Force12 agent and server
+// API between Microscaling agent and server
 package api
 
 import (
@@ -12,29 +12,29 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-func GetBaseF12APIUrl() string {
-	baseUrl := os.Getenv("F12_API_ADDRESS")
+func GetBaseAPIUrl() string {
+	baseUrl := os.Getenv("MSS_API_ADDRESS")
 	if baseUrl == "" {
-		baseUrl = "app.force12.io"
+		baseUrl = "app.microscaling.com"
 	}
 
 	log.Printf("Sending results to %s", baseUrl)
 	return baseUrl
 }
 
-// SetBaseF12APIUrl only used for testing
-func SetBaseF12APIUrl(baseurl string) {
-	baseF12APIUrl = baseurl
+// SetBaseAPIUrl only used for testing
+func SetBaseAPIUrl(baseurl string) {
+	baseAPIUrl = baseurl
 }
 
-var baseF12APIUrl string = GetBaseF12APIUrl()
+var baseAPIUrl string = GetBaseAPIUrl()
 var httpClient *http.Client = &http.Client{
 	Timeout: 15000 * time.Millisecond,
 }
-var debugTimeHttpClient bool = (os.Getenv("F12_TIME_HTTP_CLIENT") == "true")
+var debugTimeHttpClient bool = (os.Getenv("MSS_TIME_HTTP_CLIENT") == "true")
 
 func getJsonGet(userID string, endpoint string) (body []byte, err error) {
-	url := "http://" + baseF12APIUrl + endpoint + userID
+	url := "http://" + baseAPIUrl + endpoint + userID
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -75,7 +75,7 @@ func timeHttpClientDo(req *http.Request) (resp *http.Response, err error) {
 
 func InitWebSocket() (ws *websocket.Conn, err error) {
 	origin := "http://localhost/"
-	url := "ws://" + baseF12APIUrl
+	url := "ws://" + baseAPIUrl
 	ws, err = websocket.Dial(url, "", origin)
 	if err != nil {
 		log.Printf("Error getting the web socket: %v", err)
