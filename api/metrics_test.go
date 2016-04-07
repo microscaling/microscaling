@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/force12io/force12/demand"
+	"github.com/microscaling/microscaling/demand"
 	"golang.org/x/net/websocket"
 )
 
@@ -79,7 +79,7 @@ func TestSendMetrics(t *testing.T) {
 		server := httptest.NewServer(websocket.Handler(testServerMetrics))
 		serverAddr = server.Listener.Addr().String()
 
-		baseF12APIUrl = serverAddr
+		baseAPIUrl = serverAddr
 		ws, err := InitWebSocket()
 		if err != nil {
 			t.Fatal("dialing", err)

@@ -1,4 +1,4 @@
 #!/bin/bash
 
-# Run force12 binary
-/force12
+# Run microscaling binary
+/microscaling
