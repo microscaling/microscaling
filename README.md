@@ -3,7 +3,7 @@
 This simple demo runs on your own machine and makes it easy to experiment with microscaling and see containers running locally 
 on your machine. Full instructions for running the demo are at [app.microscaling.com](https://app.microscaling.com). 
 
-[![Build Status](https://api.travis-ci.org/microscaling/microcaling.svg)](https://travis-ci.org/microscaling/microscaling) Go 1.4 1.5
+[![Build Status](https://api.travis-ci.org/microscaling/microscaling.svg)](https://travis-ci.org/microscaling/microscaling) Go 1.4 1.5
 
 ## Building and running from source
 
