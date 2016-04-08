@@ -4,12 +4,22 @@ package api
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/op/go-logging"
+
 	"golang.org/x/net/websocket"
+)
+
+var (
+	log                              = logging.MustGetLogger("mssapi")
+	baseAPIUrl          string       = GetBaseAPIUrl()
+	debugTimeHttpClient bool         = (os.Getenv("MSS_TIME_HTTP_CLIENT") == "true")
+	httpClient          *http.Client = &http.Client{
+		Timeout: 15000 * time.Millisecond,
+	}
 )
 
 func GetBaseAPIUrl() string {
@@ -18,7 +28,7 @@ func GetBaseAPIUrl() string {
 		baseUrl = "app.microscaling.com"
 	}
 
-	log.Printf("Sending results to %s", baseUrl)
+	log.Infof("Sending results to %s", baseUrl)
 	return baseUrl
 }
 
@@ -26,12 +36,6 @@ func GetBaseAPIUrl() string {
 func SetBaseAPIUrl(baseurl string) {
 	baseAPIUrl = baseurl
 }
-
-var baseAPIUrl string = GetBaseAPIUrl()
-var httpClient *http.Client = &http.Client{
-	Timeout: 15000 * time.Millisecond,
-}
-var debugTimeHttpClient bool = (os.Getenv("MSS_TIME_HTTP_CLIENT") == "true")
 
 func getJsonGet(userID string, endpoint string) (body []byte, err error) {
 	url := "http://" + baseAPIUrl + endpoint + userID
@@ -67,7 +71,7 @@ func timeHttpClientDo(req *http.Request) (resp *http.Response, err error) {
 
 	if debugTimeHttpClient {
 		apiDuration := time.Since(issuedAt)
-		log.Printf("%v took %v", req.URL, apiDuration)
+		log.Debugf("%v took %v", req.URL, apiDuration)
 	}
 
 	return
@@ -78,7 +82,7 @@ func InitWebSocket() (ws *websocket.Conn, err error) {
 	url := "ws://" + baseAPIUrl
 	ws, err = websocket.Dial(url, "", origin)
 	if err != nil {
-		log.Printf("Error getting the web socket: %v", err)
+		log.Errorf("Error getting the web socket: %v", err)
 	}
 
 	return ws, err

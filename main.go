@@ -29,11 +29,12 @@
 package main
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/op/go-logging"
 
 	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
@@ -42,7 +43,14 @@ import (
 
 const constSendMetricsSleep = 500 // milliseconds - delay before we send state on the metrics API
 
-var tasks map[string]demand.Task
+var (
+	tasks map[string]demand.Task
+	log   = logging.MustGetLogger("mssagent")
+)
+
+func init() {
+	initLogging()
+}
 
 // cleanup resets demand for all tasks to 0 before we quit
 func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
@@ -53,10 +61,10 @@ func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
 		tasks[name] = task
 	}
 
-	log.Printf("Reset tasks to 0 for cleanup")
+	log.Info("Reset tasks to 0 for cleanup")
 	err = s.StopStartTasks(tasks)
 	if err != nil {
-		log.Printf("Failed to cleanup tasks. %v", err)
+		log.Errorf("Failed to cleanup tasks. %v", err)
 	}
 }
 
@@ -68,7 +76,7 @@ func main() {
 
 	s, err := getScheduler(st)
 	if err != nil {
-		log.Printf("Failed to get scheduler: %v", err)
+		log.Errorf("Failed to get scheduler: %v", err)
 		return
 	}
 
@@ -78,7 +86,7 @@ func main() {
 	for name, task := range tasks {
 		err = s.InitScheduler(name, &task)
 		if err != nil {
-			log.Printf("Failed to start task %s: %v", name, err)
+			log.Errorf("Failed to start task %s: %v", name, err)
 			return
 		}
 	}
@@ -86,7 +94,7 @@ func main() {
 	// Check if there are already any of these containers running
 	err = s.CountAllTasks(tasks)
 	if err != nil {
-		log.Printf("Failed to count containers. %v", err)
+		log.Errorf("Failed to count containers. %v", err)
 	}
 
 	// Prepare for cleanup when we receive an interrupt
@@ -129,48 +137,48 @@ func main() {
 				go func() {
 					err = handleDemandChange(td, s, tasks)
 					if err != nil {
-						log.Printf("Failed to handle demand change. %v", err)
+						log.Errorf("Failed to handle demand change. %v", err)
 					}
 
 					// Notify the channel when the scaling command has completed
 					ready <- struct{}{}
 				}()
 			} else {
-				log.Println("Scale still outstanding")
+				log.Debug("Scale still outstanding")
 			}
 
 		case <-sendMetricsTimeout.C:
 			if sendMetricsReady {
-				log.Println("Sending metrics")
+				log.Debug("Sending metrics")
 				sendMetricsReady = false
 				go func() {
 					// Find out how many instances of each task are running
 					err = s.CountAllTasks(tasks)
 					if err != nil {
-						log.Printf("Failed to count containers. %v", err)
+						log.Errorf("Failed to count containers. %v", err)
 					}
 
 					err = api.SendMetrics(ws, st.userID, tasks)
 					if err != nil {
-						log.Printf("Failed to send metrics. %v", err)
+						log.Errorf("Failed to send metrics. %v", err)
 					}
 
 					// Notify the channel when the API call has completed
 					metricsReady <- struct{}{}
 				}()
 			} else {
-				log.Println("Not ready to send metrics")
+				log.Debug("Not ready to send metrics")
 			}
 
 		case <-ready:
 			if exitWhenReady {
-				log.Printf("All finished")
+				log.Info("All finished")
 				os.Exit(1)
 			}
 
 			// An outstanding scale command has finished so we are OK to send another one
 			if cleanupWhenReady {
-				log.Printf("Cleaning up")
+				log.Info("Cleaning up")
 				exitWhenReady = true
 				go func() {
 					cleanup(s, tasks)
@@ -185,7 +193,7 @@ func main() {
 			sendMetricsReady = true
 
 		case <-closedown:
-			log.Printf("Clean up when ready")
+			log.Info("Clean up when ready")
 			cleanupWhenReady = true
 			if scalingReady {
 				// Trigger it now

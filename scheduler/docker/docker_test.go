@@ -2,7 +2,6 @@ package docker
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	// "strings"
@@ -27,16 +26,16 @@ func TestDockerInitScheduler(t *testing.T) {
 
 	for _, test := range tests {
 		d := NewScheduler(test.pullImages, "unix:///var/run/docker.sock")
-		log.Printf("Should I pull images? %v", test.pullImages)
+		log.Infof("Should I pull images? %v", test.pullImages)
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("Received something %v", r)
+			log.Infof("Received something %v", r)
 
 			// TODO!! Check that we're receiving what we expect
 		}))
 
-		log.Printf("Test server at %s", server.URL)
+		log.Infof("Test server at %s", server.URL)
 		d.client, _ = docker.NewClient(server.URL)
-		log.Printf("Docker client %v", d.client)
+		log.Debugf("Docker client %v", d.client)
 
 		var task demand.Task
 		task.Demand = 5

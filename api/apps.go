@@ -2,8 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	// "io"
-	"log"
 
 	"github.com/microscaling/microscaling/demand"
 )
@@ -56,7 +54,7 @@ func appsFromResponse(b []byte) (tasks map[string]demand.Task, err error) {
 func GetApps(userID string) (tasks map[string]demand.Task, err error) {
 	body, err := getJsonGet(userID, "/apps/")
 	if err != nil {
-		log.Printf("Failed to get /apps/: %v", err)
+		log.Errorf("Failed to get /apps/: %v", err)
 		return nil, err
 	}
 

@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"log"
 	"net/http/httptest"
 	"testing"
 
@@ -54,8 +53,8 @@ func testServerMetrics(ws *websocket.Conn) {
 			if vv.App == v.App {
 				appFound = true
 				if v.PendingCount != vv.PendingCount || v.RunningCount != vv.RunningCount {
-					log.Printf("%#v", test.expMetrics.Metrics.Tasks)
-					log.Printf("%#v", m.Metrics.Tasks)
+					log.Debugf("%#v", test.expMetrics.Metrics.Tasks)
+					log.Debugf("%#v", m.Metrics.Tasks)
 					global_t.Fatalf("Unexpected values")
 				}
 			}
