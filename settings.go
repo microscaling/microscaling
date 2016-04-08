@@ -7,9 +7,9 @@ import (
 
 	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
-	"github.com/microscaling/microscaling/docker"
 	"github.com/microscaling/microscaling/scheduler"
-	"github.com/microscaling/microscaling/toy_scheduler"
+	"github.com/microscaling/microscaling/scheduler/docker"
+	"github.com/microscaling/microscaling/scheduler/toy"
 )
 
 type settings struct {
