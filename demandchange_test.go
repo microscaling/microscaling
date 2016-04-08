@@ -10,14 +10,16 @@ import (
 )
 
 func TestHandleDemandChange(t *testing.T) {
-	tasks = make(map[string]demand.Task)
-	tasks["priority1"] = demand.Task{
+	var tasks *demand.Tasks = new(demand.Tasks)
+	tasks.Tasks = make(map[string]demand.Task)
+
+	tasks.Tasks["priority1"] = demand.Task{
 		FamilyName: "p1family",
 		Demand:     4,
 		Requested:  0,
 	}
 
-	tasks["priority2"] = demand.Task{
+	tasks.Tasks["priority2"] = demand.Task{
 		FamilyName: "p2family",
 		Demand:     3,
 		Requested:  0,
@@ -65,8 +67,8 @@ func TestHandleDemandChange(t *testing.T) {
 			t.Fatalf("handleDemandChange failed")
 		}
 		log.Info(tasks)
-		if !reflect.DeepEqual(tasks, test.newtasks) {
-			t.Fatalf("Expected %v tasks, got %v", test.newtasks, tasks)
+		if !reflect.DeepEqual(tasks.Tasks, test.newtasks) {
+			t.Fatalf("Expected %v tasks, got %v", test.newtasks, tasks.Tasks)
 		}
 	}
 }

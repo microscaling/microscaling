@@ -13,5 +13,5 @@ type Scheduler interface {
 	StopStartTasks(tasks map[string]demand.Task) error
 
 	// CountAllTasks updates task.Running to tell us how many instances of each task are currently running
-	CountAllTasks(tasks map[string]demand.Task) error
+	CountAllTasks(tasks *demand.Tasks) error
 }

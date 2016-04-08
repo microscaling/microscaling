@@ -44,8 +44,7 @@ import (
 const constSendMetricsSleep = 500 // milliseconds - delay before we send state on the metrics API
 
 var (
-	tasks map[string]demand.Task
-	log   = logging.MustGetLogger("mssagent")
+	log = logging.MustGetLogger("mssagent")
 )
 
 func init() {
@@ -53,16 +52,19 @@ func init() {
 }
 
 // cleanup resets demand for all tasks to 0 before we quit
-func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
-	var err error
+func cleanup(s scheduler.Scheduler, running *demand.Tasks) {
+	running.Lock()
 
+	tasks := running.Tasks
 	for name, task := range tasks {
 		task.Demand = 0
 		tasks[name] = task
 	}
 
-	log.Info("Reset tasks to 0 for cleanup")
-	err = s.StopStartTasks(tasks)
+	running.Unlock()
+
+	log.Debugf("Reset tasks to 0 for cleanup")
+	err := s.StopStartTasks(tasks)
 	if err != nil {
 		log.Errorf("Failed to cleanup tasks. %v", err)
 	}
@@ -71,6 +73,7 @@ func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
 // For this simple prototype, Microscaling sits in a loop checking for demand changes every X milliseconds
 func main() {
 	var err error
+	var tasks *demand.Tasks
 
 	st := getSettings()
 
@@ -80,10 +83,10 @@ func main() {
 		return
 	}
 
-	tasks := getTasks(st)
+	tasks = getTasks(st)
 
 	// Let the scheduler know about the task types.
-	for name, task := range tasks {
+	for name, task := range tasks.Tasks {
 		err = s.InitScheduler(name, &task)
 		if err != nil {
 			log.Errorf("Failed to start task %s: %v", name, err)
@@ -95,6 +98,12 @@ func main() {
 	err = s.CountAllTasks(tasks)
 	if err != nil {
 		log.Errorf("Failed to count containers. %v", err)
+	}
+
+	// Set the initial requested counts to match what's running
+	for name, task := range tasks.Tasks {
+		task.Requested = task.Running
+		tasks.Tasks[name] = task
 	}
 
 	// Prepare for cleanup when we receive an interrupt
@@ -158,7 +167,7 @@ func main() {
 						log.Errorf("Failed to count containers. %v", err)
 					}
 
-					err = api.SendMetrics(ws, st.userID, tasks)
+					err = api.SendMetrics(ws, st.userID, tasks.Tasks)
 					if err != nil {
 						log.Errorf("Failed to send metrics. %v", err)
 					}

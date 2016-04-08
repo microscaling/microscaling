@@ -7,23 +7,27 @@ import (
 )
 
 // handleDemandChange updates to changed demand
-func handleDemandChange(td []api.TaskDemand, s scheduler.Scheduler, tasks map[string]demand.Task) (err error) {
+func handleDemandChange(td []api.TaskDemand, s scheduler.Scheduler, running *demand.Tasks) (err error) {
+	running.Lock()
+	defer running.Unlock()
+	runningTasks := running.Tasks
+
 	var demandChanged = false
 	for _, task := range td {
 		name := task.App
 
-		if existingTask, ok := tasks[name]; ok {
+		if existingTask, ok := runningTasks[name]; ok {
 			if existingTask.Demand != task.DemandCount {
 				demandChanged = true
 			}
 			existingTask.Demand = task.DemandCount
-			tasks[name] = existingTask
+			runningTasks[name] = existingTask
 		}
 	}
 
 	if demandChanged {
 		// Ask the scheduler to make the changes
-		err = s.StopStartTasks(tasks)
+		err = s.StopStartTasks(running.Tasks)
 		if err != nil {
 			log.Errorf("Failed to stop / start tasks. %v", err)
 		}
