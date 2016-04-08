@@ -1,7 +1,6 @@
-package toy_scheduler
+package toy
 
 import (
-	"log"
 	"testing"
 
 	"github.com/microscaling/microscaling/demand"
@@ -16,13 +15,13 @@ func TestToyScheduler(t *testing.T) {
 	task := tasks["anything"]
 	m.InitScheduler("anything", &task)
 
-	log.Printf("before start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
+	log.Debugf("before start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
 	err := m.StopStartTasks(tasks)
 	if err != nil {
 		t.Fatalf("Error %v", err)
 	}
 	task = tasks["anything"]
-	log.Printf("after start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
+	log.Debugf("after start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
 
 	if err != nil {
 		t.Fatalf("Error. %v", err)
@@ -35,7 +34,7 @@ func TestToyScheduler(t *testing.T) {
 		if task.Running != task.Requested || task.Running != task.Demand {
 			t.Fatalf("Task %s running is not what was requested or demanded", name)
 		}
-		log.Printf("after counting: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
+		log.Debugf("after counting: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
 
 	}
 

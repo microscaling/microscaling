@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"reflect"
 	"testing"
 
@@ -24,7 +23,7 @@ func TestHandleDemandChange(t *testing.T) {
 		Requested:  0,
 	}
 
-	s := toy_scheduler.NewScheduler()
+	s := toy.NewScheduler()
 
 	tests := []struct {
 		td       []api.TaskDemand
@@ -65,7 +64,7 @@ func TestHandleDemandChange(t *testing.T) {
 		if err != nil {
 			t.Fatalf("handleDemandChange failed")
 		}
-		log.Println(tasks)
+		log.Info(tasks)
 		if !reflect.DeepEqual(tasks, test.newtasks) {
 			t.Fatalf("Expected %v tasks, got %v", test.newtasks, tasks)
 		}

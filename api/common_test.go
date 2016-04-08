@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,7 +19,7 @@ func TestGetBaseUrl(t *testing.T) {
 }
 
 func testServer(ws *websocket.Conn) {
-	log.Printf("Received something")
+	log.Debugf("Received something")
 }
 
 func TestInitWebSocket(t *testing.T) {
