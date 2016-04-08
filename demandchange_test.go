@@ -7,7 +7,7 @@ import (
 
 	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
-	"github.com/microscaling/microscaling/toy_scheduler"
+	"github.com/microscaling/microscaling/scheduler/toy"
 )
 
 func TestHandleDemandChange(t *testing.T) {
