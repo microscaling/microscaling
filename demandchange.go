@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/scheduler"
@@ -27,7 +25,7 @@ func handleDemandChange(td []api.TaskDemand, s scheduler.Scheduler, tasks map[st
 		// Ask the scheduler to make the changes
 		err = s.StopStartTasks(tasks)
 		if err != nil {
-			log.Printf("Failed to stop / start tasks. %v", err)
+			log.Errorf("Failed to stop / start tasks. %v", err)
 		}
 	}
 

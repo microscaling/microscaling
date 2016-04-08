@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"net/http/httptest"
 	"reflect"
 	"testing"
@@ -48,7 +47,7 @@ func testServerDemand(ws *websocket.Conn) {
 	err := Listen(ws, du)
 
 	if err != nil {
-		log.Printf("Error %v", err)
+		log.Errorf("Error %v", err)
 	}
 }
 
@@ -84,8 +83,8 @@ func TestGetDemand(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(rr, ee) {
-			log.Printf("Received %#v", result)
-			log.Printf("Expected %#v", expected)
+			log.Debugf("Received %#v", result)
+			log.Debugf("Expected %#v", expected)
 			t.Fatalf("Unexpected demand")
 		}
 	}

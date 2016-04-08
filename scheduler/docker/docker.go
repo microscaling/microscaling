@@ -3,16 +3,18 @@ package docker
 
 import (
 	"fmt"
-	"log"
 	"strings"
+
+	"github.com/fsouza/go-dockerclient"
+	"github.com/op/go-logging"
 
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/scheduler"
-
-	"github.com/fsouza/go-dockerclient"
 )
 
 const f12_map string = "com.microscaling.microscaling-in-a-box"
+
+var log = logging.MustGetLogger("mssscheduler")
 
 type DockerScheduler struct {
 	client     *docker.Client
@@ -23,7 +25,7 @@ type DockerScheduler struct {
 func NewScheduler(pullImages bool, dockerHost string) *DockerScheduler {
 	client, err := docker.NewClient(dockerHost)
 	if err != nil {
-		log.Printf("Error starting Docker client: %v", err)
+		log.Errorf("Error starting Docker client: %v", err)
 		return nil
 	}
 
@@ -38,7 +40,7 @@ func NewScheduler(pullImages bool, dockerHost string) *DockerScheduler {
 var _ scheduler.Scheduler = (*DockerScheduler)(nil)
 
 func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err error) {
-	log.Printf("Docker initializing task %s", appId)
+	log.Infof("Docker initializing task %s", appId)
 
 	c.containers[appId] = make([]string, 100)
 
@@ -50,10 +52,10 @@ func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err er
 
 		authOpts := docker.AuthConfiguration{}
 
-		log.Printf("Pulling image: %v", task.Image)
+		log.Infof("Pulling image: %v", task.Image)
 		err = c.client.PullImage(pullOpts, authOpts)
 		if err != nil {
-			log.Printf("Failed to pull image %s: %v", task.Image, err)
+			log.Errorf("Failed to pull image %s: %v", task.Image, err)
 		}
 	}
 
@@ -85,7 +87,7 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 	}
 
 	c.containers[name] = append(c.containers[name], container.ID[:12])
-	log.Printf("Created task %s with image %s, ID %s", name, task.Image, container.ID[:12])
+	log.Debugf("Created task %s with image %s, ID %s", name, task.Image, container.ID[:12])
 
 	hostConfig := docker.HostConfig{
 		PublishAllPorts: task.PublishAllPorts,
@@ -105,7 +107,7 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 	these_containers := c.containers[name]
 	container_to_kill := these_containers[len(these_containers)-1]
 	c.containers[name] = these_containers[:len(these_containers)-1]
-	log.Printf("Removing task %s with ID %s", name, container_to_kill)
+	log.Debugf("Removing task %s with ID %s", name, container_to_kill)
 
 	err = c.client.StopContainer(container_to_kill, 1)
 	if err != nil {
@@ -145,11 +147,11 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 	for _, name := range too_many {
 		task := tasks[name]
 		diff = task.Requested - task.Demand
-		log.Printf("Stop %d of task %s", diff, name)
+		log.Debugf("Stop %d of task %s", diff, name)
 		for i := 0; i < diff; i++ {
 			err = c.stopTask(name, &task)
 			if err != nil {
-				log.Printf("Couldn't stop %s: %v ", name, err)
+				log.Errorf("Couldn't stop %s: %v ", name, err)
 			}
 			task.Requested -= 1
 		}
@@ -160,11 +162,11 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 	for _, name := range too_few {
 		task := tasks[name]
 		diff = task.Demand - task.Requested
-		log.Printf("Start %d of task %s", diff, name)
+		log.Debugf("Start %d of task %s", diff, name)
 		for i := 0; i < diff; i++ {
 			err = c.startTask(name, &task)
 			if err != nil {
-				log.Printf("Couldn't start %s: %v ", name, err)
+				log.Errorf("Couldn't start %s: %v ", name, err)
 			}
 			task.Requested += 1
 		}
