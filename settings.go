@@ -44,22 +44,11 @@ func initLogging() {
 
 	var components = []string{"mssengine", "mssagent", "mssapi", "mssdemand", "mssscheduler"}
 
-	switch logComponents {
-	case "all":
-		for _, component := range components {
+	for _, component := range components {
+		if strings.Contains(logComponents, component) || strings.Contains(logComponents, "all") {
 			logging.SetLevel(logging.DEBUG, component)
-		}
-	case "none":
-		for _, component := range components {
+		} else {
 			logging.SetLevel(logging.INFO, component)
-		}
-	default:
-		for _, component := range components {
-			if strings.Contains(logComponents, component) {
-				logging.SetLevel(logging.DEBUG, component)
-			} else {
-				logging.SetLevel(logging.INFO, component)
-			}
 		}
 	}
 }
