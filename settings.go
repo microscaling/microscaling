@@ -92,7 +92,7 @@ func getScheduler(st settings) (scheduler.Scheduler, error) {
 	return s, nil
 }
 
-func getTasks(st settings) map[string]demand.Task {
+func getTasks(st settings) (tasks *demand.Tasks) {
 	var t map[string]demand.Task
 
 	// Get the tasks that have been configured by this user
@@ -101,8 +101,11 @@ func getTasks(st settings) map[string]demand.Task {
 		log.Errorf("Error getting tasks: %v", err)
 	}
 
-	log.Debug(t)
-	return t
+	log.Debugf("Tasks: %v", t)
+
+	tasks = new(demand.Tasks)
+	tasks.Tasks = t
+	return tasks
 }
 
 func getEnvOrDefault(name string, defaultValue string) string {

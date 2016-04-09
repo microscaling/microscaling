@@ -38,7 +38,11 @@ func (t *ToyScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 }
 
 // CountAllTasks for the Toy scheduler simply reflects back what has been requested
-func (t *ToyScheduler) CountAllTasks(tasks map[string]demand.Task) error {
+func (t *ToyScheduler) CountAllTasks(running *demand.Tasks) error {
+	running.Lock()
+	defer running.Unlock()
+	tasks := running.Tasks
+
 	for name, task := range tasks {
 		task.Running = task.Requested
 		tasks[name] = task

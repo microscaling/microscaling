@@ -69,8 +69,8 @@ func TestDockerScheduler(t *testing.T) {
 		fmt.Printf("Error %v", err)
 	}
 
-	var tasks map[string]demand.Task
-	tasks = make(map[string]demand.Task)
-	tasks["anything"] = task
-	d.CountAllTasks(tasks)
+	var tasks demand.Tasks
+	tasks.Tasks = make(map[string]demand.Task)
+	tasks.Tasks["anything"] = task
+	d.CountAllTasks(&tasks)
 }

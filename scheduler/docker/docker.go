@@ -176,7 +176,7 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 	return err
 }
 
-func (c *DockerScheduler) CountAllTasks(tasks map[string]demand.Task) error {
+func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 	// Docker Remote API https://docs.docker.com/reference/api/docker_remote_api_v1.20/
 	// get /containers/json
 	var err error
@@ -185,6 +185,10 @@ func (c *DockerScheduler) CountAllTasks(tasks map[string]demand.Task) error {
 	if err != nil {
 		return fmt.Errorf("Failed to list containers: %v", err)
 	}
+
+	running.Lock()
+	defer running.Unlock()
+	tasks := running.Tasks
 
 	// Reset all the running counts to 0
 	for name, t := range tasks {
