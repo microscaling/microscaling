@@ -4,6 +4,7 @@ package docker
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/fsouza/go-dockerclient"
 	"github.com/op/go-logging"
@@ -12,14 +13,20 @@ import (
 	"github.com/microscaling/microscaling/scheduler"
 )
 
-const f12_map string = "com.microscaling.microscaling-in-a-box"
+const labelMap string = "com.microscaling.microscaling-in-a-box"
 
 var log = logging.MustGetLogger("mssscheduler")
 
+type dockerContainer struct {
+	state   string
+	updated bool
+}
+
 type DockerScheduler struct {
-	client     *docker.Client
-	pullImages bool
-	containers map[string][]string
+	client         *docker.Client
+	pullImages     bool
+	taskContainers map[string]map[string]*dockerContainer // tasks indexed by app name, containers indexed by ID
+	sync.Mutex
 }
 
 func NewScheduler(pullImages bool, dockerHost string) *DockerScheduler {
@@ -30,9 +37,9 @@ func NewScheduler(pullImages bool, dockerHost string) *DockerScheduler {
 	}
 
 	return &DockerScheduler{
-		client:     client,
-		containers: make(map[string][]string),
-		pullImages: pullImages,
+		client:         client,
+		taskContainers: make(map[string]map[string]*dockerContainer),
+		pullImages:     pullImages,
 	}
 }
 
@@ -42,7 +49,10 @@ var _ scheduler.Scheduler = (*DockerScheduler)(nil)
 func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err error) {
 	log.Infof("Docker initializing task %s", appId)
 
-	c.containers[appId] = make([]string, 100)
+	c.Lock()
+	defer c.Unlock()
+
+	c.taskContainers[appId] = make(map[string]*dockerContainer, 100)
 
 	// We may need to pull the image for this container
 	if c.pullImages {
@@ -66,7 +76,7 @@ func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err er
 func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 	var err error = nil
 	var labels map[string]string = map[string]string{
-		f12_map: name,
+		labelMap: name,
 	}
 
 	var cmds []string = strings.Fields(task.Command)
@@ -86,15 +96,29 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 		return err
 	}
 
-	c.containers[name] = append(c.containers[name], container.ID[:12])
-	log.Debugf("Created task %s with image %s, ID %s", name, task.Image, container.ID[:12])
+	var containerID = container.ID[:12]
+
+	c.Lock()
+	c.taskContainers[name][containerID] = &dockerContainer{
+		state: "created",
+	}
+	c.Unlock()
+	log.Debugf("[created] task %s with image %s, ID %s", name, task.Image, container.ID[:12])
 
 	hostConfig := docker.HostConfig{
 		PublishAllPorts: task.PublishAllPorts,
 	}
 
 	// Start it
-	err = c.client.StartContainer(container.ID, &hostConfig)
+	err = c.client.StartContainer(containerID, &hostConfig)
+	if err != nil {
+		return err
+	}
+	log.Debugf("[running] task %s ID %s", name, container.ID[:12])
+
+	c.Lock()
+	c.taskContainers[name][containerID].state = "starting"
+	c.Unlock()
 
 	return err
 }
@@ -103,23 +127,40 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 	var err error = nil
 
-	// Kill the last container of this type.
-	these_containers := c.containers[name]
-	container_to_kill := these_containers[len(these_containers)-1]
-	c.containers[name] = these_containers[:len(these_containers)-1]
-	log.Debugf("Removing task %s with ID %s", name, container_to_kill)
+	// Kill a currently-running container of this type
+	c.Lock()
+	theseContainers := c.taskContainers[name]
+	var containerToKill string
+	for id, v := range theseContainers {
+		if v.state == "running" {
+			containerToKill = id
+			v.state = "stopping"
+			break
+		}
+	}
+	c.Unlock()
 
-	err = c.client.StopContainer(container_to_kill, 1)
+	if containerToKill == "" {
+		return fmt.Errorf("[stop] No containers of type %s to kill", name)
+	}
+
+	log.Debugf("[stop] container for task %s with ID %s", name, containerToKill)
+	err = c.client.StopContainer(containerToKill, 1)
 	if err != nil {
 		return err
 	}
 
 	removeOpts := docker.RemoveContainerOptions{
-		ID:            container_to_kill,
+		ID:            containerToKill,
 		RemoveVolumes: true,
 	}
 
+	c.Lock()
+	c.taskContainers[name][containerToKill].state = "removing"
+	c.Unlock()
+	log.Debugf("[remove] container for task %s with ID %s", name, containerToKill)
 	err = c.client.RemoveContainer(removeOpts)
+
 	return err
 }
 
@@ -176,6 +217,23 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 	return err
 }
 
+func statusToState(status string) string {
+	if strings.Contains(status, "Up") {
+		return "running"
+	}
+	if strings.Contains(status, "Removal") {
+		return "removing"
+	}
+	if strings.Contains(status, "Exit") {
+		return "exited"
+	}
+	if strings.Contains(status, "Dead") {
+		return "dead"
+	}
+	log.Errorf("Unexpected docker status %s", status)
+	return "unknown"
+}
+
 func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 	// Docker Remote API https://docs.docker.com/reference/api/docker_remote_api_v1.20/
 	// get /containers/json
@@ -188,27 +246,79 @@ func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 
 	running.Lock()
 	defer running.Unlock()
-	tasks := running.Tasks
+	c.Lock()
+	defer c.Unlock()
 
 	// Reset all the running counts to 0
+	tasks := running.Tasks
 	for name, t := range tasks {
 		t.Running = 0
 		tasks[name] = t
+
+		for _, cc := range c.taskContainers[name] {
+			cc.updated = false
+		}
 	}
 
-	var service_name string
+	var taskName string
 	var present bool
 
 	for i := range containers {
 		labels := containers[i].Labels
-		service_name, present = labels[f12_map]
+		taskName, present = labels[labelMap]
 		if present {
 			// Only update tasks that are already in our task map - don't try to manage anything else
-			// log.Printf("Found a container with labels %v", labels)
-			t, in_our_tasks := tasks[service_name]
-			if in_our_tasks {
-				t.Running++
-				tasks[service_name] = t
+			// log.Debugf("Found a container with labels %v", labels)
+			t, inOurTasks := tasks[taskName]
+			if inOurTasks {
+				newState := statusToState(containers[i].Status)
+				id := containers[i].ID[:12]
+				thisContainer, ok := c.taskContainers[taskName][id]
+				if !ok {
+					log.Infof("We have no previous record of container %s, state %s", id, newState)
+					thisContainer = &dockerContainer{}
+					c.taskContainers[taskName][id] = thisContainer
+				}
+
+				switch newState {
+				case "running":
+					t.Running++
+					// We could be moving from starting to running, or it could be a container that's totally new to us
+					if thisContainer.state == "starting" || thisContainer.state == "" {
+						thisContainer.state = newState
+					}
+				case "removing":
+					if thisContainer.state != "removing" {
+						log.Errorf("Container %s is being removed, but we didn't terminate it", id)
+					}
+				case "exited":
+					if thisContainer.state != "stopping" && thisContainer.state != "exited" {
+						log.Errorf("Container %s is being removed, but we didn't terminate it", id)
+					}
+				case "dead":
+					if thisContainer.state != "dead" {
+						log.Errorf("Container %s is dead", id)
+					}
+					thisContainer.state = newState
+				}
+
+				thisContainer.updated = true
+				tasks[taskName] = t
+			}
+		}
+	}
+
+	for name, task := range tasks {
+		log.Debugf("  %s: internally running %d, requested %d", name, task.Running, task.Requested)
+		for id, cc := range c.taskContainers[name] {
+			log.Debugf("  %s - %s", id, cc.state)
+			if !cc.updated {
+				if cc.state == "removing" || cc.state == "exited" {
+					log.Debugf("    Deleting %s", id)
+					delete(c.taskContainers[name], id)
+				} else if cc.state != "starting" && cc.state != "stopping" {
+					log.Errorf("Bad state for container %s: %s", id, cc.state)
+				}
 			}
 		}
 	}
