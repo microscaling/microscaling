@@ -147,24 +147,32 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 		return fmt.Errorf("[stop] No containers of type %s to kill", name)
 	}
 
-	log.Debugf("[stop] container for task %s with ID %s", name, containerToKill)
-	err = c.client.StopContainer(containerToKill, 1)
-	if err != nil {
-		return err
-	}
-
 	removeOpts := docker.RemoveContainerOptions{
 		ID:            containerToKill,
 		RemoveVolumes: true,
 	}
 
-	c.Lock()
-	c.taskContainers[name][containerToKill].state = "removing"
-	c.Unlock()
-	log.Debugf("[remove] container for task %s with ID %s", name, containerToKill)
-	err = c.client.RemoveContainer(removeOpts)
+	go func() {
+		log.Debugf("[stopping] container for task %s with ID %s", name, containerToKill)
+		err = c.client.StopContainer(containerToKill, 1)
+		if err != nil {
+			log.Errorf("Couldn't stop container %s: %v", containerToKill, err)
+			return
+		}
 
-	return err
+		c.Lock()
+		c.taskContainers[name][containerToKill].state = "removing"
+		c.Unlock()
+
+		log.Debugf("[removing] container for task %s with ID %s", name, containerToKill)
+		err = c.client.RemoveContainer(removeOpts)
+		if err != nil {
+			log.Errorf("Couldn't remove container %s: %v", containerToKill, err)
+			return
+		}
+	}()
+
+	return nil
 }
 
 func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {

@@ -181,8 +181,12 @@ func main() {
 
 		case <-ready:
 			if exitWhenReady {
-				log.Info("All finished")
-				os.Exit(1)
+				err = s.CountAllTasks(tasks)
+				if demand.Exited(tasks) {
+					log.Info("All finished")
+					os.Exit(1)
+				}
+				break
 			}
 
 			// An outstanding scale command has finished so we are OK to send another one
