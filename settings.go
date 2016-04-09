@@ -23,10 +23,15 @@ type settings struct {
 }
 
 func initLogging() {
+	// The MSS_LOG_DEBUG environment variable controls what logging is output
+	// By default the log level is INFO for all components
+	// Adding a component name to MSS_LOG_DEBUG makes its logging level DEBUG
+	// In addition, if "detail" is included in the environment variable details of the process ID and file name / line number are included in the logs
+	// MSS_LOG_DEBUG="all" - turn on DEBUG for all components
+	// MSS_LOG_DEBUG="mssapi,detail" - turn on DEBUG for the api package, and use the detailed logging format
 	basicLogFormat := logging.MustStringFormatter(`%{color}%{level:.4s} %{time:15:04:05.000}: %{color:reset} %{message}`)
 	detailLogFormat := logging.MustStringFormatter(`%{color}%{level:.4s} %{time:15:04:05.000} %{pid} %{shortfile}: %{color:reset} %{message}`)
 
-	// "%{level:.1s}%{time:0102 15:04:05.999999} %{pid} %{shortfile}] %{message}"
 	logComponents := getEnvOrDefault("MSS_LOG_DEBUG", "none")
 	if strings.Contains(logComponents, "detail") {
 		logging.SetFormatter(detailLogFormat)
@@ -39,22 +44,11 @@ func initLogging() {
 
 	var components = []string{"mssengine", "mssagent", "mssapi", "mssdemand", "mssscheduler"}
 
-	switch logComponents {
-	case "all":
-		for _, component := range components {
+	for _, component := range components {
+		if strings.Contains(logComponents, component) || strings.Contains(logComponents, "all") {
 			logging.SetLevel(logging.DEBUG, component)
-		}
-	case "none":
-		for _, component := range components {
+		} else {
 			logging.SetLevel(logging.INFO, component)
-		}
-	default:
-		for _, component := range components {
-			if strings.Contains(logComponents, component) {
-				logging.SetLevel(logging.DEBUG, component)
-			} else {
-				logging.SetLevel(logging.INFO, component)
-			}
 		}
 	}
 }
