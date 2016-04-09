@@ -149,8 +149,9 @@ func main() {
 						log.Errorf("Failed to handle demand change. %v", err)
 					}
 
-					// Notify the channel when the scaling command has completed
-					ready <- struct{}{}
+					if demand.ScaleComplete(tasks) {
+						ready <- struct{}{}
+					}
 				}()
 			} else {
 				log.Debug("Scale still outstanding")
@@ -167,6 +168,10 @@ func main() {
 						log.Errorf("Failed to count containers. %v", err)
 					}
 
+					if demand.ScaleComplete(tasks) {
+						ready <- struct{}{}
+					}
+
 					err = api.SendMetrics(ws, st.userID, tasks.Tasks)
 					if err != nil {
 						log.Errorf("Failed to send metrics. %v", err)
@@ -174,6 +179,7 @@ func main() {
 
 					// Notify the channel when the API call has completed
 					metricsReady <- struct{}{}
+
 				}()
 			} else {
 				log.Debug("Not ready to send metrics")

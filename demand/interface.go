@@ -38,3 +38,18 @@ func Exited(tasks *Tasks) (done bool) {
 
 	return done
 }
+
+func ScaleComplete(tasks *Tasks) (done bool) {
+	tasks.RLock()
+	defer tasks.RUnlock()
+
+	done = true
+	for name, task := range tasks.Tasks {
+		if task.Running != task.Requested {
+			done = false
+			log.Debugf("Scale outstanding for %s: %d running, %d requested", name, task.Running, task.Requested)
+		}
+	}
+
+	return done
+}
