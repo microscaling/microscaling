@@ -11,9 +11,5 @@ RUN apk update && \
 # needs to be built for Linux:
 # GOOS=linux go build -o microscaling .
 ADD microscaling /
-
-ADD run.sh /
-RUN chmod +x /run.sh
-
-# Needs a run.sh wrapper to run the microscaling binary successfully
-ENTRYPOINT ["/run.sh"]
+RUN chmod +x /microscaling
+ENTRYPOINT ["/microscaling"]
