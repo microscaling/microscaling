@@ -73,8 +73,7 @@ func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err er
 }
 
 // startTask creates the container and then starts it
-func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
-	var err error = nil
+func (c *DockerScheduler) startTask(name string, task *demand.Task) {
 	var labels map[string]string = map[string]string{
 		labelMap: name,
 	}
@@ -91,36 +90,40 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) error {
 		},
 	}
 
-	container, err := c.client.CreateContainer(createOpts)
-	if err != nil {
-		return err
-	}
-
-	var containerID = container.ID[:12]
-
-	c.Lock()
-	c.taskContainers[name][containerID] = &dockerContainer{
-		state: "created",
-	}
-	c.Unlock()
-	log.Debugf("[created] task %s with image %s, ID %s", name, task.Image, container.ID[:12])
-
 	hostConfig := docker.HostConfig{
 		PublishAllPorts: task.PublishAllPorts,
 	}
 
-	// Start it
-	err = c.client.StartContainer(containerID, &hostConfig)
-	if err != nil {
-		return err
-	}
-	log.Debugf("[running] task %s ID %s", name, container.ID[:12])
+	go func() {
+		log.Debugf("[start] task %s", name)
+		container, err := c.client.CreateContainer(createOpts)
+		if err != nil {
+			log.Errorf("Couldn't create container for task %s: %v", name, err)
+			return
+		}
 
-	c.Lock()
-	c.taskContainers[name][containerID].state = "starting"
-	c.Unlock()
+		var containerID = container.ID[:12]
 
-	return err
+		c.Lock()
+		c.taskContainers[name][containerID] = &dockerContainer{
+			state: "created",
+		}
+		c.Unlock()
+		log.Debugf("[created] task %s ID %s", name, containerID)
+
+		// Start it
+		err = c.client.StartContainer(containerID, &hostConfig)
+		if err != nil {
+			log.Errorf("Couldn't start container ID %s for task %s: %v", containerID, name, err)
+			return
+		}
+
+		log.Debugf("[starting] task %s ID %s", name, containerID)
+
+		c.Lock()
+		c.taskContainers[name][containerID].state = "starting"
+		c.Unlock()
+	}()
 }
 
 // stopTask kills the last container we know about of this type
@@ -205,10 +208,7 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 		diff = task.Demand - task.Requested
 		log.Debugf("Start %d of task %s", diff, name)
 		for i := 0; i < diff; i++ {
-			err = c.startTask(name, &task)
-			if err != nil {
-				log.Errorf("Couldn't start %s: %v ", name, err)
-			}
+			c.startTask(name, &task)
 			task.Requested += 1
 		}
 		tasks[name] = task
@@ -316,7 +316,7 @@ func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 				if cc.state == "removing" || cc.state == "exited" {
 					log.Debugf("    Deleting %s", id)
 					delete(c.taskContainers[name], id)
-				} else if cc.state != "starting" && cc.state != "stopping" {
+				} else if cc.state != "created" && cc.state != "starting" && cc.state != "stopping" {
 					log.Errorf("Bad state for container %s: %s", id, cc.state)
 				}
 			}
