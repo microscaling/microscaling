@@ -65,7 +65,7 @@ func appsFromResponse(b []byte) (tasks map[string]demand.Task, maxContainers int
 		}
 
 		if a.RuleType == "Queue" {
-			task.TargetQueueLength = a.TargetQueueLength
+			task.Target = a.TargetQueueLength
 		}
 
 		tasks[name] = task
