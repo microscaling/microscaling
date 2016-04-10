@@ -31,6 +31,7 @@ package main
 import (
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -51,6 +52,13 @@ func init() {
 	initLogging()
 }
 
+type exitLock struct {
+	ready bool
+	sync.Mutex
+}
+
+var exitWhen exitLock
+
 // cleanup resets demand for all tasks to 0 before we quit
 func cleanup(s scheduler.Scheduler, running *demand.Tasks) {
 	running.Lock()
@@ -68,6 +76,10 @@ func cleanup(s scheduler.Scheduler, running *demand.Tasks) {
 	if err != nil {
 		log.Errorf("Failed to cleanup tasks. %v", err)
 	}
+
+	exitWhen.Lock()
+	exitWhen.ready = true
+	exitWhen.Unlock()
 }
 
 // For this simple prototype, Microscaling sits in a loop checking for demand changes every X milliseconds
@@ -120,104 +132,44 @@ func main() {
 	var sendMetricsTimeout *time.Ticker
 	if st.sendMetrics {
 		sendMetricsTimeout = time.NewTicker(constSendMetricsSleep * time.Millisecond)
+		go func() {
+			for _ = range sendMetricsTimeout.C {
+				log.Debug("Sending metrics")
+				// Find out how many instances of each task are running
+				err = s.CountAllTasks(tasks)
+				if err != nil {
+					log.Errorf("Failed to count containers. %v", err)
+				}
+
+				err = api.SendMetrics(ws, st.userID, tasks.Tasks)
+				if err != nil {
+					log.Errorf("Failed to send metrics. %v", err)
+				}
+
+				exitWhen.Lock()
+				if exitWhen.ready {
+					if demand.Exited(tasks) {
+						log.Info("All finished")
+						os.Exit(1)
+					}
+				}
+				exitWhen.Unlock()
+			}
+		}()
 	}
 
-	// Only allow one scaling command and one metrics send to be outstanding at a time
-	ready := make(chan struct{}, 1)
-	metricsReady := make(chan struct{}, 1)
-	var scalingReady = true
-	var sendMetricsReady = true
-	var cleanupWhenReady = false
-	var exitWhenReady = false
-
-	// Loop, continually checking for changes in demand that need to be scheduled
-	// At the moment we plough on regardless in the face of errors, simply logging them out
-	for {
-		select {
-		case td := <-demandUpdate:
-			// Don't do anything if we're about to exit
-			if cleanupWhenReady || exitWhenReady {
-				break
-			}
-
-			// If we already have a scaling change outstanding, we can't do another one
-			if scalingReady {
-				scalingReady = false
-				go func() {
-					err = handleDemandChange(td, s, tasks)
-					if err != nil {
-						log.Errorf("Failed to handle demand change. %v", err)
-					}
-
-					if demand.ScaleComplete(tasks) {
-						ready <- struct{}{}
-					}
-				}()
-			} else {
-				log.Debug("Scale still outstanding")
-			}
-
-		case <-sendMetricsTimeout.C:
-			if sendMetricsReady {
-				log.Debug("Sending metrics")
-				sendMetricsReady = false
-				go func() {
-					// Find out how many instances of each task are running
-					err = s.CountAllTasks(tasks)
-					if err != nil {
-						log.Errorf("Failed to count containers. %v", err)
-					}
-
-					if demand.ScaleComplete(tasks) {
-						ready <- struct{}{}
-					}
-
-					err = api.SendMetrics(ws, st.userID, tasks.Tasks)
-					if err != nil {
-						log.Errorf("Failed to send metrics. %v", err)
-					}
-
-					// Notify the channel when the API call has completed
-					metricsReady <- struct{}{}
-
-				}()
-			} else {
-				log.Debug("Not ready to send metrics")
-			}
-
-		case <-ready:
-			if exitWhenReady {
-				err = s.CountAllTasks(tasks)
-				if demand.Exited(tasks) {
-					log.Info("All finished")
-					os.Exit(1)
-				}
-				break
-			}
-
-			// An outstanding scale command has finished so we are OK to send another one
-			if cleanupWhenReady {
-				log.Info("Cleaning up")
-				exitWhenReady = true
-				go func() {
-					cleanup(s, tasks)
-					ready <- struct{}{}
-				}()
-			} else {
-				scalingReady = true
-			}
-
-		case <-metricsReady:
-			// Finished sending metrics so we are OK to send another one
-			sendMetricsReady = true
-
-		case <-closedown:
-			log.Info("Clean up when ready")
-			cleanupWhenReady = true
-			if scalingReady {
-				// Trigger it now
-				ready <- struct{}{}
+	go func() {
+		for td := range demandUpdate {
+			log.Debug("Demand update")
+			err = handleDemandChange(td, s, tasks)
+			if err != nil {
+				log.Errorf("Failed to handle demand change. %v", err)
 			}
 		}
-	}
+	}()
+
+	<-closedown
+	log.Info("Clean up when ready")
+	close(demandUpdate)
+	cleanup(s, tasks)
 }
