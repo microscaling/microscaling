@@ -6,10 +6,21 @@ import (
 	"github.com/microscaling/microscaling/demand"
 )
 
+type AppsMessage struct {
+	UserID        string           `json:"name"`
+	MaxContainers int              `json:"maxContainers"`
+	Apps          []AppDescription `json:"apps"`
+}
+
 type AppDescription struct {
-	Name    string          `json:"name"`
-	AppType string          `json:"type"`
-	Config  DockerAppConfig `json:"config"`
+	Name              string          `json:"name"`
+	Priority          int             `json:"priority"` // 1 is the highest, 0 means it's not scalable
+	MinContainers     int             `json:"minContainers"`
+	MaxContainers     int             `json:"maxContainers"`
+	TargetQueueLength int             `json:"targetValue"`
+	RuleType          string          `json:"ruleType"`
+	AppType           string          `json:"appType"`
+	Config            DockerAppConfig `json:"config"`
 }
 
 type DockerAppConfig struct {
@@ -29,19 +40,32 @@ func (d *DockerAppConfig) UnmarshalJSON(b []byte) (err error) {
 	return
 }
 
-func appsFromResponse(b []byte) (tasks map[string]demand.Task, err error) {
-	var apps []AppDescription
-	err = json.Unmarshal(b, &apps)
-
+func appsFromResponse(b []byte) (tasks map[string]demand.Task, maxContainers int, err error) {
+	var appsMessage AppsMessage
 	tasks = make(map[string]demand.Task)
 
-	for _, a := range apps {
+	err = json.Unmarshal(b, &appsMessage)
+	if err != nil {
+		log.Debugf("Error unmarshalling from %s", string(b[:]))
+	}
+
+	maxContainers = appsMessage.MaxContainers
+
+	for _, a := range appsMessage.Apps {
 		name := a.Name
 		task := demand.Task{
-			Image:   a.Config.Image,
-			Command: a.Config.Command,
+			Image:         a.Config.Image,
+			Command:       a.Config.Command,
+			Priority:      a.Priority,
+			MinContainers: a.MinContainers,
+			MaxContainers: a.MaxContainers,
+			TargetType:    a.RuleType,
 			// TODO!! For now we will default turning on publishAllPorts, until we add this to the client-server interface
 			PublishAllPorts: true,
+		}
+
+		if a.RuleType == "Queue" {
+			task.TargetQueueLength = a.TargetQueueLength
 		}
 
 		tasks[name] = task
@@ -50,14 +74,13 @@ func appsFromResponse(b []byte) (tasks map[string]demand.Task, err error) {
 	return
 }
 
-// Get /apps/ to receive a list of apps we'll be scaling
-func GetApps(userID string) (tasks map[string]demand.Task, err error) {
-	body, err := getJsonGet(userID, "/apps/")
+func GetApps(userID string) (tasks map[string]demand.Task, maxContainers int, err error) {
+	body, err := getJsonGet(userID, "/v2/apps/")
 	if err != nil {
-		log.Errorf("Failed to get /apps/: %v", err)
-		return nil, err
+		log.Debugf("Failed to get /v2/apps/: %v", err)
+		return nil, 0, err
 	}
 
-	tasks, err = appsFromResponse(body)
+	tasks, maxContainers, err = appsFromResponse(body)
 	return
 }

@@ -20,6 +20,7 @@ type settings struct {
 	userID        string
 	pullImages    bool
 	dockerHost    string
+	maxContainers int 
 }
 
 func initLogging() {
@@ -96,7 +97,7 @@ func getTasks(st settings) (tasks *demand.Tasks) {
 	var t map[string]demand.Task
 
 	// Get the tasks that have been configured by this user
-	t, err := api.GetApps(st.userID)
+	t, st.maxContainers, err := api.GetApps(st.userID)
 	if err != nil {
 		log.Errorf("Error getting tasks: %v", err)
 	}
