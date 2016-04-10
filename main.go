@@ -31,7 +31,6 @@ package main
 import (
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -52,13 +51,6 @@ func init() {
 	initLogging()
 }
 
-type exitLock struct {
-	ready bool
-	sync.Mutex
-}
-
-var exitWhen exitLock
-
 // cleanup resets demand for all tasks to 0 before we quit
 func cleanup(s scheduler.Scheduler, running *demand.Tasks) {
 	running.Lock()
@@ -76,10 +68,6 @@ func cleanup(s scheduler.Scheduler, running *demand.Tasks) {
 	if err != nil {
 		log.Errorf("Failed to cleanup tasks. %v", err)
 	}
-
-	exitWhen.Lock()
-	exitWhen.ready = true
-	exitWhen.Unlock()
 }
 
 // For this simple prototype, Microscaling sits in a loop checking for demand changes every X milliseconds
@@ -123,41 +111,12 @@ func main() {
 	signal.Notify(closedown, os.Interrupt)
 	signal.Notify(closedown, syscall.SIGTERM)
 
-	// Listen for demand on a websocket (we'll also use this to send metrics)
+	// Listen for demand on a websocket
 	demandUpdate := make(chan []api.TaskDemand, 1)
 	ws, err := api.InitWebSocket()
 	go api.Listen(ws, demandUpdate)
 
-	// Periodically send state to the API if required
-	var sendMetricsTimeout *time.Ticker
-	if st.sendMetrics {
-		sendMetricsTimeout = time.NewTicker(constSendMetricsSleep * time.Millisecond)
-		go func() {
-			for _ = range sendMetricsTimeout.C {
-				log.Debug("Sending metrics")
-				// Find out how many instances of each task are running
-				err = s.CountAllTasks(tasks)
-				if err != nil {
-					log.Errorf("Failed to count containers. %v", err)
-				}
-
-				err = api.SendMetrics(ws, st.userID, tasks.Tasks)
-				if err != nil {
-					log.Errorf("Failed to send metrics. %v", err)
-				}
-
-				exitWhen.Lock()
-				if exitWhen.ready {
-					if demand.Exited(tasks) {
-						log.Info("All finished")
-						os.Exit(1)
-					}
-				}
-				exitWhen.Unlock()
-			}
-		}()
-	}
-
+	// Handle demand updates
 	go func() {
 		for td := range demandUpdate {
 			log.Debug("Demand update")
@@ -166,10 +125,42 @@ func main() {
 				log.Errorf("Failed to handle demand change. %v", err)
 			}
 		}
+
+		// When the demandUpdate channel is closed, it's time to scale everything down to 0
+		cleanup(s, tasks)
 	}()
 
+	// Periodically read the current state of tasks
+	var sendMetricsTimeout *time.Ticker
+	sendMetricsTimeout = time.NewTicker(constSendMetricsSleep * time.Millisecond)
+	go func() {
+		for _ = range sendMetricsTimeout.C {
+			// Find out how many instances of each task are running
+			err = s.CountAllTasks(tasks)
+			if err != nil {
+				log.Errorf("Failed to count containers. %v", err)
+			}
+
+			if st.sendMetrics {
+				log.Debug("Sending metrics")
+				err = api.SendMetrics(ws, st.userID, tasks.Tasks)
+				if err != nil {
+					log.Errorf("Failed to send metrics. %v", err)
+				}
+			}
+		}
+	}()
+
+	// When we're asked to close down, we don't want to handle demand updates any more
 	<-closedown
 	log.Info("Clean up when ready")
 	close(demandUpdate)
-	cleanup(s, tasks)
+
+	exitWaitTimeout := time.NewTicker(constSendMetricsSleep * time.Millisecond)
+	for _ = range exitWaitTimeout.C {
+		if demand.Exited(tasks) {
+			log.Info("All finished")
+			break
+		}
+	}
 }

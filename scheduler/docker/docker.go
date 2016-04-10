@@ -46,6 +46,8 @@ func NewScheduler(pullImages bool, dockerHost string) *DockerScheduler {
 // compile-time assert that we implement the right interface
 var _ scheduler.Scheduler = (*DockerScheduler)(nil)
 
+var scaling sync.WaitGroup
+
 func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err error) {
 	log.Infof("Docker initializing task %s", appId)
 
@@ -95,6 +97,9 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) {
 	}
 
 	go func() {
+		scaling.Add(1)
+		defer scaling.Done()
+
 		log.Debugf("[start] task %s", name)
 		container, err := c.client.CreateContainer(createOpts)
 		if err != nil {
@@ -153,6 +158,9 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 	}
 
 	go func() {
+		scaling.Add(1)
+		defer scaling.Done()
+
 		log.Debugf("[stopping] container for task %s with ID %s", name, containerToKill)
 		err = c.client.StopContainer(containerToKill, 1)
 		if err != nil {
@@ -222,6 +230,8 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 		tasks[name] = task
 	}
 
+	// Don't return until all the scale tasks are complete
+	scaling.Wait()
 	return err
 }
 
