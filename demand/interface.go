@@ -3,6 +3,8 @@ package demand
 
 import (
 	"sync"
+
+	"github.com/op/go-logging"
 )
 
 type Tasks struct {
@@ -18,4 +20,36 @@ type Task struct {
 	Image           string
 	Command         string
 	PublishAllPorts bool
+}
+
+var log = logging.MustGetLogger("mssdemand")
+
+func Exited(tasks *Tasks) (done bool) {
+	tasks.RLock()
+	defer tasks.RUnlock()
+
+	done = true
+	for name, task := range tasks.Tasks {
+		if task.Running > 0 {
+			done = false
+			log.Debugf("Waiting for %s, still %d running, %d requested", name, task.Running, task.Requested)
+		}
+	}
+
+	return done
+}
+
+func ScaleComplete(tasks *Tasks) (done bool) {
+	tasks.RLock()
+	defer tasks.RUnlock()
+
+	done = true
+	for name, task := range tasks.Tasks {
+		if task.Running != task.Requested {
+			done = false
+			log.Debugf("Scale outstanding for %s: %d running, %d requested", name, task.Running, task.Requested)
+		}
+	}
+
+	return done
 }

@@ -111,103 +111,56 @@ func main() {
 	signal.Notify(closedown, os.Interrupt)
 	signal.Notify(closedown, syscall.SIGTERM)
 
-	// Listen for demand on a websocket (we'll also use this to send metrics)
+	// Listen for demand on a websocket
 	demandUpdate := make(chan []api.TaskDemand, 1)
 	ws, err := api.InitWebSocket()
 	go api.Listen(ws, demandUpdate)
 
-	// Periodically send state to the API if required
+	// Handle demand updates
+	go func() {
+		for td := range demandUpdate {
+			log.Debug("Demand update")
+			err = handleDemandChange(td, s, tasks)
+			if err != nil {
+				log.Errorf("Failed to handle demand change. %v", err)
+			}
+		}
+
+		// When the demandUpdate channel is closed, it's time to scale everything down to 0
+		cleanup(s, tasks)
+	}()
+
+	// Periodically read the current state of tasks
 	var sendMetricsTimeout *time.Ticker
-	if st.sendMetrics {
-		sendMetricsTimeout = time.NewTicker(constSendMetricsSleep * time.Millisecond)
-	}
-
-	// Only allow one scaling command and one metrics send to be outstanding at a time
-	ready := make(chan struct{}, 1)
-	metricsReady := make(chan struct{}, 1)
-	var scalingReady = true
-	var sendMetricsReady = true
-	var cleanupWhenReady = false
-	var exitWhenReady = false
-
-	// Loop, continually checking for changes in demand that need to be scheduled
-	// At the moment we plough on regardless in the face of errors, simply logging them out
-	for {
-		select {
-		case td := <-demandUpdate:
-			// Don't do anything if we're about to exit
-			if cleanupWhenReady || exitWhenReady {
-				break
+	sendMetricsTimeout = time.NewTicker(constSendMetricsSleep * time.Millisecond)
+	go func() {
+		for _ = range sendMetricsTimeout.C {
+			// Find out how many instances of each task are running
+			err = s.CountAllTasks(tasks)
+			if err != nil {
+				log.Errorf("Failed to count containers. %v", err)
 			}
 
-			// If we already have a scaling change outstanding, we can't do another one
-			if scalingReady {
-				scalingReady = false
-				go func() {
-					err = handleDemandChange(td, s, tasks)
-					if err != nil {
-						log.Errorf("Failed to handle demand change. %v", err)
-					}
-
-					// Notify the channel when the scaling command has completed
-					ready <- struct{}{}
-				}()
-			} else {
-				log.Debug("Scale still outstanding")
-			}
-
-		case <-sendMetricsTimeout.C:
-			if sendMetricsReady {
+			if st.sendMetrics {
 				log.Debug("Sending metrics")
-				sendMetricsReady = false
-				go func() {
-					// Find out how many instances of each task are running
-					err = s.CountAllTasks(tasks)
-					if err != nil {
-						log.Errorf("Failed to count containers. %v", err)
-					}
-
-					err = api.SendMetrics(ws, st.userID, tasks.Tasks)
-					if err != nil {
-						log.Errorf("Failed to send metrics. %v", err)
-					}
-
-					// Notify the channel when the API call has completed
-					metricsReady <- struct{}{}
-				}()
-			} else {
-				log.Debug("Not ready to send metrics")
+				err = api.SendMetrics(ws, st.userID, tasks.Tasks)
+				if err != nil {
+					log.Errorf("Failed to send metrics. %v", err)
+				}
 			}
+		}
+	}()
 
-		case <-ready:
-			if exitWhenReady {
-				log.Info("All finished")
-				os.Exit(1)
-			}
+	// When we're asked to close down, we don't want to handle demand updates any more
+	<-closedown
+	log.Info("Clean up when ready")
+	close(demandUpdate)
 
-			// An outstanding scale command has finished so we are OK to send another one
-			if cleanupWhenReady {
-				log.Info("Cleaning up")
-				exitWhenReady = true
-				go func() {
-					cleanup(s, tasks)
-					ready <- struct{}{}
-				}()
-			} else {
-				scalingReady = true
-			}
-
-		case <-metricsReady:
-			// Finished sending metrics so we are OK to send another one
-			sendMetricsReady = true
-
-		case <-closedown:
-			log.Info("Clean up when ready")
-			cleanupWhenReady = true
-			if scalingReady {
-				// Trigger it now
-				ready <- struct{}{}
-			}
+	exitWaitTimeout := time.NewTicker(constSendMetricsSleep * time.Millisecond)
+	for _ = range exitWaitTimeout.C {
+		if demand.Exited(tasks) {
+			log.Info("All finished")
+			break
 		}
 	}
 }
