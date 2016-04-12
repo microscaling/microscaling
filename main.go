@@ -114,6 +114,11 @@ func main() {
 	// Listen for demand on a websocket
 	demandUpdate := make(chan []api.TaskDemand, 1)
 	ws, err := api.InitWebSocket()
+	if err != nil {
+		log.Errorf("Failed to init web socket: %v", err)
+		return
+	}
+
 	go api.Listen(ws, demandUpdate)
 
 	// Handle demand updates
