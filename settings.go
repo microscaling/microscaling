@@ -109,7 +109,6 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 		log.Errorf("Error getting tasks: %v", err)
 	}
 
-	log.Debugf("Tasks: %v", tasks.Tasks)
 	return tasks, err
 }
 

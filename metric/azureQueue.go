@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/storage"
@@ -21,7 +22,19 @@ type AzureQueueMetric struct {
 
 func AcsInit() (err error) {
 	azureAccountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
-	azureClient, err = storage.NewBasicClient(azureAccountName, os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"))
+	if azureAccountName == "" {
+		log.Error("You need to pass in environment variable AZURE_STORAGE_ACCOUNT_NAME")
+		err = fmt.Errorf("Azure storage account name not configured")
+		return
+	}
+	azureKey := os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
+	if azureAccountName == "" {
+		log.Error("You need to pass in environment variable AZURE_STORAGE_ACCOUNT_KEY")
+		err = fmt.Errorf("Azure storage account key not configured")
+		return
+	}
+
+	azureClient, err = storage.NewBasicClient(azureAccountName, azureKey)
 	if err == nil {
 		azureQueueClient = azureClient.GetQueueService()
 	}

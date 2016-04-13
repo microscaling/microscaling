@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/metric"
@@ -73,10 +72,11 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 		case "Queue":
 			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
 			switch a.MetricType {
-			case "Azure":
-				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
 			default:
-				err = fmt.Errorf("Unexpected queue metricType %s", a.MetricType)
+				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
+				// TODO!! When we pass a metric type on the API
+				// default:
+				// 	err = fmt.Errorf("Unexpected queue metricType %s", a.MetricType)
 			}
 		default:
 			task.Target = target.NewRemainderTarget(a.MaxContainers)
@@ -84,6 +84,10 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 		}
 
 		tasks = append(tasks, &task)
+	}
+
+	if err != nil {
+		log.Debugf("Apps message: %v", appsMessage)
 	}
 
 	return
