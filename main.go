@@ -170,7 +170,7 @@ func main() {
 
 	exitWaitTimeout := time.NewTicker(constGetMetricsTimeout * time.Millisecond)
 	for _ = range exitWaitTimeout.C {
-		if demand.Exited(tasks) {
+		if tasks.Exited() {
 			log.Info("All finished")
 			break
 		}

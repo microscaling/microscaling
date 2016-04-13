@@ -24,23 +24,17 @@ func NewEngine() *LocalEngine {
 	return &de
 }
 
-func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
-
-	return demandChanged
-}
-
 func (de *LocalEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}) {
 
-	// In this we need to collect the metrics, calculate demand, and send a demandUpdate messages on the API
+	// In this we need to collect the metrics, calculate demand, and trigger a demand update
 	demandTimeout := time.NewTicker(constGetDemandSleep * time.Millisecond)
 	for _ = range demandTimeout.C {
 		tasks.Lock()
 		log.Debug("Getting demand")
 
-		// In this engine the Server collects the metrics, calculates demand, and sends demandUpdate messages on the API
-		// for _, task := range tasks.Tasks {
-		// task.Metric.GetCurrent()
-		// }
+		for _, task := range tasks.Tasks {
+			task.Metric.UpdateCurrent()
+		}
 
 		demandChanged := ScalingCalculation(tasks)
 

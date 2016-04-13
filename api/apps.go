@@ -2,8 +2,11 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/metric"
+	"github.com/microscaling/microscaling/target"
 )
 
 type AppsMessage struct {
@@ -20,13 +23,17 @@ type AppDescription struct {
 	TargetQueueLength int             `json:"targetValue"`
 	RuleType          string          `json:"ruleType"`
 	AppType           string          `json:"appType"`
+	MetricType        string          `json:"metricType"`
 	Config            DockerAppConfig `json:"config"`
 }
 
+// TODO!! This is not really just Docker-specific as we have some target info in here too
 type DockerAppConfig struct {
 	Image           string `json:"image"`
 	Command         string `json:"command"`
-	PublishAllPorts bool   `json:"publish_all_ports"`
+	PublishAllPorts bool   `json:"publishAllPorts"`
+	QueueName       string `json:"queueName"`
+	QueueLength     int    `json:"targetQueueLength"`
 }
 
 type dockerAppConfig DockerAppConfig
@@ -58,13 +65,22 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 			Priority:      a.Priority,
 			MinContainers: a.MinContainers,
 			MaxContainers: a.MaxContainers,
-			TargetType:    a.RuleType,
 			// TODO!! For now we will default turning on publishAllPorts, until we add this to the client-server interface
 			PublishAllPorts: true,
 		}
 
-		if a.RuleType == "Queue" {
-			task.Target = a.TargetQueueLength
+		switch a.RuleType {
+		case "Queue":
+			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
+			switch a.MetricType {
+			case "Azure":
+				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
+			default:
+				err = fmt.Errorf("Unexpected queue metricType %s", a.MetricType)
+			}
+		default:
+			task.Target = target.NewRemainderTarget(a.MaxContainers)
+			task.Metric = metric.NewNullMetric()
 		}
 
 		tasks = append(tasks, &task)

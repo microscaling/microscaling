@@ -24,7 +24,6 @@ type settings struct {
 	userID        string
 	pullImages    bool
 	dockerHost    string
-	maxContainers int
 	demandEngine  string
 }
 
@@ -104,7 +103,7 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 
 	// Get the tasks that have been configured by this user
 	t, maxContainers, err := api.GetApps(st.userID)
-	st.maxContainers = maxContainers
+	tasks.MaxContainers = maxContainers
 	tasks.Tasks = t
 	if err != nil {
 		log.Errorf("Error getting tasks: %v", err)
