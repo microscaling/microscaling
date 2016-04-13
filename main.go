@@ -41,7 +41,7 @@ import (
 	"github.com/microscaling/microscaling/scheduler"
 )
 
-const constSendMetricsSleep = 500 // milliseconds - delay before we send state on the metrics API
+const constGetMetricsTimeout = 500 // milliseconds - delay before we send read state (and optionally send on the metrics API)
 
 var (
 	log = logging.MustGetLogger("mssagent")
@@ -111,23 +111,31 @@ func main() {
 	signal.Notify(closedown, os.Interrupt)
 	signal.Notify(closedown, syscall.SIGTERM)
 
-	// Listen for demand on a websocket
-	demandUpdate := make(chan []api.TaskDemand, 1)
+	// Open a web socket to the server TODO!! This won't always be necessary if we're not sending metrics & calculating demand locally
 	ws, err := api.InitWebSocket()
 	if err != nil {
-		log.Errorf("Failed to init web socket: %v", err)
+		log.Errorf("Failed to open web socket: %v", err)
 		return
 	}
 
-	go api.Listen(ws, demandUpdate)
+	demandUpdate := make(chan struct{}, 1)
+	de, err := getDemandEngine(st, ws)
+	if err != nil {
+		log.Errorf("Failed to get demand engine: %v", err)
+		return
+	}
+
+	go de.GetDemand(tasks, demandUpdate)
 
 	// Handle demand updates
 	go func() {
-		for td := range demandUpdate {
+		for range demandUpdate {
 			log.Debug("Demand update")
-			err = handleDemandChange(td, s, tasks)
+			tasks.Lock()
+			err = s.StopStartTasks(tasks.Tasks)
+			tasks.Unlock()
 			if err != nil {
-				log.Errorf("Failed to handle demand change. %v", err)
+				log.Errorf("Failed to stop / start tasks. %v", err)
 			}
 		}
 
@@ -136,10 +144,9 @@ func main() {
 	}()
 
 	// Periodically read the current state of tasks
-	var sendMetricsTimeout *time.Ticker
-	sendMetricsTimeout = time.NewTicker(constSendMetricsSleep * time.Millisecond)
+	getMetricsTimeout := time.NewTicker(constGetMetricsTimeout * time.Millisecond)
 	go func() {
-		for _ = range sendMetricsTimeout.C {
+		for _ = range getMetricsTimeout.C {
 			// Find out how many instances of each task are running
 			err = s.CountAllTasks(tasks)
 			if err != nil {
@@ -159,9 +166,11 @@ func main() {
 	// When we're asked to close down, we don't want to handle demand updates any more
 	<-closedown
 	log.Info("Clean up when ready")
-	close(demandUpdate)
+	// The demand engine is responsible for closing the demandUpdate channel so that we stop
+	// doing scaling operations
+	de.StopDemand(demandUpdate)
 
-	exitWaitTimeout := time.NewTicker(constSendMetricsSleep * time.Millisecond)
+	exitWaitTimeout := time.NewTicker(constGetMetricsTimeout * time.Millisecond)
 	for _ = range exitWaitTimeout.C {
 		if demand.Exited(tasks) {
 			log.Info("All finished")
