@@ -11,6 +11,7 @@ import (
 	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/engine"
+	"github.com/microscaling/microscaling/engine/localEngine"
 	"github.com/microscaling/microscaling/engine/serverEngine"
 	"github.com/microscaling/microscaling/scheduler"
 	"github.com/microscaling/microscaling/scheduler/docker"
@@ -117,6 +118,9 @@ func getTasks(st settings) (tasks *demand.Tasks) {
 
 func getDemandEngine(st settings, ws *websocket.Conn) (e engine.Engine, err error) {
 	switch st.demandEngine {
+	case "LOCAL":
+		log.Info("Calculate demand locally")
+		e = localEngine.NewEngine()
 	case "SERVER":
 		log.Info("Get demand from server")
 		e = serverEngine.NewEngine(ws)
