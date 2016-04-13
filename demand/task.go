@@ -41,6 +41,7 @@ func (t *Task) ScaleUpCount() (delta int) {
 		delta = t.MaxDelta
 	}
 
+	log.Debugf("  [scaleup] %s delta %d", t.Name, delta)
 	return
 }
 
@@ -74,6 +75,7 @@ func (t *Task) ScaleDownCount() (delta int) {
 		delta = -t.MaxDelta
 	}
 
+	log.Debugf("  [scaledown] %s delta %d", t.Name, delta)
 	return
 }
 

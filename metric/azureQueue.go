@@ -58,6 +58,7 @@ func (aqm *AzureQueueMetric) UpdateCurrent() {
 		log.Errorf("Error getting Azure queue info: %v", err)
 	}
 	aqm.currentVal = metadata.ApproximateMessageCount
+	log.Debugf("Queue name %s length %d", aqm.azureQueueName, aqm.currentVal)
 }
 
 func (aqm *AzureQueueMetric) Current() int {

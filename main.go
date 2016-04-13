@@ -20,12 +20,6 @@
 // make very simplistic judgments because they have limited time and cpu and they act at a per packet level. Microscaling has the capability
 // of making far more sophisticated judgements, although even fairly simple ones will still provide a significant new service.
 //
-// This prototype is a bare bones implementation of microscaling that recognises only 1 demand type:
-// randomised demand for a priority 1 service. Resources are allocated to meet this demand for priority 1, and spare resource can
-// be used for a priority 2 service.
-//
-// These demand type examples have been chosen purely for simplicity of demonstration. In the future more demand types
-// will be offered
 package main
 
 import (
