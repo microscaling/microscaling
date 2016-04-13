@@ -52,16 +52,12 @@ func init() {
 }
 
 // cleanup resets demand for all tasks to 0 before we quit
-func cleanup(s scheduler.Scheduler, running *demand.Tasks) {
-	running.Lock()
-
-	tasks := running.Tasks
-	for name, task := range tasks {
+func cleanup(s scheduler.Scheduler, tasks *demand.Tasks) {
+	tasks.Lock()
+	for _, task := range tasks.Tasks {
 		task.Demand = 0
-		tasks[name] = task
 	}
-
-	running.Unlock()
+	tasks.Unlock()
 
 	log.Debugf("Reset tasks to 0 for cleanup")
 	err := s.StopStartTasks(tasks)
@@ -83,13 +79,17 @@ func main() {
 		return
 	}
 
-	tasks = getTasks(st)
+	tasks, err = getTasks(st)
+	if err != nil {
+		log.Errorf("Failed to get tasks: %v", err)
+		return
+	}
 
 	// Let the scheduler know about the task types.
-	for name, task := range tasks.Tasks {
-		err = s.InitScheduler(name, &task)
+	for _, task := range tasks.Tasks {
+		err = s.InitScheduler(task)
 		if err != nil {
-			log.Errorf("Failed to start task %s: %v", name, err)
+			log.Errorf("Failed to start task %s: %v", task.Name, err)
 			return
 		}
 	}
@@ -131,9 +131,7 @@ func main() {
 	go func() {
 		for range demandUpdate {
 			log.Debug("Demand update")
-			tasks.Lock()
-			err = s.StopStartTasks(tasks.Tasks)
-			tasks.Unlock()
+			err = s.StopStartTasks(tasks)
 			if err != nil {
 				log.Errorf("Failed to stop / start tasks. %v", err)
 			}
@@ -155,7 +153,7 @@ func main() {
 
 			if st.sendMetrics {
 				log.Debug("Sending metrics")
-				err = api.SendMetrics(ws, st.userID, tasks.Tasks)
+				err = api.SendMetrics(ws, st.userID, tasks)
 				if err != nil {
 					log.Errorf("Failed to send metrics. %v", err)
 				}

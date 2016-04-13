@@ -40,9 +40,8 @@ func (d *DockerAppConfig) UnmarshalJSON(b []byte) (err error) {
 	return
 }
 
-func appsFromResponse(b []byte) (tasks map[string]demand.Task, maxContainers int, err error) {
+func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err error) {
 	var appsMessage AppsMessage
-	tasks = make(map[string]demand.Task)
 
 	err = json.Unmarshal(b, &appsMessage)
 	if err != nil {
@@ -52,8 +51,8 @@ func appsFromResponse(b []byte) (tasks map[string]demand.Task, maxContainers int
 	maxContainers = appsMessage.MaxContainers
 
 	for _, a := range appsMessage.Apps {
-		name := a.Name
 		task := demand.Task{
+			Name:          a.Name,
 			Image:         a.Config.Image,
 			Command:       a.Config.Command,
 			Priority:      a.Priority,
@@ -68,13 +67,13 @@ func appsFromResponse(b []byte) (tasks map[string]demand.Task, maxContainers int
 			task.Target = a.TargetQueueLength
 		}
 
-		tasks[name] = task
+		tasks = append(tasks, &task)
 	}
 
 	return
 }
 
-func GetApps(userID string) (tasks map[string]demand.Task, maxContainers int, err error) {
+func GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
 	body, err := getJsonGet(userID, "/v2/apps/")
 	if err != nil {
 		log.Debugf("Failed to get /v2/apps/: %v", err)

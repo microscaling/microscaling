@@ -21,17 +21,19 @@ func NewScheduler() *ToyScheduler {
 // compile-time assert that we implement the right interface
 var _ scheduler.Scheduler = (*ToyScheduler)(nil)
 
-func (t *ToyScheduler) InitScheduler(appId string, task *demand.Task) error {
-	log.Infof("Toy scheduler initialized task %s with %d initial demand", appId, task.Demand)
+func (t *ToyScheduler) InitScheduler(task *demand.Task) error {
+	log.Infof("Toy scheduler initialized task %s with %d initial demand", task.Name, task.Demand)
 	return nil
 }
 
 // StopStartNTasks asks the scheduler to bring the number of running tasks up to task.Demand.
-func (t *ToyScheduler) StopStartTasks(tasks map[string]demand.Task) error {
-	for name, task := range tasks {
+func (t *ToyScheduler) StopStartTasks(tasks *demand.Tasks) error {
+	tasks.Lock()
+	defer tasks.Unlock()
+
+	for _, task := range tasks.Tasks {
 		task.Requested = task.Demand
-		tasks[name] = task
-		log.Debugf("Toy scheduler setting Requested for %s to %d", name, task.Requested)
+		log.Debugf("Toy scheduler setting Requested for %s to %d", task.Name, task.Requested)
 	}
 
 	return nil
@@ -41,11 +43,9 @@ func (t *ToyScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 func (t *ToyScheduler) CountAllTasks(running *demand.Tasks) error {
 	running.Lock()
 	defer running.Unlock()
-	tasks := running.Tasks
 
-	for name, task := range tasks {
+	for _, task := range running.Tasks {
 		task.Running = task.Requested
-		tasks[name] = task
 	}
 	return nil
 }

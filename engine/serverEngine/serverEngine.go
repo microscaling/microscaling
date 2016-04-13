@@ -34,12 +34,11 @@ func updateTasks(dp api.DemandPayload, tasks *demand.Tasks) (demandChanged bool)
 	for _, taskFromServer := range dp.Demand.Tasks {
 		name := taskFromServer.App
 
-		if existingTask, ok := tasks.Tasks[name]; ok {
+		if existingTask, err := tasks.GetTask(name); err == nil {
 			if existingTask.Demand != taskFromServer.DemandCount {
 				demandChanged = true
 			}
 			existingTask.Demand = taskFromServer.DemandCount
-			tasks.Tasks[name] = existingTask
 		}
 	}
 	tasks.Unlock()

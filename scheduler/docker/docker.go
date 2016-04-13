@@ -48,13 +48,13 @@ var _ scheduler.Scheduler = (*DockerScheduler)(nil)
 
 var scaling sync.WaitGroup
 
-func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err error) {
-	log.Infof("Docker initializing task %s", appId)
+func (c *DockerScheduler) InitScheduler(task *demand.Task) (err error) {
+	log.Infof("Docker initializing task %s", task.Name)
 
 	c.Lock()
 	defer c.Unlock()
 
-	c.taskContainers[appId] = make(map[string]*dockerContainer, 100)
+	c.taskContainers[task.Name] = make(map[string]*dockerContainer, 100)
 
 	// We may need to pull the image for this container
 	if c.pullImages {
@@ -75,9 +75,9 @@ func (c *DockerScheduler) InitScheduler(appId string, task *demand.Task) (err er
 }
 
 // startTask creates the container and then starts it
-func (c *DockerScheduler) startTask(name string, task *demand.Task) {
+func (c *DockerScheduler) startTask(task *demand.Task) {
 	var labels map[string]string = map[string]string{
-		labelMap: name,
+		labelMap: task.Name,
 	}
 
 	var cmds []string = strings.Fields(task.Command)
@@ -100,44 +100,44 @@ func (c *DockerScheduler) startTask(name string, task *demand.Task) {
 		scaling.Add(1)
 		defer scaling.Done()
 
-		log.Debugf("[start] task %s", name)
+		log.Debugf("[start] task %s", task.Name)
 		container, err := c.client.CreateContainer(createOpts)
 		if err != nil {
-			log.Errorf("Couldn't create container for task %s: %v", name, err)
+			log.Errorf("Couldn't create container for task %s: %v", task.Name, err)
 			return
 		}
 
 		var containerID = container.ID[:12]
 
 		c.Lock()
-		c.taskContainers[name][containerID] = &dockerContainer{
+		c.taskContainers[task.Name][containerID] = &dockerContainer{
 			state: "created",
 		}
 		c.Unlock()
-		log.Debugf("[created] task %s ID %s", name, containerID)
+		log.Debugf("[created] task %s ID %s", task.Name, containerID)
 
 		// Start it
 		err = c.client.StartContainer(containerID, &hostConfig)
 		if err != nil {
-			log.Errorf("Couldn't start container ID %s for task %s: %v", containerID, name, err)
+			log.Errorf("Couldn't start container ID %s for task %s: %v", containerID, task.Name, err)
 			return
 		}
 
-		log.Debugf("[starting] task %s ID %s", name, containerID)
+		log.Debugf("[starting] task %s ID %s", task.Name, containerID)
 
 		c.Lock()
-		c.taskContainers[name][containerID].state = "starting"
+		c.taskContainers[task.Name][containerID].state = "starting"
 		c.Unlock()
 	}()
 }
 
 // stopTask kills the last container we know about of this type
-func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
+func (c *DockerScheduler) stopTask(task *demand.Task) error {
 	var err error = nil
 
 	// Kill a currently-running container of this type
 	c.Lock()
-	theseContainers := c.taskContainers[name]
+	theseContainers := c.taskContainers[task.Name]
 	var containerToKill string
 	for id, v := range theseContainers {
 		if v.state == "running" {
@@ -149,7 +149,7 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 	c.Unlock()
 
 	if containerToKill == "" {
-		return fmt.Errorf("[stop] No containers of type %s to kill", name)
+		return fmt.Errorf("[stop] No containers of type %s to kill", task.Name)
 	}
 
 	removeOpts := docker.RemoveContainerOptions{
@@ -161,7 +161,7 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 		scaling.Add(1)
 		defer scaling.Done()
 
-		log.Debugf("[stopping] container for task %s with ID %s", name, containerToKill)
+		log.Debugf("[stopping] container for task %s with ID %s", task.Name, containerToKill)
 		err = c.client.StopContainer(containerToKill, 1)
 		if err != nil {
 			log.Errorf("Couldn't stop container %s: %v", containerToKill, err)
@@ -169,10 +169,10 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 		}
 
 		c.Lock()
-		c.taskContainers[name][containerToKill].state = "removing"
+		c.taskContainers[task.Name][containerToKill].state = "removing"
 		c.Unlock()
 
-		log.Debugf("[removing] container for task %s with ID %s", name, containerToKill)
+		log.Debugf("[removing] container for task %s with ID %s", task.Name, containerToKill)
 		err = c.client.RemoveContainer(removeOpts)
 		if err != nil {
 			log.Errorf("Couldn't remove container %s: %v", containerToKill, err)
@@ -183,51 +183,50 @@ func (c *DockerScheduler) stopTask(name string, task *demand.Task) error {
 	return nil
 }
 
-func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
+func (c *DockerScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	// Create containers if there aren't enough of them, and stop them if there are too many
-	var too_many []string
-	var too_few []string
+	var too_many []*demand.Task
+	var too_few []*demand.Task
 	var diff int
 	var err error = nil
 
+	tasks.Lock()
+	defer tasks.Unlock()
+
 	// TODO: Consider checking the number running before we start & stop
-	for name, task := range tasks {
+	for _, task := range tasks.Tasks {
 		if task.Demand > task.Requested {
 			// There aren't enough of these containers yet
-			too_few = append(too_few, name)
+			too_few = append(too_few, task)
 		}
 
 		if task.Demand < task.Requested {
 			// There aren't enough of these containers yet
-			too_many = append(too_many, name)
+			too_many = append(too_many, task)
 		}
 	}
 
 	// Scale down first to free up resources
-	for _, name := range too_many {
-		task := tasks[name]
+	for _, task := range too_many {
 		diff = task.Requested - task.Demand
-		log.Infof("Stop %d of task %s", diff, name)
+		log.Infof("Stop %d of task %s", diff, task.Name)
 		for i := 0; i < diff; i++ {
-			err = c.stopTask(name, &task)
+			err = c.stopTask(task)
 			if err != nil {
-				log.Errorf("Couldn't stop %s: %v ", name, err)
+				log.Errorf("Couldn't stop %s: %v ", task.Name, err)
 			}
 			task.Requested -= 1
 		}
-		tasks[name] = task
 	}
 
 	// Now we can scale up
-	for _, name := range too_few {
-		task := tasks[name]
+	for _, task := range too_few {
 		diff = task.Demand - task.Requested
-		log.Infof("Start %d of task %s", diff, name)
+		log.Infof("Start %d of task %s", diff, task.Name)
 		for i := 0; i < diff; i++ {
-			c.startTask(name, &task)
+			c.startTask(task)
 			task.Requested += 1
 		}
-		tasks[name] = task
 	}
 
 	// Don't return until all the scale tasks are complete
@@ -269,11 +268,10 @@ func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 
 	// Reset all the running counts to 0
 	tasks := running.Tasks
-	for name, t := range tasks {
+	for _, t := range tasks {
 		t.Running = 0
-		tasks[name] = t
 
-		for _, cc := range c.taskContainers[name] {
+		for _, cc := range c.taskContainers[t.Name] {
 			cc.updated = false
 		}
 	}
@@ -287,8 +285,10 @@ func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 		if present {
 			// Only update tasks that are already in our task map - don't try to manage anything else
 			// log.Debugf("Found a container with labels %v", labels)
-			t, inOurTasks := tasks[taskName]
-			if inOurTasks {
+			t, err := running.GetTask(taskName)
+			if err != nil {
+				log.Errorf("Received info about task %s that we're not managing", taskName)
+			} else {
 				newState := statusToState(containers[i].Status)
 				id := containers[i].ID[:12]
 				thisContainer, ok := c.taskContainers[taskName][id]
@@ -321,19 +321,18 @@ func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 				}
 
 				thisContainer.updated = true
-				tasks[taskName] = t
 			}
 		}
 	}
 
-	for name, task := range tasks {
-		log.Debugf("  %s: internally running %d, requested %d", name, task.Running, task.Requested)
-		for id, cc := range c.taskContainers[name] {
+	for _, task := range tasks {
+		log.Debugf("  %s: internally running %d, requested %d", task.Name, task.Running, task.Requested)
+		for id, cc := range c.taskContainers[task.Name] {
 			log.Debugf("  %s - %s", id, cc.state)
 			if !cc.updated {
 				if cc.state == "removing" || cc.state == "exited" {
 					log.Debugf("    Deleting %s", id)
-					delete(c.taskContainers[name], id)
+					delete(c.taskContainers[task.Name], id)
 				} else if cc.state != "created" && cc.state != "starting" && cc.state != "stopping" {
 					log.Errorf("Bad state for container %s: %s", id, cc.state)
 				}
