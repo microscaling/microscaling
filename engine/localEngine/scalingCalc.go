@@ -30,7 +30,7 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 		// For scaling down, delta should be negative
 		delta = t.ScaleDownCount()
 		if delta < 0 {
-			t.Requested = t.Running + delta
+			t.Demand = t.Running + delta
 			demandChanged = true
 			log.Debugf("  [scale] scaling %s down by %d", t.Name, delta)
 		}
@@ -76,7 +76,7 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 								scaleDownBy = delta - freedCapacity
 							}
 
-							lowerPriorityService.Requested = lowerPriorityService.Running - scaleDownBy
+							lowerPriorityService.Demand = lowerPriorityService.Running - scaleDownBy
 							demandChanged = true
 							log.Debugf("  [scale] Service %s priority %d scaling down %d", lowerPriorityService.Name, lowerPriorityService.Priority, -scaleDownBy)
 							freedCapacity = freedCapacity + scaleDownBy
@@ -92,12 +92,12 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 
 		if delta > 0 {
 			demandChanged = true
-			if t.Requested >= t.MaxContainers {
+			if t.Demand >= t.MaxContainers {
 				log.Error("*** Not enough capacity for %s ***", t.Name)
-				t.Requested = t.MaxContainers
+				t.Demand = t.MaxContainers
 			} else {
 				log.Debugf("  [scale] Service %s scaling up %d", t.Name, delta)
-				t.Requested = t.Running + delta
+				t.Demand = t.Running + delta
 			}
 		}
 	}

@@ -64,6 +64,8 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 			Priority:      a.Priority,
 			MinContainers: a.MinContainers,
 			MaxContainers: a.MaxContainers,
+			MaxDelta:      (a.MaxContainers - a.MinContainers),
+			IsScalable:    true,
 			// TODO!! For now we will default turning on publishAllPorts, until we add this to the client-server interface
 			PublishAllPorts: true,
 		}
