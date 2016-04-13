@@ -207,7 +207,7 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 	for _, name := range too_many {
 		task := tasks[name]
 		diff = task.Requested - task.Demand
-		log.Debugf("Stop %d of task %s", diff, name)
+		log.Infof("Stop %d of task %s", diff, name)
 		for i := 0; i < diff; i++ {
 			err = c.stopTask(name, &task)
 			if err != nil {
@@ -222,7 +222,7 @@ func (c *DockerScheduler) StopStartTasks(tasks map[string]demand.Task) error {
 	for _, name := range too_few {
 		task := tasks[name]
 		diff = task.Demand - task.Requested
-		log.Debugf("Start %d of task %s", diff, name)
+		log.Infof("Start %d of task %s", diff, name)
 		for i := 0; i < diff; i++ {
 			c.startTask(name, &task)
 			task.Requested += 1
