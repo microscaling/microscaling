@@ -1,13 +1,10 @@
 package docker
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
-	// "strings"
 	"testing"
 
-	// "github.com/microscaling/microscaling/api/apitest"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/microscaling/microscaling/demand"
 )
@@ -42,10 +39,7 @@ func TestDockerInitScheduler(t *testing.T) {
 		task.Image = "microscaling/priority-1:latest"
 
 		d.InitScheduler("anything", &task)
-		err := d.startTask("anything", &task)
-		if err != nil {
-			fmt.Printf("Error %v", err)
-		}
+		d.startTask("anything", &task)
 	}
 }
 
@@ -62,12 +56,8 @@ func TestDockerScheduler(t *testing.T) {
 
 	d.InitScheduler("anything", &task)
 
-	err := d.startTask("anything", &task)
-	if err != nil {
-		// We don't actually expect these to work locally
-		// TODO! Some Docker tests that mock out the Docker client
-		fmt.Printf("Error %v", err)
-	}
+	d.startTask("anything", &task)
+	// TODO! Some Docker tests that mock out the Docker client
 
 	var tasks demand.Tasks
 	tasks.Tasks = make(map[string]demand.Task)

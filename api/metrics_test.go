@@ -11,6 +11,40 @@ import (
 
 var global_t *testing.T
 
+var tests = []struct {
+	testJson  string
+	expDemand []TaskDemand
+}{
+	{
+		testJson: `{
+			   "demand": {
+			       "tasks": [
+			           {
+			               "app": "priority1",
+			               "demandCount": 7
+			           },
+			           {
+			               "app": "priority2",
+			               "demandCount": 3
+			           }
+			       ]
+			   }
+			}`,
+		expDemand: []TaskDemand{
+			{
+				App:         "priority2",
+				DemandCount: 3,
+			},
+			{
+				App:         "priority1",
+				DemandCount: 7,
+			},
+		},
+	},
+}
+
+var testIndex int
+
 var mtests = []struct {
 	expMetrics metricsPayload
 }{
