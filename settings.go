@@ -6,9 +6,13 @@ import (
 	"strings"
 
 	"github.com/op/go-logging"
+	"golang.org/x/net/websocket"
 
 	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/engine"
+	"github.com/microscaling/microscaling/engine/localEngine"
+	"github.com/microscaling/microscaling/engine/serverEngine"
 	"github.com/microscaling/microscaling/scheduler"
 	"github.com/microscaling/microscaling/scheduler/docker"
 	"github.com/microscaling/microscaling/scheduler/toy"
@@ -20,6 +24,8 @@ type settings struct {
 	userID        string
 	pullImages    bool
 	dockerHost    string
+	maxContainers int
+	demandEngine  string
 }
 
 func initLogging() {
@@ -42,7 +48,7 @@ func initLogging() {
 	logBackend := logging.NewLogBackend(os.Stdout, "", 0)
 	logging.SetBackend(logBackend)
 
-	var components = []string{"mssengine", "mssagent", "mssapi", "mssdemand", "mssscheduler"}
+	var components = []string{"mssengine", "mssagent", "mssapi", "mssdemand", "mssmetric", "mssscheduler"}
 
 	for _, component := range components {
 		if strings.Contains(logComponents, component) || strings.Contains(logComponents, "all") {
@@ -60,6 +66,7 @@ func getSettings() settings {
 	st.sendMetrics = (getEnvOrDefault("MSS_SEND_METRICS_TO_API", "true") == "true")
 	st.pullImages = (getEnvOrDefault("MSS_PULL_IMAGES", "true") == "true")
 	st.dockerHost = getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
+	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "SERVER")
 	return st
 }
 
@@ -96,7 +103,8 @@ func getTasks(st settings) (tasks *demand.Tasks) {
 	var t map[string]demand.Task
 
 	// Get the tasks that have been configured by this user
-	t, err := api.GetApps(st.userID)
+	t, maxContainers, err := api.GetApps(st.userID)
+	st.maxContainers = maxContainers
 	if err != nil {
 		log.Errorf("Error getting tasks: %v", err)
 	}
@@ -106,6 +114,20 @@ func getTasks(st settings) (tasks *demand.Tasks) {
 	tasks = new(demand.Tasks)
 	tasks.Tasks = t
 	return tasks
+}
+
+func getDemandEngine(st settings, ws *websocket.Conn) (e engine.Engine, err error) {
+	switch st.demandEngine {
+	case "LOCAL":
+		log.Info("Calculate demand locally")
+		e = localEngine.NewEngine()
+	case "SERVER":
+		log.Info("Get demand from server")
+		e = serverEngine.NewEngine(ws)
+	default:
+		return nil, fmt.Errorf("Bad value for MSS_DEMAND_ENGINE: %s", st.demandEngine)
+	}
+	return e, nil
 }
 
 func getEnvOrDefault(name string, defaultValue string) string {

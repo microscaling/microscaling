@@ -20,6 +20,12 @@ type Task struct {
 	Image           string
 	Command         string
 	PublishAllPorts bool
+	Priority        int
+	Env             []string
+	MinContainers   int
+	MaxContainers   int
+	TargetType      string
+	Target          int
 }
 
 var log = logging.MustGetLogger("mssdemand")
