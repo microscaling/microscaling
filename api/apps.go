@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/metric"
+	"github.com/microscaling/microscaling/target"
 )
 
 type AppsMessage struct {
@@ -20,13 +22,17 @@ type AppDescription struct {
 	TargetQueueLength int             `json:"targetValue"`
 	RuleType          string          `json:"ruleType"`
 	AppType           string          `json:"appType"`
+	MetricType        string          `json:"metricType"`
 	Config            DockerAppConfig `json:"config"`
 }
 
+// TODO!! This is not really just Docker-specific as we have some target info in here too
 type DockerAppConfig struct {
 	Image           string `json:"image"`
 	Command         string `json:"command"`
-	PublishAllPorts bool   `json:"publish_all_ports"`
+	PublishAllPorts bool   `json:"publishAllPorts"`
+	QueueName       string `json:"queueName"`
+	QueueLength     int    `json:"targetQueueLength"`
 }
 
 type dockerAppConfig DockerAppConfig
@@ -40,9 +46,8 @@ func (d *DockerAppConfig) UnmarshalJSON(b []byte) (err error) {
 	return
 }
 
-func appsFromResponse(b []byte) (tasks map[string]demand.Task, maxContainers int, err error) {
+func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err error) {
 	var appsMessage AppsMessage
-	tasks = make(map[string]demand.Task)
 
 	err = json.Unmarshal(b, &appsMessage)
 	if err != nil {
@@ -52,29 +57,45 @@ func appsFromResponse(b []byte) (tasks map[string]demand.Task, maxContainers int
 	maxContainers = appsMessage.MaxContainers
 
 	for _, a := range appsMessage.Apps {
-		name := a.Name
 		task := demand.Task{
+			Name:          a.Name,
 			Image:         a.Config.Image,
 			Command:       a.Config.Command,
 			Priority:      a.Priority,
 			MinContainers: a.MinContainers,
 			MaxContainers: a.MaxContainers,
-			TargetType:    a.RuleType,
+			MaxDelta:      (a.MaxContainers - a.MinContainers),
+			IsScalable:    true,
 			// TODO!! For now we will default turning on publishAllPorts, until we add this to the client-server interface
 			PublishAllPorts: true,
 		}
 
-		if a.RuleType == "Queue" {
-			task.Target = a.TargetQueueLength
+		switch a.RuleType {
+		case "Queue":
+			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
+			switch a.MetricType {
+			default:
+				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
+				// TODO!! When we pass a metric type on the API
+				// default:
+				// 	err = fmt.Errorf("Unexpected queue metricType %s", a.MetricType)
+			}
+		default:
+			task.Target = target.NewRemainderTarget(a.MaxContainers)
+			task.Metric = metric.NewNullMetric()
 		}
 
-		tasks[name] = task
+		tasks = append(tasks, &task)
+	}
+
+	if err != nil {
+		log.Debugf("Apps message: %v", appsMessage)
 	}
 
 	return
 }
 
-func GetApps(userID string) (tasks map[string]demand.Task, maxContainers int, err error) {
+func GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
 	body, err := getJsonGet(userID, "/v2/apps/")
 	if err != nil {
 		log.Debugf("Failed to get /v2/apps/: %v", err)

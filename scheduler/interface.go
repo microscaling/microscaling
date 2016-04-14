@@ -7,10 +7,10 @@ import (
 
 type Scheduler interface {
 	// InitScheduler creates and starts the app identified by appId
-	InitScheduler(appId string, task *demand.Task) error
+	InitScheduler(task *demand.Task) error
 
 	// StopStartTasks changes the count of containers to match task.Demand
-	StopStartTasks(tasks map[string]demand.Task) error
+	StopStartTasks(tasks *demand.Tasks) error
 
 	// CountAllTasks updates task.Running to tell us how many instances of each task are currently running
 	CountAllTasks(tasks *demand.Tasks) error

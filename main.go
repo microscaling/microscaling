@@ -20,12 +20,6 @@
 // make very simplistic judgments because they have limited time and cpu and they act at a per packet level. Microscaling has the capability
 // of making far more sophisticated judgements, although even fairly simple ones will still provide a significant new service.
 //
-// This prototype is a bare bones implementation of microscaling that recognises only 1 demand type:
-// randomised demand for a priority 1 service. Resources are allocated to meet this demand for priority 1, and spare resource can
-// be used for a priority 2 service.
-//
-// These demand type examples have been chosen purely for simplicity of demonstration. In the future more demand types
-// will be offered
 package main
 
 import (
@@ -52,16 +46,12 @@ func init() {
 }
 
 // cleanup resets demand for all tasks to 0 before we quit
-func cleanup(s scheduler.Scheduler, running *demand.Tasks) {
-	running.Lock()
-
-	tasks := running.Tasks
-	for name, task := range tasks {
+func cleanup(s scheduler.Scheduler, tasks *demand.Tasks) {
+	tasks.Lock()
+	for _, task := range tasks.Tasks {
 		task.Demand = 0
-		tasks[name] = task
 	}
-
-	running.Unlock()
+	tasks.Unlock()
 
 	log.Debugf("Reset tasks to 0 for cleanup")
 	err := s.StopStartTasks(tasks)
@@ -83,13 +73,17 @@ func main() {
 		return
 	}
 
-	tasks = getTasks(st)
+	tasks, err = getTasks(st)
+	if err != nil {
+		log.Errorf("Failed to get tasks: %v", err)
+		return
+	}
 
 	// Let the scheduler know about the task types.
-	for name, task := range tasks.Tasks {
-		err = s.InitScheduler(name, &task)
+	for _, task := range tasks.Tasks {
+		err = s.InitScheduler(task)
 		if err != nil {
-			log.Errorf("Failed to start task %s: %v", name, err)
+			log.Errorf("Failed to start task %s: %v", task.Name, err)
 			return
 		}
 	}
@@ -131,9 +125,7 @@ func main() {
 	go func() {
 		for range demandUpdate {
 			log.Debug("Demand update")
-			tasks.Lock()
-			err = s.StopStartTasks(tasks.Tasks)
-			tasks.Unlock()
+			err = s.StopStartTasks(tasks)
 			if err != nil {
 				log.Errorf("Failed to stop / start tasks. %v", err)
 			}
@@ -155,7 +147,7 @@ func main() {
 
 			if st.sendMetrics {
 				log.Debug("Sending metrics")
-				err = api.SendMetrics(ws, st.userID, tasks.Tasks)
+				err = api.SendMetrics(ws, st.userID, tasks)
 				if err != nil {
 					log.Errorf("Failed to send metrics. %v", err)
 				}
@@ -172,7 +164,7 @@ func main() {
 
 	exitWaitTimeout := time.NewTicker(constGetMetricsTimeout * time.Millisecond)
 	for _ = range exitWaitTimeout.C {
-		if demand.Exited(tasks) {
+		if tasks.Exited() {
 			log.Info("All finished")
 			break
 		}

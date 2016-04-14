@@ -27,19 +27,21 @@ type taskMetrics struct {
 }
 
 // sendMetrics sends the current state of tasks to the API
-func SendMetrics(ws *websocket.Conn, userID string, tasks map[string]demand.Task) error {
+func SendMetrics(ws *websocket.Conn, userID string, tasks *demand.Tasks) error {
 	var err error = nil
 	var index int = 0
 
 	metrics := metrics{
-		Tasks:     make([]taskMetrics, len(tasks)),
+		Tasks:     make([]taskMetrics, len(tasks.Tasks)),
 		CreatedAt: time.Now().Unix(),
 	}
 
-	for name, task := range tasks {
-		metrics.Tasks[index] = taskMetrics{App: name, RunningCount: task.Running, PendingCount: task.Requested}
+	tasks.Lock()
+	for _, task := range tasks.Tasks {
+		metrics.Tasks[index] = taskMetrics{App: task.Name, RunningCount: task.Running, PendingCount: task.Requested}
 		index++
 	}
+	tasks.Unlock()
 
 	payload := metricsPayload{
 		User:    userID,

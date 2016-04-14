@@ -24,7 +24,6 @@ type settings struct {
 	userID        string
 	pullImages    bool
 	dockerHost    string
-	maxContainers int
 	demandEngine  string
 }
 
@@ -99,21 +98,18 @@ func getScheduler(st settings) (scheduler.Scheduler, error) {
 	return s, nil
 }
 
-func getTasks(st settings) (tasks *demand.Tasks) {
-	var t map[string]demand.Task
+func getTasks(st settings) (tasks *demand.Tasks, err error) {
+	tasks = new(demand.Tasks)
 
 	// Get the tasks that have been configured by this user
 	t, maxContainers, err := api.GetApps(st.userID)
-	st.maxContainers = maxContainers
+	tasks.MaxContainers = maxContainers
+	tasks.Tasks = t
 	if err != nil {
 		log.Errorf("Error getting tasks: %v", err)
 	}
 
-	log.Debugf("Tasks: %v", t)
-
-	tasks = new(demand.Tasks)
-	tasks.Tasks = t
-	return tasks
+	return tasks, err
 }
 
 func getDemandEngine(st settings, ws *websocket.Conn) (e engine.Engine, err error) {
