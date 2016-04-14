@@ -96,9 +96,9 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 }
 
 func GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
-	body, err := getJsonGet(userID, "/v2/apps/")
+	body, err := getJsonGet(userID, "/apps/")
 	if err != nil {
-		log.Debugf("Failed to get /v2/apps/: %v", err)
+		log.Debugf("Failed to get /apps/: %v", err)
 		return nil, 0, err
 	}
 
