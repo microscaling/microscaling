@@ -31,6 +31,8 @@ func NewEngine(ws *websocket.Conn) *ServerEngine {
 func updateTasks(dp api.DemandPayload, tasks *demand.Tasks) (demandChanged bool) {
 	demandChanged = false
 	tasks.Lock()
+	defer tasks.Unlock()
+
 	for _, taskFromServer := range dp.Demand.Tasks {
 		name := taskFromServer.App
 
@@ -41,7 +43,6 @@ func updateTasks(dp api.DemandPayload, tasks *demand.Tasks) (demandChanged bool)
 			existingTask.Demand = taskFromServer.DemandCount
 		}
 	}
-	tasks.Unlock()
 	return demandChanged
 }
 
