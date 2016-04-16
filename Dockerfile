@@ -1,7 +1,7 @@
-FROM alpine:3.2
+FROM alpine:3.3
 MAINTAINER Ross Fairbanks "ross@microscaling.com"
 
-ENV BUILD_PACKAGES bash curl-dev
+ENV BUILD_PACKAGES ca-certificates
 
 RUN apk update && \
     apk upgrade && \
