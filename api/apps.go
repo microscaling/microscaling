@@ -78,11 +78,10 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 		case "Queue":
 			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
 			switch a.MetricType {
+			case "NSQ":
+				task.Metric = metric.NewNSQMetric(a.Config.QueueName)
 			default:
-				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
-				// TODO!! When we pass a metric type on the API
-				// default:
-				//      err = fmt.Errorf("Unexpected queue metricType %s", a.MetricType)
+				log.Errorf("Unexpected queue metricType %s", a.MetricType)
 			}
 		default:
 			task.Target = target.NewRemainderTarget(a.MaxContainers)
