@@ -30,6 +30,7 @@ type Task struct {
 	Image           string
 	Command         string
 	PublishAllPorts bool
+	NetworkMode     string
 	Env             []string
 
 	// Scaling config

@@ -89,11 +89,13 @@ func (c *DockerScheduler) startTask(task *demand.Task) {
 			AttachStdout: true,
 			AttachStdin:  true,
 			Labels:       labels,
+			Env:          task.Env,
 		},
 	}
 
 	hostConfig := docker.HostConfig{
 		PublishAllPorts: task.PublishAllPorts,
+		NetworkMode:     task.NetworkMode,
 	}
 
 	go func() {

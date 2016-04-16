@@ -66,8 +66,12 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 			MaxContainers: a.MaxContainers,
 			MaxDelta:      (a.MaxContainers - a.MinContainers),
 			IsScalable:    true,
-			// TODO!! For now we will default turning on publishAllPorts, until we add this to the client-server interface
+
+			// TODO!! Settings that need to be made configurable via the API.
+			// Default PublishAllPorts to true.
 			PublishAllPorts: true,
+			// Set Network mode to host only. This won't work for load balancer metrics.
+			NetworkMode: "host",
 		}
 
 		switch a.RuleType {
@@ -78,7 +82,7 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
 				// TODO!! When we pass a metric type on the API
 				// default:
-				// 	err = fmt.Errorf("Unexpected queue metricType %s", a.MetricType)
+				//      err = fmt.Errorf("Unexpected queue metricType %s", a.MetricType)
 			}
 		default:
 			task.Target = target.NewRemainderTarget(a.MaxContainers)

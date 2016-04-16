@@ -104,7 +104,16 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 	// Get the tasks that have been configured by this user
 	t, maxContainers, err := api.GetApps(st.userID)
 	tasks.MaxContainers = maxContainers
+
+	// For now pass the whole environment to all containers.
+	globalEnv := os.Environ()
+
+	for _, task := range t {
+		task.Env = globalEnv
+	}
+
 	tasks.Tasks = t
+
 	if err != nil {
 		log.Errorf("Error getting tasks: %v", err)
 	}
