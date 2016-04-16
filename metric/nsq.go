@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const constNSQStatsEndpoint string = "127.0.0.1:8151"
+const constNSQStatsEndpoint string = "127.0.0.1:4151"
 const constNSQStatsAPI string = "/stats?format=json"
 
 // compile-time assert that we implement the right interface
