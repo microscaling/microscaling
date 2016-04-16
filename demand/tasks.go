@@ -25,12 +25,12 @@ func (tasks *Tasks) Exited() (done bool) {
 func (tasks *Tasks) CheckCapacity() int {
 	// TODO!! For now we are simply going to say there is a maximum total number of containers this deployment can handle
 	// TODO!! It should really look at the available CPU / mem / bw in / out
-	totalRequested := 0
+	totalDemand := 0
 	for _, t := range tasks.Tasks {
-		totalRequested += t.Requested
+		totalDemand += t.Demand
 	}
 
-	return tasks.MaxContainers - totalRequested
+	return tasks.MaxContainers - totalDemand
 }
 
 // implements sort.Interface tasks based on priority
