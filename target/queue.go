@@ -82,21 +82,9 @@ func (t *QueueLengthTarget) Exceeding(current int) bool {
 func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 	var deltafloat float64
 	var currErr int
-	// If the queue is longer than the target we need a positive number of additional containers
-	// We want magnitude of cumErr to decrease if we're within the acceptable range minLength - Length
-	if currentLength > t.length {
-		currErr = currentLength - t.length
-		t.cumErr = t.cumErr + currErr
-	} else if currentLength < t.minLength {
-		currErr = currentLength - t.minLength
-		t.cumErr = t.cumErr + currErr
-	} else { // t.minLength <= currentLength <= t.length
-		if t.cumErr < 0 {
-			t.cumErr = t.cumErr + (t.length - currentLength)
-		} else {
-			t.cumErr = t.cumErr + (t.minLength - currentLength)
-		}
-	}
+
+	currErr = currentLength - t.length
+	t.cumErr = t.cumErr + currErr
 
 	var aveVel float64
 	// Store the new value at the end of the array (this is one more than we need), but only average over the right number of samples
