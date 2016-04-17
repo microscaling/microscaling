@@ -39,6 +39,7 @@ func AcsInit() (err error) {
 		azureQueueClient = azureClient.GetQueueService()
 	}
 
+	azureInitialized = true
 	return
 }
 
