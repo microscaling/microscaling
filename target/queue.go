@@ -25,8 +25,8 @@ const queueAverageSamples int = 1
 
 func NewQueueLengthTarget(length int) Target {
 	// TODO!! Better ways to calculate these heuristics and/or pass them in
-	kUStr := os.Getenv("F12_KU")
-	tUStr := os.Getenv("F12_TU")
+	kUStr := os.Getenv("MSS_KU")
+	tUStr := os.Getenv("MSS_TU")
 	kU, err := strconv.ParseFloat(kUStr, 64)
 	if kUStr == "" || err != nil {
 		kU = 0.5
@@ -38,7 +38,7 @@ func NewQueueLengthTarget(length int) Target {
 	}
 
 	var velSamples int
-	velSamplesStr := os.Getenv("F12_VEL_SAMPLES")
+	velSamplesStr := os.Getenv("MSS_VEL_SAMPLES")
 	velSamples, err = strconv.Atoi(velSamplesStr)
 	if err != nil || velSamples == 0 {
 		velSamples = queueAverageSamples
