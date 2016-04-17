@@ -45,7 +45,8 @@ type Channel struct {
 
 var (
 	httpClient = &http.Client{
-		Timeout: 15000 * time.Millisecond,
+		// TODO Make timeout configurable.
+		Timeout: 10 * time.Second,
 	}
 	nsqStatsEndpoint string
 	nsqInitialized   = false
