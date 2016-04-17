@@ -29,12 +29,12 @@ func NewQueueLengthTarget(length int) Target {
 	tUStr := os.Getenv("F12_TU")
 	kU, err := strconv.ParseFloat(kUStr, 64)
 	if kUStr == "" || err != nil {
-		kU = 0.5
+		kU = 0.05
 	}
 
 	tU, err := strconv.ParseFloat(tUStr, 64)
 	if tUStr == "" || err != nil {
-		tU = 40.0
+		tU = 10.0
 	}
 
 	var velSamples int
@@ -44,10 +44,15 @@ func NewQueueLengthTarget(length int) Target {
 		velSamples = queueAverageSamples
 	}
 
-	// Ziegler-Nichols
-	kP := 0.6 * kU
-	kI := kP * 2.0 / tU
-	kD := kP * tU / 8.0
+	// Ziegler-Nichols PID
+	// kP := 0.6 * kU
+	// kI := kP * 2.0 / tU
+	// kD := kP * tU / 8.0
+
+	// Ziegler-Nichols PD
+	kP := float64(0.8 * kU)
+	kD := float64(tU / 8.0)
+	kI := float64(0) // Seems like PD works better than PID, but this needs more testing
 	log.Debugf("[new ql] kU = %f, tU = %f", kU, tU)
 	log.Debugf("[new ql] kP = %f, kI = %f, kD = %f", kP, kI, kD)
 
