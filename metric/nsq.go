@@ -57,6 +57,8 @@ func NSQInit() {
 	if nsqStatsEndpoint == "" {
 		nsqStatsEndpoint = constNSQStatsEndpoint
 	}
+
+	nsqInitialized = true
 }
 
 // NewNSQMetric creates the metric.
