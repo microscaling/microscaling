@@ -51,7 +51,7 @@ func TestGetApps(t *testing.T) {
 		tasks   map[string]demand.Task
 	}{
 		{
-			expUrl: "/v2/apps/hello",
+			expUrl: "/apps/hello",
 			json: `{"apps": [
 			      {
 			          "name": "priority1",
@@ -81,7 +81,7 @@ func TestGetApps(t *testing.T) {
 			},
 		},
 		{
-			expUrl:  "/v2/apps/hello",
+			expUrl:  "/apps/hello",
 			json:    "",
 			success: false,
 			tasks:   map[string]demand.Task{},
