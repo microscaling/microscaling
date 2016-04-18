@@ -29,12 +29,12 @@ func NewQueueLengthTarget(length int) Target {
 	tUStr := os.Getenv("MSS_TU")
 	kU, err := strconv.ParseFloat(kUStr, 64)
 	if kUStr == "" || err != nil {
-		kU = 0.5
+		kU = 0.05
 	}
 
 	tU, err := strconv.ParseFloat(tUStr, 64)
 	if tUStr == "" || err != nil {
-		tU = 40.0
+		tU = 10.0
 	}
 
 	var velSamples int
@@ -44,10 +44,15 @@ func NewQueueLengthTarget(length int) Target {
 		velSamples = queueAverageSamples
 	}
 
-	// Ziegler-Nichols
-	kP := 0.6 * kU
-	kI := kP * 2.0 / tU
-	kD := kP * tU / 8.0
+	// Ziegler-Nichols PID
+	// kP := 0.6 * kU
+	// kI := kP * 2.0 / tU
+	// kD := kP * tU / 8.0
+
+	// Ziegler-Nichols PD
+	kP := float64(0.8 * kU)
+	kD := float64(tU / 8.0)
+	kI := float64(0) // Seems like PD works better than PID, but this needs more testing
 	log.Debugf("[new ql] kU = %f, tU = %f", kU, tU)
 	log.Debugf("[new ql] kP = %f, kI = %f, kD = %f", kP, kI, kD)
 
@@ -82,21 +87,9 @@ func (t *QueueLengthTarget) Exceeding(current int) bool {
 func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 	var deltafloat float64
 	var currErr int
-	// If the queue is longer than the target we need a positive number of additional containers
-	// We want magnitude of cumErr to decrease if we're within the acceptable range minLength - Length
-	if currentLength > t.length {
-		currErr = currentLength - t.length
-		t.cumErr = t.cumErr + currErr
-	} else if currentLength < t.minLength {
-		currErr = currentLength - t.minLength
-		t.cumErr = t.cumErr + currErr
-	} else { // t.minLength <= currentLength <= t.length
-		if t.cumErr < 0 {
-			t.cumErr = t.cumErr + (t.length - currentLength)
-		} else {
-			t.cumErr = t.cumErr + (t.minLength - currentLength)
-		}
-	}
+
+	currErr = currentLength - t.length
+	t.cumErr = t.cumErr + currErr
 
 	var aveVel float64
 	// Store the new value at the end of the array (this is one more than we need), but only average over the right number of samples

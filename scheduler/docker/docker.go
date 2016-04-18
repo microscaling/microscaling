@@ -196,13 +196,14 @@ func (c *DockerScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	defer tasks.Unlock()
 
 	// TODO: Consider checking the number running before we start & stop
+	// Don't do more scaling if this task is already changin
 	for _, task := range tasks.Tasks {
-		if task.Demand > task.Requested {
+		if task.Demand > task.Requested && task.Requested == task.Running {
 			// There aren't enough of these containers yet
 			too_few = append(too_few, task)
 		}
 
-		if task.Demand < task.Requested {
+		if task.Demand < task.Requested && task.Requested == task.Running {
 			// There aren't enough of these containers yet
 			too_many = append(too_many, task)
 		}

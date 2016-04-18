@@ -11,7 +11,11 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 	// Work out the ideal scale for all the services
 	for _, t := range tasks.Tasks {
 		t.IdealContainers = t.Running + t.Target.Delta(t.Metric.Current())
+		log.Debugf("  [scale] ideal for %s priority %d would be %d. %d running, %d requested", t.Name, t.Priority, t.IdealContainers, t.Running, t.Requested)
 	}
+
+	available := tasks.CheckCapacity()
+	log.Debugf("  [scale] available space: %d", available)
 
 	// Look for services we could scale down, in reverse priority order
 	tasks.PrioritySort(true)
@@ -32,6 +36,7 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 		if delta < 0 {
 			t.Demand = t.Running + delta
 			demandChanged = true
+			available += (-delta)
 			log.Debugf("  [scale] scaling %s down by %d", t.Name, delta)
 		}
 	}
@@ -54,14 +59,11 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 			continue
 		}
 
-		log.Debugf("  [scale] scale up %s by %d", t.Name, delta)
-		available := tasks.CheckCapacity()
+		log.Debugf("  [scale]  would like to scale up %s by %d - available %d", t.Name, delta, available)
 
 		if available < delta {
 			// If this is a task that fills the remainder, there's no need to exceed capacity
-			if t.IsRemainder() {
-				delta = available
-			} else {
+			if !t.IsRemainder() {
 				log.Debugf("  [scale] looking for %d additional capacity by scaling down:", delta-available)
 				index := len(tasks.Tasks)
 				freedCapacity := available
@@ -70,6 +72,7 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 					index -= 1
 					lowerPriorityService := tasks.Tasks[index]
 					if lowerPriorityService.Priority > t.Priority {
+						log.Debugf("  [scale] looking for capacity from %s: running %d requested %d demand %d", lowerPriorityService.Name, lowerPriorityService.Running, lowerPriorityService.Requested, lowerPriorityService.Demand)
 						scaleDownBy := lowerPriorityService.CanScaleDown()
 						if scaleDownBy > 0 {
 							if scaleDownBy > (delta - freedCapacity) {
@@ -83,15 +86,16 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 						}
 					}
 				}
-
-				// We might still not have enough capacity and we haven't waited for scale down to complete, so just scale up what's available now
-				delta = available
-				log.Debugf("  [scale] Can only scale %s by %d", t.Name, delta)
 			}
+
+			// We might still not have enough capacity and we haven't waited for scale down to complete, so just scale up what's available now
+			delta = available
+			log.Debugf("  [scale] Can only scale %s by %d", t.Name, delta)
 		}
 
 		if delta > 0 {
 			demandChanged = true
+			available -= delta
 			if t.Demand >= t.MaxContainers {
 				log.Error("*** Not enough capacity for %s ***", t.Name)
 				t.Demand = t.MaxContainers
