@@ -1,15 +1,16 @@
 package target
 
 // Target of keeping the number of items in a queue under a certain length
+// This version tends to oscillate too much, so we prefer the version that uses a PD controller (queue.go)
 type SimpleQueueLengthTarget struct {
 	length    int
 	minLength int
 }
 
+// TODO!! For now just use the queue version
 // const queueLengthExceedingPercent float64 = 0.7
 
 func NewSimpleQueueLengthTarget(length int) Target {
-	// TODO!! Better ways to calculate these heuristics and/or pass them in
 
 	return &SimpleQueueLengthTarget{
 		length:    length,
