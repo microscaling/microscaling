@@ -1,3 +1,7 @@
+# 0.6.0
+
+- Supports scaling to maintain the length of an NSQ queue
+
 # 0.5.3
 
 - Rename from force12io/force12 to microscaling/microscaling

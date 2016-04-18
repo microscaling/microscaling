@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"log"
 	"net/http/httptest"
 	"testing"
 
@@ -11,6 +10,40 @@ import (
 )
 
 var global_t *testing.T
+
+var tests = []struct {
+	testJson  string
+	expDemand []TaskDemand
+}{
+	{
+		testJson: `{
+			   "demand": {
+			       "tasks": [
+			           {
+			               "app": "priority1",
+			               "demandCount": 7
+			           },
+			           {
+			               "app": "priority2",
+			               "demandCount": 3
+			           }
+			       ]
+			   }
+			}`,
+		expDemand: []TaskDemand{
+			{
+				App:         "priority2",
+				DemandCount: 3,
+			},
+			{
+				App:         "priority1",
+				DemandCount: 7,
+			},
+		},
+	},
+}
+
+var testIndex int
 
 var mtests = []struct {
 	expMetrics metricsPayload
@@ -54,8 +87,8 @@ func testServerMetrics(ws *websocket.Conn) {
 			if vv.App == v.App {
 				appFound = true
 				if v.PendingCount != vv.PendingCount || v.RunningCount != vv.RunningCount {
-					log.Printf("%#v", test.expMetrics.Metrics.Tasks)
-					log.Printf("%#v", m.Metrics.Tasks)
+					log.Debugf("%#v", test.expMetrics.Metrics.Tasks)
+					log.Debugf("%#v", m.Metrics.Tasks)
 					global_t.Fatalf("Unexpected values")
 				}
 			}
@@ -68,10 +101,11 @@ func testServerMetrics(ws *websocket.Conn) {
 }
 
 func TestSendMetrics(t *testing.T) {
-	var tasks map[string]demand.Task = make(map[string]demand.Task)
+	var tasks demand.Tasks
+	tasks.Tasks = make([]*demand.Task, 2)
 
-	tasks["priority1"] = demand.Task{Demand: 8, Requested: 3, Running: 4}
-	tasks["priority2"] = demand.Task{Demand: 2, Requested: 7, Running: 5}
+	tasks.Tasks[0] = &demand.Task{Name: "priority1", Demand: 8, Requested: 3, Running: 4}
+	tasks.Tasks[1] = &demand.Task{Name: "priority2", Demand: 2, Requested: 7, Running: 5}
 
 	global_t = t
 
@@ -85,7 +119,7 @@ func TestSendMetrics(t *testing.T) {
 			t.Fatal("dialing", err)
 		}
 
-		SendMetrics(ws, "hello", tasks)
+		SendMetrics(ws, "hello", &tasks)
 
 		ws.Close()
 		server.Close()

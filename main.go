@@ -20,65 +20,70 @@
 // make very simplistic judgments because they have limited time and cpu and they act at a per packet level. Microscaling has the capability
 // of making far more sophisticated judgements, although even fairly simple ones will still provide a significant new service.
 //
-// This prototype is a bare bones implementation of microscaling that recognises only 1 demand type:
-// randomised demand for a priority 1 service. Resources are allocated to meet this demand for priority 1, and spare resource can
-// be used for a priority 2 service.
-//
-// These demand type examples have been chosen purely for simplicity of demonstration. In the future more demand types
-// will be offered
 package main
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/op/go-logging"
 
 	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/scheduler"
 )
 
-const constSendMetricsSleep = 500 // milliseconds - delay before we send state on the metrics API
+const constGetMetricsTimeout = 500 // milliseconds - delay before we send read state (and optionally send on the metrics API)
 
-var tasks map[string]demand.Task
+var (
+	log = logging.MustGetLogger("mssagent")
+)
+
+func init() {
+	initLogging()
+}
 
 // cleanup resets demand for all tasks to 0 before we quit
-func cleanup(s scheduler.Scheduler, tasks map[string]demand.Task) {
-	var err error
-
-	for name, task := range tasks {
+func cleanup(s scheduler.Scheduler, tasks *demand.Tasks) {
+	tasks.Lock()
+	for _, task := range tasks.Tasks {
 		task.Demand = 0
-		tasks[name] = task
 	}
+	tasks.Unlock()
 
-	log.Printf("Reset tasks to 0 for cleanup")
-	err = s.StopStartTasks(tasks)
+	log.Debugf("Reset tasks to 0 for cleanup")
+	err := s.StopStartTasks(tasks)
 	if err != nil {
-		log.Printf("Failed to cleanup tasks. %v", err)
+		log.Errorf("Failed to cleanup tasks. %v", err)
 	}
 }
 
 // For this simple prototype, Microscaling sits in a loop checking for demand changes every X milliseconds
 func main() {
 	var err error
+	var tasks *demand.Tasks
 
 	st := getSettings()
 
 	s, err := getScheduler(st)
 	if err != nil {
-		log.Printf("Failed to get scheduler: %v", err)
+		log.Errorf("Failed to get scheduler: %v", err)
 		return
 	}
 
-	tasks := getTasks(st)
+	tasks, err = getTasks(st)
+	if err != nil {
+		log.Errorf("Failed to get tasks: %v", err)
+		return
+	}
 
 	// Let the scheduler know about the task types.
-	for name, task := range tasks {
-		err = s.InitScheduler(name, &task)
+	for _, task := range tasks.Tasks {
+		err = s.InitScheduler(task)
 		if err != nil {
-			log.Printf("Failed to start task %s: %v", name, err)
+			log.Errorf("Failed to start task %s: %v", task.Name, err)
 			return
 		}
 	}
@@ -86,7 +91,13 @@ func main() {
 	// Check if there are already any of these containers running
 	err = s.CountAllTasks(tasks)
 	if err != nil {
-		log.Printf("Failed to count containers. %v", err)
+		log.Errorf("Failed to count containers. %v", err)
+	}
+
+	// Set the initial requested counts to match what's running
+	for name, task := range tasks.Tasks {
+		task.Requested = task.Running
+		tasks.Tasks[name] = task
 	}
 
 	// Prepare for cleanup when we receive an interrupt
@@ -94,103 +105,68 @@ func main() {
 	signal.Notify(closedown, os.Interrupt)
 	signal.Notify(closedown, syscall.SIGTERM)
 
-	// Listen for demand on a websocket (we'll also use this to send metrics)
-	demandUpdate := make(chan []api.TaskDemand, 1)
+	// Open a web socket to the server TODO!! This won't always be necessary if we're not sending metrics & calculating demand locally
 	ws, err := api.InitWebSocket()
-	go api.Listen(ws, demandUpdate)
-
-	// Periodically send state to the API if required
-	var sendMetricsTimeout *time.Ticker
-	if st.sendMetrics {
-		sendMetricsTimeout = time.NewTicker(constSendMetricsSleep * time.Millisecond)
+	if err != nil {
+		log.Errorf("Failed to open web socket: %v", err)
+		return
 	}
 
-	// Only allow one scaling command and one metrics send to be outstanding at a time
-	ready := make(chan struct{}, 1)
-	metricsReady := make(chan struct{}, 1)
-	var scalingReady = true
-	var sendMetricsReady = true
-	var cleanupWhenReady = false
-	var exitWhenReady = false
+	demandUpdate := make(chan struct{}, 1)
+	de, err := getDemandEngine(st, ws)
+	if err != nil {
+		log.Errorf("Failed to get demand engine: %v", err)
+		return
+	}
 
-	// Loop, continually checking for changes in demand that need to be scheduled
-	// At the moment we plough on regardless in the face of errors, simply logging them out
-	for {
-		select {
-		case td := <-demandUpdate:
-			// Don't do anything if we're about to exit
-			if cleanupWhenReady || exitWhenReady {
-				break
+	go de.GetDemand(tasks, demandUpdate)
+
+	// Handle demand updates
+	go func() {
+		for range demandUpdate {
+			log.Debug("Demand update")
+			err = s.StopStartTasks(tasks)
+			if err != nil {
+				log.Errorf("Failed to stop / start tasks. %v", err)
+			}
+		}
+
+		// When the demandUpdate channel is closed, it's time to scale everything down to 0
+		cleanup(s, tasks)
+	}()
+
+	// Periodically read the current state of tasks
+	getMetricsTimeout := time.NewTicker(constGetMetricsTimeout * time.Millisecond)
+	go func() {
+		for _ = range getMetricsTimeout.C {
+			// Find out how many instances of each task are running
+			err = s.CountAllTasks(tasks)
+			if err != nil {
+				log.Errorf("Failed to count containers. %v", err)
 			}
 
-			// If we already have a scaling change outstanding, we can't do another one
-			if scalingReady {
-				scalingReady = false
-				go func() {
-					err = handleDemandChange(td, s, tasks)
-					if err != nil {
-						log.Printf("Failed to handle demand change. %v", err)
-					}
-
-					// Notify the channel when the scaling command has completed
-					ready <- struct{}{}
-				}()
-			} else {
-				log.Println("Scale still outstanding")
+			if st.sendMetrics {
+				log.Debug("Sending metrics")
+				err = api.SendMetrics(ws, st.userID, tasks)
+				if err != nil {
+					log.Errorf("Failed to send metrics. %v", err)
+				}
 			}
+		}
+	}()
 
-		case <-sendMetricsTimeout.C:
-			if sendMetricsReady {
-				log.Println("Sending metrics")
-				sendMetricsReady = false
-				go func() {
-					// Find out how many instances of each task are running
-					err = s.CountAllTasks(tasks)
-					if err != nil {
-						log.Printf("Failed to count containers. %v", err)
-					}
+	// When we're asked to close down, we don't want to handle demand updates any more
+	<-closedown
+	log.Info("Clean up when ready")
+	// The demand engine is responsible for closing the demandUpdate channel so that we stop
+	// doing scaling operations
+	de.StopDemand(demandUpdate)
 
-					err = api.SendMetrics(ws, st.userID, tasks)
-					if err != nil {
-						log.Printf("Failed to send metrics. %v", err)
-					}
-
-					// Notify the channel when the API call has completed
-					metricsReady <- struct{}{}
-				}()
-			} else {
-				log.Println("Not ready to send metrics")
-			}
-
-		case <-ready:
-			if exitWhenReady {
-				log.Printf("All finished")
-				os.Exit(1)
-			}
-
-			// An outstanding scale command has finished so we are OK to send another one
-			if cleanupWhenReady {
-				log.Printf("Cleaning up")
-				exitWhenReady = true
-				go func() {
-					cleanup(s, tasks)
-					ready <- struct{}{}
-				}()
-			} else {
-				scalingReady = true
-			}
-
-		case <-metricsReady:
-			// Finished sending metrics so we are OK to send another one
-			sendMetricsReady = true
-
-		case <-closedown:
-			log.Printf("Clean up when ready")
-			cleanupWhenReady = true
-			if scalingReady {
-				// Trigger it now
-				ready <- struct{}{}
-			}
+	exitWaitTimeout := time.NewTicker(constGetMetricsTimeout * time.Millisecond)
+	for _ = range exitWaitTimeout.C {
+		if tasks.Exited() {
+			log.Info("All finished")
+			break
 		}
 	}
 }
