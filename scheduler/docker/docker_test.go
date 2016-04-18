@@ -38,8 +38,8 @@ func TestDockerInitScheduler(t *testing.T) {
 		task.Demand = 5
 		task.Image = "microscaling/priority-1:latest"
 
-		d.InitScheduler("anything", &task)
-		d.startTask("anything", &task)
+		d.InitScheduler(&task)
+		d.startTask(&task)
 	}
 }
 
@@ -54,13 +54,13 @@ func TestDockerScheduler(t *testing.T) {
 	task.Demand = 5
 	task.Image = "microscaling/priority-1:latest"
 
-	d.InitScheduler("anything", &task)
+	d.InitScheduler(&task)
 
-	d.startTask("anything", &task)
+	d.startTask(&task)
 	// TODO! Some Docker tests that mock out the Docker client
 
 	var tasks demand.Tasks
-	tasks.Tasks = make(map[string]demand.Task)
-	tasks.Tasks["anything"] = task
+	tasks.Tasks = make([]*demand.Task, 1)
+	tasks.Tasks = append(tasks.Tasks, &task)
 	d.CountAllTasks(&tasks)
 }

@@ -67,11 +67,11 @@ func DoTestGetJson(t *testing.T, expUrl string, success bool, testJson string) (
 }
 
 // Utility for checking that tasks are updated to be what we expect
-func CheckReturnedTasks(t *testing.T, tasks map[string]demand.Task, returned_tasks map[string]demand.Task) {
-	for name, rt := range returned_tasks {
-		tt, ok := tasks[name]
+func CheckReturnedTasks(t *testing.T, tasks map[string]demand.Task, returned_tasks []*demand.Task) {
+	for _, rt := range returned_tasks {
+		tt, ok := tasks[rt.Name]
 		if !ok {
-			t.Fatalf("Unexpected app name %v", name)
+			t.Fatalf("Unexpected app name %v", rt.Name)
 		}
 
 		if tt.Image != rt.Image {
