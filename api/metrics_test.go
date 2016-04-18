@@ -101,10 +101,11 @@ func testServerMetrics(ws *websocket.Conn) {
 }
 
 func TestSendMetrics(t *testing.T) {
-	var tasks map[string]demand.Task = make(map[string]demand.Task)
+	var tasks demand.Tasks
+	tasks.Tasks = make([]*demand.Task, 2)
 
-	tasks["priority1"] = demand.Task{Demand: 8, Requested: 3, Running: 4}
-	tasks["priority2"] = demand.Task{Demand: 2, Requested: 7, Running: 5}
+	tasks.Tasks[0] = &demand.Task{Name: "priority1", Demand: 8, Requested: 3, Running: 4}
+	tasks.Tasks[1] = &demand.Task{Name: "priority2", Demand: 2, Requested: 7, Running: 5}
 
 	global_t = t
 
@@ -118,7 +119,7 @@ func TestSendMetrics(t *testing.T) {
 			t.Fatal("dialing", err)
 		}
 
-		SendMetrics(ws, "hello", tasks)
+		SendMetrics(ws, "hello", &tasks)
 
 		ws.Close()
 		server.Close()

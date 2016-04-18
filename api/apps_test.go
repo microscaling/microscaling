@@ -30,14 +30,21 @@ func TestGetAppsDecode(t *testing.T) {
 		t.Fatalf("Error decoding apps message: %v", err)
 	}
 
-	var apps map[string]demand.Task
+	var apps []*demand.Task
 	apps, _, _ = appsFromResponse(b)
 
-	p1 := apps["priority1"]
+	var p1, p2 *demand.Task
+	for _, task := range apps {
+		switch task.Name {
+		case "priority1":
+			p1 = task
+		case "priority2":
+			p2 = task
+		}
+	}
 	if p1.Image != "microscaling/priority-1:latest" {
 		t.Fatalf("Bad image %s", p1.Image)
 	}
-	p2 := apps["priority2"]
 	if p2.Image != "microscaling/priority-2:latest" {
 		t.Fatalf("Bad image %s", p2.Image)
 	}

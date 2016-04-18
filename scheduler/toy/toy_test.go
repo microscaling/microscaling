@@ -7,21 +7,20 @@ import (
 )
 
 func TestToyScheduler(t *testing.T) {
-	var tasks demand.Tasks
-	tasks.Tasks = make(map[string]demand.Task)
+	var tasks = demand.Tasks{}
+	tasks.Tasks = make([]*demand.Task, 1)
 
-	tasks.Tasks["anything"] = demand.Task{Demand: 8, Requested: 3}
+	task := demand.Task{Name: "anything", Demand: 8, Requested: 3}
+	tasks.Tasks[0] = &task
 	m := NewScheduler()
 
-	task := tasks.Tasks["anything"]
-	m.InitScheduler("anything", &task)
+	m.InitScheduler(&task)
 
 	log.Debugf("before start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
-	err := m.StopStartTasks(tasks.Tasks)
+	err := m.StopStartTasks(&tasks)
 	if err != nil {
 		t.Fatalf("Error %v", err)
 	}
-	task = tasks.Tasks["anything"]
 	log.Debugf("after start/stop: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
 
 	if err != nil {
