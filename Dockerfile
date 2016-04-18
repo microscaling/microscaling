@@ -1,7 +1,7 @@
-FROM alpine:3.2
+FROM alpine:3.3
 MAINTAINER Ross Fairbanks "ross@microscaling.com"
 
-ENV BUILD_PACKAGES bash curl-dev
+ENV BUILD_PACKAGES ca-certificates
 
 RUN apk update && \
     apk upgrade && \
@@ -11,9 +11,5 @@ RUN apk update && \
 # needs to be built for Linux:
 # GOOS=linux go build -o microscaling .
 ADD microscaling /
-
-ADD run.sh /
-RUN chmod +x /run.sh
-
-# Needs a run.sh wrapper to run the microscaling binary successfully
-ENTRYPOINT ["/run.sh"]
+RUN chmod +x /microscaling
+ENTRYPOINT ["/microscaling"]

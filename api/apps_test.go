@@ -20,22 +20,26 @@ func TestGetAppsDecode(t *testing.T) {
 		t.Fatalf("Didn't decode command")
 	}
 
-	var response string = `[{"name":"priority1","type":"Docker","config":{"image":"microscaling/priority-1:latest","command":"/run.sh"}},{"name":"priority2","type":"Docker","config":{"image":"microscaling/priority-2:latest","command":"/run.sh"}}]`
+	// var response string = `"apps": [{"name":"priority1","appType":"Docker","config":{"image":"force12io/priority-1:latest","command":"/run.sh"}},{"name":"priority2","type":"Docker","config":{"image":"force12io/priority-2:latest","command":"/run.sh"}}]`
+	var response string = `{"apps" : [{"name":"priority1", "config":{"image":"microscaling/priority-1:latest","command":"/run.sh"}},{"name":"priority2","appType":"Docker","config":{"image":"microscaling/priority-2:latest","command":"/run.sh"}}]}`
 	var b = []byte(response)
 
-	var a []AppDescription
-	_ = json.Unmarshal(b, &a)
+	var a AppsMessage
+	err := json.Unmarshal(b, &a)
+	if err != nil {
+		t.Fatalf("Error decoding apps message: %v", err)
+	}
 
 	var apps map[string]demand.Task
-	apps, _ = appsFromResponse(b)
+	apps, _, _ = appsFromResponse(b)
 
 	p1 := apps["priority1"]
 	if p1.Image != "microscaling/priority-1:latest" {
-		t.Fatalf("Bad image")
+		t.Fatalf("Bad image %s", p1.Image)
 	}
 	p2 := apps["priority2"]
 	if p2.Image != "microscaling/priority-2:latest" {
-		t.Fatalf("Bad image")
+		t.Fatalf("Bad image %s", p2.Image)
 	}
 }
 
@@ -48,23 +52,23 @@ func TestGetApps(t *testing.T) {
 	}{
 		{
 			expUrl: "/apps/hello",
-			json: `[
+			json: `{"apps": [
 			      {
 			          "name": "priority1",
-			          "type": "Docker",
+			          "appType": "Docker",
 			          "config": {
 			              "image": "firstimage"
 			          }
 			      },
 			      {
 			          "name": "priority2",
-			          "type": "Docker",
+			          "appType": "Docker",
 			          "config": {
 			              "image": "anotherimage",
 			              "command": "do this"
 			          }
 			      }
-			]`,
+			]}`,
 			success: true,
 			tasks: map[string]demand.Task{
 				"priority1": demand.Task{
@@ -89,7 +93,7 @@ func TestGetApps(t *testing.T) {
 		defer server.Close()
 
 		baseAPIUrl = strings.Replace(server.URL, "http://", "", 1)
-		returned_tasks, err := GetApps("hello")
+		returned_tasks, _, err := GetApps("hello")
 		baseAPIUrl = GetBaseAPIUrl()
 
 		if test.success {
