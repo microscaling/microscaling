@@ -2,6 +2,7 @@ package localEngine
 
 import (
 	"time"
+	"sync"
 
 	"github.com/op/go-logging"
 
@@ -25,6 +26,7 @@ func NewEngine() *LocalEngine {
 }
 
 func (de *LocalEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}) {
+	var gettingMetrics sync.WaitGroup
 
 	// In this we need to collect the metrics, calculate demand, and trigger a demand update
 	demandTimeout := time.NewTicker(constGetDemandSleep * time.Millisecond)
@@ -33,8 +35,14 @@ func (de *LocalEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}
 		log.Debug("Getting demand")
 
 		for _, task := range tasks.Tasks {
-			task.Metric.UpdateCurrent()
+			go func() {
+				gettingMetrics.Add(1)
+				defer gettingMetrics.Done()
+				task.Metric.UpdateCurrent()
+			}
 		}
+
+		gettingMetrics.Wait()
 
 		demandChanged := ScalingCalculation(tasks)
 
