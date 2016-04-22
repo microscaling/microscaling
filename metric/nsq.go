@@ -61,6 +61,7 @@ func NSQInit() {
 	}
 
 	nsqInitialized = true
+	return
 }
 
 // NewNSQMetric creates the metric.
