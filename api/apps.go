@@ -31,8 +31,10 @@ type DockerAppConfig struct {
 	Image           string `json:"image"`
 	Command         string `json:"command"`
 	PublishAllPorts bool   `json:"publishAllPorts"`
-	QueueName       string `json:"queueName"`
 	QueueLength     int    `json:"targetQueueLength"`
+	QueueName       string `json:"queueName"`
+	TopicName       string `json:"topicName"`
+	ChannelName     string `json:"channelName"`
 }
 
 type dockerAppConfig DockerAppConfig
@@ -79,7 +81,7 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
 			switch a.MetricType {
 			case "NSQ":
-				task.Metric = metric.NewNSQMetric(a.Config.QueueName)
+				task.Metric = metric.NewNSQMetric(a.Config.TopicName, a.Config.ChannelName)
 			default:
 				log.Errorf("Unexpected queue metricType %s", a.MetricType)
 			}

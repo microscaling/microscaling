@@ -17,8 +17,9 @@ var _ Metric = (*NSQMetric)(nil)
 
 // NSQMetric stores the current value.
 type NSQMetric struct {
-	currentVal int
-	queueName  string
+	currentVal  int
+	topicName   string
+	channelName string
 }
 
 // StatsMessage from NSQ stats API.
@@ -63,13 +64,14 @@ func NSQInit() {
 }
 
 // NewNSQMetric creates the metric.
-func NewNSQMetric(queueName string) *NSQMetric {
+func NewNSQMetric(topicName string, channelName string) *NSQMetric {
 	if !nsqInitialized {
 		NSQInit()
 	}
 
 	return &NSQMetric{
-		queueName: queueName,
+		topicName:   topicName,
+		channelName: channelName,
 	}
 }
 
@@ -114,19 +116,17 @@ func (nsqm *NSQMetric) UpdateCurrent() {
 	}
 
 	// Loop through NSQ Channels and Metrics to find the correct value.
-	// Currently queue name is used for both the Topic and Channel.
-	// TODO May need to split these later.
 	for _, topic := range statsMessage.Data.Topics {
-		if topic.TopicName == nsqm.queueName {
+		if topic.TopicName == nsqm.topicName {
 			for _, channel := range topic.Channels {
-				if channel.ChannelName == nsqm.queueName {
+				if channel.ChannelName == nsqm.channelName {
 					nsqm.currentVal = channel.Depth
 				}
 			}
 		}
 	}
 
-	log.Debugf("Queue name %s length %d", nsqm.queueName, nsqm.currentVal)
+	log.Debugf("Topic: %s Channel: %s Length: %d", nsqm.topicName, nsqm.channelName, nsqm.currentVal)
 }
 
 // Current returns the queue length.
