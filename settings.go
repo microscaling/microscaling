@@ -15,6 +15,7 @@ import (
 	"github.com/microscaling/microscaling/engine/serverEngine"
 	"github.com/microscaling/microscaling/scheduler"
 	"github.com/microscaling/microscaling/scheduler/docker"
+	"github.com/microscaling/microscaling/scheduler/marathon"
 	"github.com/microscaling/microscaling/scheduler/toy"
 )
 
@@ -25,6 +26,7 @@ type settings struct {
 	pullImages    bool
 	dockerHost    string
 	demandEngine  string
+	marathonAPI   string
 }
 
 func initLogging() {
@@ -66,6 +68,7 @@ func getSettings() settings {
 	st.pullImages = (getEnvOrDefault("MSS_PULL_IMAGES", "true") == "true")
 	st.dockerHost = getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
 	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "SERVER")
+	st.marathonAPI = getEnvOrDefault("MSS_MARATHON_API", "http://localhost:8080")
 	return st
 }
 
@@ -76,12 +79,13 @@ func getScheduler(st settings) (scheduler.Scheduler, error) {
 	case "DOCKER":
 		log.Info("Scheduling with Docker remote API")
 		s = docker.NewScheduler(st.pullImages, st.dockerHost)
+	case "MARATHON":
+		log.Info("Scheduling with Mesos / Marathon")
+		s = marathon.NewScheduler(st.marathonAPI)
 	case "ECS":
 		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #MicroscaleECS if you'd like us to add this next!")
 	case "KUBERNETES":
 		return nil, fmt.Errorf("Scheduling with Kubernetes not yet supported. Tweet with hashtag #MicroscaleK8S if you'd like us to add this next!")
-	case "MESOS":
-		return nil, fmt.Errorf("Scheduling with Mesos / Marathon not yet supported. Tweet with hashtag #MicroscaleMesos if you'd like us to add this next!")
 	case "NOMAD":
 		return nil, fmt.Errorf("Scheduling with Nomad not yet supported. Tweet with hashtag #MicroscaleNomad if you'd like us to add this next!")
 	case "TOY":
