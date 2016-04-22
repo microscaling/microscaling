@@ -13,13 +13,15 @@ var _ Metric = (*AzureQueueMetric)(nil)
 var azureAccountName string
 var azureQueueClient storage.QueueServiceClient
 var azureClient storage.Client
-var azureInitialized bool = false
+var azureInitialized = false
 
+// AzureQueueMetric stores the current value.
 type AzureQueueMetric struct {
 	currentVal     int
 	azureQueueName string
 }
 
+// AcsInit sets up the Azure Storage client.
 func AcsInit() (err error) {
 	azureAccountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
 	if azureAccountName == "" {
@@ -43,6 +45,7 @@ func AcsInit() (err error) {
 	return
 }
 
+// NewAzureQueueMetric creates the metric.
 func NewAzureQueueMetric(queueName string) *AzureQueueMetric {
 	if !azureInitialized {
 		AcsInit()
@@ -53,6 +56,7 @@ func NewAzureQueueMetric(queueName string) *AzureQueueMetric {
 	}
 }
 
+// UpdateCurrent calls the Azure Storage API to the queue length.
 func (aqm *AzureQueueMetric) UpdateCurrent() {
 	metadata, err := azureQueueClient.GetMetadata(aqm.azureQueueName)
 	if err != nil {
@@ -62,6 +66,7 @@ func (aqm *AzureQueueMetric) UpdateCurrent() {
 	log.Debugf("Queue name %s length %d", aqm.azureQueueName, aqm.currentVal)
 }
 
+// Current returns the queue length.
 func (aqm *AzureQueueMetric) Current() int {
 	return aqm.currentVal
 }
