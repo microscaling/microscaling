@@ -4,7 +4,6 @@ package marathon
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -83,26 +82,23 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	// Scale down first to free up resources
 	for _, task := range tooMany {
 		diff = task.Requested - task.Demand
-		log.Infof("Stop %d of task %s", diff, task.Name)
+		log.Debugf("Stop %d of task %s", diff, task.Name)
 		err = m.stopStartTask(task)
 		if err != nil {
 			log.Errorf("Couldn't stop %s: %v ", task.Name, err)
 		}
 		log.Infof("now have %d", task.Requested)
-		// task.Requested = task.Demand
-		//tasks[name] = task
 	}
 
 	// Now we can scale up
 	for _, task := range tooFew {
 		diff = task.Demand - task.Requested
-		log.Infof("Start %d of task %s", diff, task.Name)
+		log.Debugf("Start %d of task %s", diff, task.Name)
 		err = m.stopStartTask(task)
 		if err != nil {
 			log.Errorf("Couldn't start %s: %v ", task.Name, err)
 		}
 		log.Infof("now have %d", task.Requested)
-		//tasks[name] = task
 	}
 
 	log.Infof("%v", tasks)
@@ -146,11 +142,13 @@ func (m *MarathonScheduler) CountAllTasks(running *demand.Tasks) error {
 	body, err := getJSONGet(url)
 	if err != nil {
 		log.Errorf("Error getting Marathon Apps %v", err)
+		return err
 	}
 
 	err = json.Unmarshal(body, &appsMessage)
 	if err != nil {
 		log.Errorf("Error %v unmarshalling from %s", err, string(body[:]))
+		return err
 	}
 
 	appCounts := make(map[string]int)
@@ -188,12 +186,14 @@ func (m *MarathonScheduler) stopStartTask(task *demand.Task) error {
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(&payload)
 	if err != nil {
-		return fmt.Errorf("Failed to encode json. %v", err)
+		log.Errorf("Failed to encode json. %v", err)
+		return err
 	}
 
 	req, err := http.NewRequest("PUT", url, w)
 	if err != nil {
-		return fmt.Errorf("Failed to build PUT request err %v", err)
+		log.Errorf("Failed to build PUT request err %v", err)
+		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -202,16 +202,19 @@ func (m *MarathonScheduler) stopStartTask(task *demand.Task) error {
 	defer resp.Body.Close()
 
 	if err != nil {
-		return fmt.Errorf("start/stop err %v", err)
+		log.Errorf("start/stop err %v", err)
+		return err
 	}
 
 	if resp.StatusCode > 299 {
-		return fmt.Errorf("error response from marathon. %s", resp.Status)
+		log.Errorf("error response from marathon. %s", resp.Status)
+		return err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("start/stop read err %v", err)
+		log.Errorf("start/stop read err %v", err)
+		return err
 	}
 
 	// We do nothing with this body
@@ -221,7 +224,7 @@ func (m *MarathonScheduler) stopStartTask(task *demand.Task) error {
 	// Now we've asked for this many, update the currentcount
 	task.Requested = task.Demand
 
-	return nil
+	return err
 }
 
 // getBaseMarathonURL returns the base API path.
