@@ -18,10 +18,9 @@ import (
 
 var log = logging.MustGetLogger("mssscheduler")
 
-// MarathonScheduler holds Marathon API URL and the running services.
+// MarathonScheduler holds Marathon API URL.
 type MarathonScheduler struct {
 	baseMarathonURL string
-	services        map[string][]string
 }
 
 // AppsMessage from the Marathon Apps API.
@@ -46,7 +45,6 @@ var (
 func NewScheduler(marathonAPI string) *MarathonScheduler {
 	return &MarathonScheduler{
 		baseMarathonURL: getBaseMarathonURL(marathonAPI),
-		services:        make(map[string][]string),
 	}
 }
 
