@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/op/go-logging"
 
@@ -21,6 +23,24 @@ type MarathonScheduler struct {
 	baseMarathonURL string
 	services        map[string][]string
 }
+
+// AppsMessage from the Marathon Apps API.
+type AppsMessage struct {
+	Apps []App `json:"apps"`
+}
+
+// App from the Marathon Apps API.
+type App struct {
+	ID        string `json:"id"`
+	Instances int    `json:"instances"`
+}
+
+var (
+	httpClient = &http.Client{
+		// TODO Make timeout configurable.
+		Timeout: 10 * time.Second,
+	}
+)
 
 // NewScheduler returns a pointer to the scheduler.
 func NewScheduler(marathonAPI string) *MarathonScheduler {
@@ -91,13 +111,61 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	return err
 }
 
+// Marathon API to get the current running tasks.
+func getJSONGet(url string) (body []byte, err error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Errorf("Failed to build API GET request err %v", err)
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Errorf("Failed to GET err %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Errorf("Http error %d: %s", resp.StatusCode, resp.Status)
+	}
+
+	body, err = ioutil.ReadAll(resp.Body)
+
+	return body, err
+}
+
 // CountAllTasks tells us how many instances of each task are currently running.
 func (m *MarathonScheduler) CountAllTasks(running *demand.Tasks) error {
-	var err error
+	var (
+		err         error
+		appsMessage AppsMessage
+	)
 
+	url := m.baseMarathonURL + "apps/"
+
+	body, err := getJSONGet(url)
+	if err != nil {
+		log.Errorf("Error getting Marathon Apps %v", err)
+	}
+
+	err = json.Unmarshal(body, &appsMessage)
+	if err != nil {
+		log.Errorf("Error %v unmarshalling from %s", err, string(body[:]))
+	}
+
+	appCounts := make(map[string]int)
+
+	// Remove leading slash from App IDs and set the instance counts.
+	for _, app := range appsMessage.Apps {
+		appCounts[strings.Replace(app.ID, "/", "", 1)] = app.Instances
+	}
+
+	// Set running counts. Defaults to 0 if the App does not exist.
 	tasks := running.Tasks
 	for _, t := range tasks {
-		t.Running = t.Requested
+		t.Running = appCounts[t.Name]
 	}
 
 	return err
