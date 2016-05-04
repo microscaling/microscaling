@@ -67,7 +67,7 @@ func getSettings() settings {
 	st.sendMetrics = (getEnvOrDefault("MSS_SEND_METRICS_TO_API", "true") == "true")
 	st.pullImages = (getEnvOrDefault("MSS_PULL_IMAGES", "true") == "true")
 	st.dockerHost = getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
-	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "SERVER")
+	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "LOCAL")
 	st.marathonAPI = getEnvOrDefault("MSS_MARATHON_API", "http://localhost:8080")
 	return st
 }
