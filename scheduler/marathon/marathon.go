@@ -22,7 +22,6 @@ var log = logging.MustGetLogger("mssscheduler")
 type MarathonScheduler struct {
 	baseMarathonURL string
 	taskBackoffs    map[string]*utils.Backoff
-	sync.Mutex
 }
 
 // AppsMessage from the Marathon API.
@@ -62,9 +61,6 @@ var _ scheduler.Scheduler = (*MarathonScheduler)(nil)
 func (m *MarathonScheduler) InitScheduler(task *demand.Task) (err error) {
 	log.Infof("Marathon initializing task %s", task.Name)
 
-	m.Lock()
-	defer m.Unlock()
-
 	m.taskBackoffs[task.Name] = &utils.Backoff{
 		Min:    250 * time.Millisecond,
 		Max:    10 * time.Second,
@@ -82,8 +78,6 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 
 	tasks.Lock()
 	defer tasks.Unlock()
-	m.Lock()
-	defer m.Unlock()
 
 	// TODO: Consider checking the number running before we start & stop
 	for _, task := range tasks.Tasks {
@@ -127,8 +121,6 @@ func (m *MarathonScheduler) CountAllTasks(running *demand.Tasks) error {
 
 	running.Lock()
 	defer running.Unlock()
-	m.Lock()
-	defer m.Unlock()
 
 	url := m.baseMarathonURL + "apps/"
 
