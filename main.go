@@ -33,6 +33,7 @@ import (
 	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/scheduler"
+	"github.com/microscaling/microscaling/utils"
 )
 
 const constGetMetricsTimeout = 500 // milliseconds - delay before we send read state (and optionally send on the metrics API)
@@ -106,7 +107,7 @@ func main() {
 	signal.Notify(closedown, syscall.SIGTERM)
 
 	// Open a web socket to the server TODO!! This won't always be necessary if we're not sending metrics & calculating demand locally
-	ws, err := api.InitWebSocket()
+	ws, err := utils.InitWebSocket(st.microscalingAPI)
 	if err != nil {
 		log.Errorf("Failed to open web socket: %v", err)
 		return

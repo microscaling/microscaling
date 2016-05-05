@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/op/go-logging"
+	"golang.org/x/net/websocket"
 )
 
 var log = logging.MustGetLogger("mssmetric")
@@ -27,6 +28,11 @@ func GetJSON(url string) (body []byte, err error) {
 // PutJSON makes a PUT request to a REST API and submits the JSON payload.
 func PutJSON(url string, payload *bytes.Buffer) (status int, err error) {
 	return putJSON(url, payload)
+}
+
+// InitWebSocket opens a websocket connection to the provided address.
+func InitWebSocket(apiAddress string) (ws *websocket.Conn, err error) {
+	return initWebSocket(apiAddress)
 }
 
 func getJSON(url string) (body []byte, err error) {
@@ -71,4 +77,16 @@ func putJSON(url string, payload *bytes.Buffer) (status int, err error) {
 	}
 
 	return resp.StatusCode, err
+}
+
+func initWebSocket(apiAddress string) (ws *websocket.Conn, err error) {
+	// TODO Set actual origin.
+	origin := "http://localhost/"
+	url := "ws://" + apiAddress
+	ws, err = websocket.Dial(url, "", origin)
+	if err != nil {
+		log.Errorf("Error getting the web socket: %v", err)
+	}
+
+	return ws, err
 }
