@@ -8,19 +8,19 @@ import (
 
 // Backoff holds the number of attempts as well as the min and max backoff delays.
 type Backoff struct {
-	attempt, Factor float64
+	attempt, Factor int
 	Min, Max        time.Duration
 }
 
 // Duration calculates the backoff delay and increments the attempts count.
-func (b *Backoff) Duration(attempt float64) time.Duration {
-	d := b.SetDuration(b.attempt)
+func (b *Backoff) Duration(attempt int) time.Duration {
+	d := b.CalcDuration(b.attempt)
 	b.attempt++
 	return d
 }
 
-// SetDuration calculates the backoff delay and caps it at the maximum delay.
-func (b *Backoff) SetDuration(attempt float64) time.Duration {
+// CalcDuration calculates the backoff delay and caps it at the maximum delay.
+func (b *Backoff) CalcDuration(attempt int) time.Duration {
 	if b.Min == 0 {
 		b.Min = 100 * time.Millisecond
 	}
@@ -30,7 +30,7 @@ func (b *Backoff) SetDuration(attempt float64) time.Duration {
 	}
 
 	// Calculate the wait duration.
-	duration := float64(b.Min) * math.Pow(b.Factor, attempt)
+	duration := float64(b.Min) * math.Pow(float64(b.Factor), float64(attempt))
 
 	// Cap it at the maximum value.
 	if duration > float64(b.Max) {
@@ -46,6 +46,6 @@ func (b *Backoff) Reset() {
 }
 
 // Attempt returns the number of times the API call has failed.
-func (b *Backoff) Attempt() float64 {
+func (b *Backoff) Attempt() int {
 	return b.attempt
 }
