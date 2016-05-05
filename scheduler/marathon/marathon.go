@@ -4,15 +4,16 @@ package marathon
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/op/go-logging"
 
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/scheduler"
+	"github.com/microscaling/microscaling/utils"
 )
 
 var log = logging.MustGetLogger("mssscheduler")
@@ -20,14 +21,16 @@ var log = logging.MustGetLogger("mssscheduler")
 // MarathonScheduler holds Marathon API URL.
 type MarathonScheduler struct {
 	baseMarathonURL string
+	taskBackoffs    map[string]*utils.Backoff
+	sync.Mutex
 }
 
-// AppsMessage from the Marathon Apps API.
+// AppsMessage from the Marathon API.
 type AppsMessage struct {
 	Apps []App `json:"apps"`
 }
 
-// App from the Marathon Apps API.
+// App from the Marathon API.
 type App struct {
 	ID        string `json:"id"`
 	Instances int    `json:"instances"`
@@ -44,6 +47,7 @@ var (
 func NewScheduler(marathonAPI string) *MarathonScheduler {
 	return &MarathonScheduler{
 		baseMarathonURL: getBaseMarathonURL(marathonAPI),
+		taskBackoffs:    make(map[string]*utils.Backoff),
 	}
 }
 
@@ -56,6 +60,16 @@ var _ scheduler.Scheduler = (*MarathonScheduler)(nil)
 
 // InitScheduler initializes the scheduler.
 func (m *MarathonScheduler) InitScheduler(task *demand.Task) (err error) {
+	log.Infof("Marathon initializing task %s", task.Name)
+
+	m.Lock()
+	defer m.Unlock()
+
+	m.taskBackoffs[task.Name] = &utils.Backoff{
+		Min:    500 * time.Millisecond,
+		Max:    10 * time.Second,
+		Factor: 2,
+	}
 	return err
 }
 
@@ -64,8 +78,12 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	// Create tasks if there aren't enough of them, and stop them if there are too many
 	var tooMany []*demand.Task
 	var tooFew []*demand.Task
-	var diff int
 	var err error = nil
+
+	tasks.Lock()
+	defer tasks.Unlock()
+	m.Lock()
+	defer m.Unlock()
 
 	// TODO: Consider checking the number running before we start & stop
 	for _, task := range tasks.Tasks {
@@ -81,53 +99,23 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 
 	// Scale down first to free up resources
 	for _, task := range tooMany {
-		diff = task.Requested - task.Demand
-		log.Debugf("Stop %d of task %s", diff, task.Name)
 		err = m.stopStartTask(task)
 		if err != nil {
 			log.Errorf("Couldn't stop %s: %v ", task.Name, err)
 		}
-		log.Infof("now have %d", task.Requested)
+		log.Debugf("Now have %s: %d", task.Name, task.Requested)
 	}
 
 	// Now we can scale up
 	for _, task := range tooFew {
-		diff = task.Demand - task.Requested
-		log.Debugf("Start %d of task %s", diff, task.Name)
 		err = m.stopStartTask(task)
 		if err != nil {
 			log.Errorf("Couldn't start %s: %v ", task.Name, err)
 		}
-		log.Infof("now have %d", task.Requested)
+		log.Debugf("Now have %s: %d", task.Name, task.Requested)
 	}
 
-	log.Infof("%v", tasks)
 	return err
-}
-
-// Marathon API to get the current running tasks.
-func getJSONGet(url string) (body []byte, err error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Errorf("Failed to build API GET request err %v", err)
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		log.Errorf("Failed to GET err %v", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Errorf("Http error %d: %s", resp.StatusCode, resp.Status)
-	}
-
-	body, err = ioutil.ReadAll(resp.Body)
-
-	return body, err
 }
 
 // CountAllTasks tells us how many instances of each task are currently running.
@@ -137,9 +125,14 @@ func (m *MarathonScheduler) CountAllTasks(running *demand.Tasks) error {
 		appsMessage AppsMessage
 	)
 
+	running.Lock()
+	defer running.Unlock()
+	m.Lock()
+	defer m.Unlock()
+
 	url := m.baseMarathonURL + "apps/"
 
-	body, err := getJSONGet(url)
+	body, err := utils.GetJSON(url)
 	if err != nil {
 		log.Errorf("Error getting Marathon Apps %v", err)
 		return err
@@ -176,8 +169,9 @@ func (m *MarathonScheduler) stopStartTask(task *demand.Task) error {
 	//  {
 	//    "instances": 8
 	//  }
+
 	url := m.baseMarathonURL + "apps/" + task.Name
-	log.Infof("Start/stop PUT: %s", url)
+	log.Debugf("Start/stop PUT: %s", url)
 
 	payload := startStopPayload{
 		Instances: task.Demand,
@@ -190,36 +184,30 @@ func (m *MarathonScheduler) stopStartTask(task *demand.Task) error {
 		return err
 	}
 
-	req, err := http.NewRequest("PUT", url, w)
-	if err != nil {
-		log.Errorf("Failed to build PUT request err %v", err)
+	status, err := utils.PutJSON(url, w)
+
+	b := m.taskBackoffs[task.Name]
+
+	// Handle locked deployments by backing off until they complete.
+	if status == 409 {
+		dur := b.Duration(b.Attempt())
+
+		log.Infof("Task: %s has a locked deployment - backing off for %s", task.Name, dur.String())
+		time.Sleep(dur)
+
 		return err
+	} else {
+		// Reset attempts when the deployment is no longer locked.
+		if b.Attempt() > 0 {
+			log.Infof("Task: %s succeeded set attempts to 0", task.Name)
+			b.Reset()
+		}
+
+		if status > 299 {
+			log.Errorf("Error response from Marathon. %v", err)
+			return err
+		}
 	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
-
-	if err != nil {
-		log.Errorf("start/stop err %v", err)
-		return err
-	}
-
-	if resp.StatusCode > 299 {
-		log.Errorf("error response from marathon. %s", resp.Status)
-		return err
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Errorf("start/stop read err %v", err)
-		return err
-	}
-
-	// We do nothing with this body
-	s := string(body)
-	log.Infof("start/stop json: %s", s)
 
 	// Now we've asked for this many, update the currentcount
 	task.Requested = task.Demand
