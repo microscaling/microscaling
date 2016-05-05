@@ -21,12 +21,15 @@ func (b *Backoff) Duration(attempt int) time.Duration {
 
 // CalcDuration calculates the backoff delay and caps it at the maximum delay.
 func (b *Backoff) CalcDuration(attempt int) time.Duration {
+	// Default to sensible values when not configured.
 	if b.Min == 0 {
 		b.Min = 100 * time.Millisecond
 	}
-
 	if b.Max == 0 {
 		b.Max = 10 * time.Second
+	}
+	if b.Factor == 0 {
+		b.Factor = 2
 	}
 
 	// Calculate the wait duration.

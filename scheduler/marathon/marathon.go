@@ -66,7 +66,7 @@ func (m *MarathonScheduler) InitScheduler(task *demand.Task) (err error) {
 	defer m.Unlock()
 
 	m.taskBackoffs[task.Name] = &utils.Backoff{
-		Min:    500 * time.Millisecond,
+		Min:    250 * time.Millisecond,
 		Max:    10 * time.Second,
 		Factor: 2,
 	}
