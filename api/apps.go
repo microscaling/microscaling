@@ -6,6 +6,7 @@ import (
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/metric"
 	"github.com/microscaling/microscaling/target"
+	"github.com/microscaling/microscaling/utils"
 )
 
 type AppsMessage struct {
@@ -102,8 +103,10 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 	return
 }
 
-func GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
-	body, err := getJsonGet(userID, "/apps/")
+func GetApps(apiAddress string, userID string) (tasks []*demand.Task, maxContainers int, err error) {
+	url := "http://" + apiAddress + "/apps/" + userID
+
+	body, err := utils.GetJSON(url)
 	if err != nil {
 		log.Debugf("Failed to get /apps/: %v", err)
 		return nil, 0, err

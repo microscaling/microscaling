@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/op/go-logging"
-
-	"golang.org/x/net/websocket"
 )
 
 var log = logging.MustGetLogger("mssmetric")

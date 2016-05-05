@@ -20,13 +20,14 @@ import (
 )
 
 type settings struct {
-	schedulerType string
-	sendMetrics   bool
-	userID        string
-	pullImages    bool
-	dockerHost    string
-	demandEngine  string
-	marathonAPI   string
+	schedulerType   string
+	sendMetrics     bool
+	microscalingAPI string
+	userID          string
+	pullImages      bool
+	dockerHost      string
+	demandEngine    string
+	marathonAPI     string
 }
 
 func initLogging() {
@@ -63,6 +64,7 @@ func initLogging() {
 func getSettings() settings {
 	var st settings
 	st.schedulerType = getEnvOrDefault("MSS_SCHEDULER", "DOCKER")
+	st.microscalingAPI = getEnvOrDefault("MSS_API_ADDRESS", "app.microscaling.com")
 	st.userID = getEnvOrDefault("MSS_USER_ID", "5k5gk")
 	st.sendMetrics = (getEnvOrDefault("MSS_SEND_METRICS_TO_API", "true") == "true")
 	st.pullImages = (getEnvOrDefault("MSS_PULL_IMAGES", "true") == "true")
@@ -106,7 +108,7 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 	tasks = new(demand.Tasks)
 
 	// Get the tasks that have been configured by this user
-	t, maxContainers, err := api.GetApps(st.userID)
+	t, maxContainers, err := api.GetApps(st.microscalingAPI, st.userID)
 	tasks.MaxContainers = maxContainers
 
 	// For now pass the whole environment to all containers.
