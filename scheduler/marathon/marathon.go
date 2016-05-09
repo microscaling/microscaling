@@ -1,4 +1,4 @@
-// Package marathon scheduler integration
+// Package marathon provides a scheduler using the Marathon REST API.
 package marathon
 
 import (
@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/op/go-logging"
@@ -18,7 +17,7 @@ import (
 
 var log = logging.MustGetLogger("mssscheduler")
 
-// MarathonScheduler holds Marathon API URL.
+// MarathonScheduler holds Marathon API URL and a Backoff struct for each task.
 type MarathonScheduler struct {
 	baseMarathonURL string
 	taskBackoffs    map[string]*utils.Backoff
@@ -74,7 +73,7 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	// Create tasks if there aren't enough of them, and stop them if there are too many
 	var tooMany []*demand.Task
 	var tooFew []*demand.Task
-	var err error = nil
+	var err error
 
 	tasks.Lock()
 	defer tasks.Unlock()
@@ -154,57 +153,70 @@ func (m *MarathonScheduler) CountAllTasks(running *demand.Tasks) error {
 
 // stopStartTask updates the number of running tasks using the Marathon API.
 func (m *MarathonScheduler) stopStartTask(task *demand.Task) error {
-	// Submit a post request to Marathon to match the requested number of the requested app
-	// format looks like:
-	// PUT http://marathon:8080/v2/apps/<app>
-	//  Request:
-	//  {
-	//    "instances": 8
-	//  }
+	var (
+		err    error
+		status int
+	)
 
-	url := m.baseMarathonURL + "apps/" + task.Name
+	// Get the backoff for the task.
+	b := m.taskBackoffs[task.Name]
+
+	// Keep attempting to scale app until successful.
+	for task.Requested != task.Demand {
+
+		// Scale app using the Marathon REST API.
+		status, err = updateApp(m.baseMarathonURL, task.Name, task.Demand)
+
+		if status >= 200 && status <= 299 {
+			// Update was successful so set the requested count.
+			task.Requested = task.Demand
+
+			// Reset attempts since the deployment is no longer locked.
+			if b.Attempt() > 0 {
+				log.Infof("Task: %s succeeded set attempts to 0", task.Name)
+				b.Reset()
+			}
+		} else {
+			// Update failed so back off and attempt again.
+			dur := b.Duration(b.Attempt())
+			log.Infof("Task: %s failed to scale backing off for %s", task.Name, dur.String())
+
+			time.Sleep(dur)
+
+			// Break loop if the maximum attempts is reached.
+			if b.MaxAttempts() {
+				break
+			}
+		}
+	}
+
+	return err
+}
+
+// Submit a post request to Marathon to match the requested number of the requested app
+// format looks like:
+// PUT http://marathon:8080/v2/apps/<app>
+//  Request:
+//  {
+//    "instances": 8
+//  }
+func updateApp(marathonURL string, taskName string, demand int) (status int, err error) {
+	url := marathonURL + "apps/" + taskName
 	log.Debugf("Start/stop PUT: %s", url)
 
 	payload := startStopPayload{
-		Instances: task.Demand,
+		Instances: demand,
 	}
 	w := &bytes.Buffer{}
 	encoder := json.NewEncoder(w)
-	err := encoder.Encode(&payload)
+	err = encoder.Encode(&payload)
 	if err != nil {
 		log.Errorf("Failed to encode json. %v", err)
-		return err
+		return 0, err
 	}
 
-	status, err := utils.PutJSON(url, w)
-
-	b := m.taskBackoffs[task.Name]
-
-	// Handle locked deployments by backing off until they complete.
-	if status == 409 {
-		dur := b.Duration(b.Attempt())
-
-		log.Infof("Task: %s has a locked deployment - backing off for %s", task.Name, dur.String())
-		time.Sleep(dur)
-
-		return err
-	} else {
-		// Reset attempts when the deployment is no longer locked.
-		if b.Attempt() > 0 {
-			log.Infof("Task: %s succeeded set attempts to 0", task.Name)
-			b.Reset()
-		}
-
-		if status > 299 {
-			log.Errorf("Error response from Marathon. %v", err)
-			return err
-		}
-	}
-
-	// Now we've asked for this many, update the currentcount
-	task.Requested = task.Demand
-
-	return err
+	// Make scaling call to the Marathon API.
+	return utils.PutJSON(url, w)
 }
 
 // getBaseMarathonURL returns the base API path.

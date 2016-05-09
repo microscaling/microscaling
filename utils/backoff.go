@@ -9,6 +9,7 @@ import (
 // Backoff holds the number of attempts as well as the min and max backoff delays.
 type Backoff struct {
 	attempt, Factor int
+	maxAttempts     bool
 	Min, Max        time.Duration
 }
 
@@ -37,6 +38,7 @@ func (b *Backoff) CalcDuration(attempt int) time.Duration {
 
 	// Cap it at the maximum value.
 	if duration > float64(b.Max) {
+		b.maxAttempts = true
 		return b.Max
 	}
 
@@ -51,4 +53,9 @@ func (b *Backoff) Reset() {
 // Attempt returns the number of times the API call has failed.
 func (b *Backoff) Attempt() int {
 	return b.attempt
+}
+
+// MaxAttempts returns true when the wait duration has reached the maximum value.
+func (b *Backoff) MaxAttempts() bool {
+	return b.maxAttempts
 }
