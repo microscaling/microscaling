@@ -69,7 +69,7 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 				freedCapacity := available
 				for index > p+1 && freedCapacity < delta {
 					// Kill off lower priority services if we need to
-					index -= 1
+					index--
 					lowerPriorityService := tasks.Tasks[index]
 					if lowerPriorityService.Priority > t.Priority {
 						log.Debugf("  [scale] looking for capacity from %s: running %d requested %d demand %d", lowerPriorityService.Name, lowerPriorityService.Running, lowerPriorityService.Requested, lowerPriorityService.Demand)

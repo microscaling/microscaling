@@ -1,4 +1,4 @@
-// API between Microscaling agent and server
+// Package api describes the API between Microscaling agent and server
 package api
 
 import (
@@ -22,14 +22,15 @@ var (
 	}
 )
 
+// GetBaseAPIUrl returns the server URL
 func GetBaseAPIUrl() string {
-	baseUrl := os.Getenv("MSS_API_ADDRESS")
-	if baseUrl == "" {
-		baseUrl = "app.microscaling.com"
+	baseURL := os.Getenv("MSS_API_ADDRESS")
+	if baseURL == "" {
+		baseURL = "app.microscaling.com"
 	}
 
-	log.Infof("Sending results to %s", baseUrl)
-	return baseUrl
+	log.Infof("Sending results to %s", baseURL)
+	return baseURL
 }
 
 // SetBaseAPIUrl only used for testing

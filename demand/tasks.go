@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-// Returns whether tasks have all drained down to 0
+// Exited returns whether tasks have all drained down to 0 so we can quit microscaling
 func (tasks *Tasks) Exited() (done bool) {
 	tasks.RLock()
 	defer tasks.RUnlock()
@@ -21,7 +21,7 @@ func (tasks *Tasks) Exited() (done bool) {
 	return done
 }
 
-// Returns number of containers we have space for
+// CheckCapacity returns number of containers we have space for
 func (tasks *Tasks) CheckCapacity() int {
 	// TODO!! For now we are simply going to say there is a maximum total number of containers this deployment can handle
 	// TODO!! It should really look at the available CPU / mem / bw in / out
@@ -40,16 +40,18 @@ func (p byPriority) Len() int           { return len(p) }
 func (p byPriority) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 func (p byPriority) Less(i, j int) bool { return p[i].Priority < p[j].Priority }
 
-func (t *Tasks) PrioritySort(reverse bool) {
+// PrioritySort reorders tasks in priority order (or reverse priority order)
+func (tasks *Tasks) PrioritySort(reverse bool) {
 	if reverse {
-		sort.Sort(sort.Reverse(byPriority(t.Tasks)))
+		sort.Sort(sort.Reverse(byPriority(tasks.Tasks)))
 	} else {
-		sort.Sort(byPriority(t.Tasks))
+		sort.Sort(byPriority(tasks.Tasks))
 	}
 }
 
-func (t *Tasks) GetTask(name string) (task *Task, err error) {
-	for _, task := range t.Tasks {
+// GetTask returns the task identified by name
+func (tasks *Tasks) GetTask(name string) (task *Task, err error) {
+	for _, task := range tasks.Tasks {
 		if task.Name == name {
 			return task, nil
 		}

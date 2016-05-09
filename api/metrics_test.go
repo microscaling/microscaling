@@ -65,7 +65,7 @@ var mtests = []struct {
 	},
 }
 
-var currentTest int = 0
+var currentTest int
 
 func testServerMetrics(ws *websocket.Conn) {
 	var b []byte
@@ -109,7 +109,7 @@ func TestSendMetrics(t *testing.T) {
 
 	global_t = t
 
-	for testIndex, _ = range tests {
+	for testIndex = range tests {
 		server := httptest.NewServer(websocket.Handler(testServerMetrics))
 		serverAddr = server.Listener.Addr().String()
 

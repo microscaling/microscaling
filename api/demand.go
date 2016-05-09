@@ -1,6 +1,7 @@
-// API between Microscaling agent and server
 package api
 
+// DemandPayload is the JSON sent from the server describing the number of containers needed for each task
+// This is only used if we're generating demand server-sde
 type DemandPayload struct {
 	Demand DemandUpdate `json:"demand"`
 }
