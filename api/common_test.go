@@ -42,10 +42,10 @@ func TestInitWebSocket(t *testing.T) {
 }
 
 // Utility for checking GET requests
-func DoTestGetJson(t *testing.T, expUrl string, success bool, testJson string) (server *httptest.Server) {
+func DoTestGetJSON(t *testing.T, expURL string, success bool, testJSON string) (server *httptest.Server) {
 	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != expUrl {
-			t.Fatalf("Expected %s, have %s", expUrl, r.URL.Path)
+		if r.URL.Path != expURL {
+			t.Fatalf("Expected %s, have %s", expURL, r.URL.Path)
 		}
 
 		if r.Method != "GET" {
@@ -57,7 +57,7 @@ func DoTestGetJson(t *testing.T, expUrl string, success bool, testJson string) (
 		}
 
 		if success {
-			w.Write([]byte(testJson))
+			w.Write([]byte(testJSON))
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -67,8 +67,8 @@ func DoTestGetJson(t *testing.T, expUrl string, success bool, testJson string) (
 }
 
 // Utility for checking that tasks are updated to be what we expect
-func CheckReturnedTasks(t *testing.T, tasks map[string]demand.Task, returned_tasks []*demand.Task) {
-	for _, rt := range returned_tasks {
+func CheckReturnedTasks(t *testing.T, tasks map[string]demand.Task, returnedTasks []*demand.Task) {
+	for _, rt := range returnedTasks {
 		tt, ok := tasks[rt.Name]
 		if !ok {
 			t.Fatalf("Unexpected app name %v", rt.Name)

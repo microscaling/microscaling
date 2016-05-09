@@ -6,12 +6,15 @@ import (
 	"github.com/microscaling/microscaling/target"
 )
 
+// IsRemainder returns true if this task uses up unused resources
 func (t *Task) IsRemainder() bool {
 	remainderType := reflect.TypeOf(&target.RemainderTarget{})
 	ruleType := reflect.TypeOf(t.Target)
 	return ruleType == remainderType
 }
 
+// ScaleUpCount tells us how many containers to scale up by
+// Call this after IdealContainers has been updated
 func (t *Task) ScaleUpCount() (delta int) {
 	if t.Target.Meeting(t.Metric.Current()) {
 		delta = 0
@@ -45,6 +48,8 @@ func (t *Task) ScaleUpCount() (delta int) {
 	return
 }
 
+// ScaleDownCount tells us how many we should scale down by
+// Call this after IdealContainers has been updated
 func (t *Task) ScaleDownCount() (delta int) {
 
 	if t.Target.Exceeding(t.Metric.Current()) {
@@ -79,6 +84,7 @@ func (t *Task) ScaleDownCount() (delta int) {
 	return
 }
 
+// CanScaleDown returns the number we could scale down by
 func (t *Task) CanScaleDown() int {
 	if !t.IsScalable {
 		return 0

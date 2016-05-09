@@ -1,4 +1,4 @@
-// Toy scheduler is a mock scheduling output that simply reflects back whatever we tell it
+// Package toy is a mock scheduling output that simply reflects back whatever we tell it
 package toy
 
 import (

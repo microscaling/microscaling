@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-// Target of keeping the number of items in a queue under a certain length
+// QueueLengthTarget is where we ant to keep the number of items in a queue under a certain length
 type QueueLengthTarget struct {
 	length     int
 	minLength  int

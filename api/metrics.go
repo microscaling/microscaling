@@ -1,4 +1,3 @@
-// API between Microscaling agent and server
 package api
 
 import (
@@ -27,10 +26,10 @@ type taskMetrics struct {
 	Metric       int    `json:"metric,omitempty"`
 }
 
-// sendMetrics sends the current state of tasks to the API
+// SendMetrics sends the current state of tasks to the API
 func SendMetrics(ws *websocket.Conn, userID string, tasks *demand.Tasks) error {
-	var err error = nil
-	var index int = 0
+	var err error
+	var index int
 
 	metrics := metrics{
 		Tasks:     make([]taskMetrics, len(tasks.Tasks)),

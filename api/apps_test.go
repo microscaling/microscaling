@@ -21,7 +21,7 @@ func TestGetAppsDecode(t *testing.T) {
 	}
 
 	// var response string = `"apps": [{"name":"priority1","appType":"Docker","config":{"image":"force12io/priority-1:latest","command":"/run.sh"}},{"name":"priority2","type":"Docker","config":{"image":"force12io/priority-2:latest","command":"/run.sh"}}]`
-	var response string = `{"apps" : [{"name":"priority1", "config":{"image":"microscaling/priority-1:latest","command":"/run.sh"}},{"name":"priority2","appType":"Docker","config":{"image":"microscaling/priority-2:latest","command":"/run.sh"}}]}`
+	var response = `{"apps" : [{"name":"priority1", "config":{"image":"microscaling/priority-1:latest","command":"/run.sh"}},{"name":"priority2","appType":"Docker","config":{"image":"microscaling/priority-2:latest","command":"/run.sh"}}]}`
 	var b = []byte(response)
 
 	var a AppsMessage
@@ -52,13 +52,13 @@ func TestGetAppsDecode(t *testing.T) {
 
 func TestGetApps(t *testing.T) {
 	tests := []struct {
-		expUrl  string
+		expURL  string
 		json    string
 		success bool
 		tasks   map[string]demand.Task
 	}{
 		{
-			expUrl: "/apps/hello",
+			expURL: "/apps/hello",
 			json: `{"apps": [
 			      {
 			          "name": "priority1",
@@ -88,7 +88,7 @@ func TestGetApps(t *testing.T) {
 			},
 		},
 		{
-			expUrl:  "/apps/hello",
+			expURL:  "/apps/hello",
 			json:    "",
 			success: false,
 			tasks:   map[string]demand.Task{},
@@ -96,15 +96,15 @@ func TestGetApps(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		server := DoTestGetJson(t, test.expUrl, test.success, test.json)
+		server := DoTestGetJSON(t, test.expURL, test.success, test.json)
 		defer server.Close()
 
 		baseAPIUrl = strings.Replace(server.URL, "http://", "", 1)
-		returned_tasks, _, err := GetApps("hello")
+		returnedTasks, _, err := GetApps("hello")
 		baseAPIUrl = GetBaseAPIUrl()
 
 		if test.success {
-			CheckReturnedTasks(t, test.tasks, returned_tasks)
+			CheckReturnedTasks(t, test.tasks, returnedTasks)
 
 			if err != nil {
 				t.Fatalf("Unexpected error %v", err)

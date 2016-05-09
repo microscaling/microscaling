@@ -1,4 +1,4 @@
-// API between Microscaling agent and server
+// Package api describes the API between Microscaling agent and server
 package api
 
 import (
@@ -14,27 +14,28 @@ import (
 )
 
 var (
-	log                              = logging.MustGetLogger("mssapi")
-	baseAPIUrl          string       = GetBaseAPIUrl()
-	debugTimeHttpClient bool         = (os.Getenv("MSS_TIME_HTTP_CLIENT") == "true")
-	httpClient          *http.Client = &http.Client{
+	log                 = logging.MustGetLogger("mssapi")
+	baseAPIUrl          = GetBaseAPIUrl()
+	debugTimeHTTPClient = (os.Getenv("MSS_TIME_HTTP_CLIENT") == "true")
+	httpClient          = &http.Client{
 		Timeout: 15000 * time.Millisecond,
 	}
 )
 
+// GetBaseAPIUrl returns the server URL
 func GetBaseAPIUrl() string {
-	baseUrl := os.Getenv("MSS_API_ADDRESS")
-	if baseUrl == "" {
-		baseUrl = "app.microscaling.com"
+	baseURL := os.Getenv("MSS_API_ADDRESS")
+	if baseURL == "" {
+		baseURL = "app.microscaling.com"
 	}
 
-	log.Infof("Sending results to %s", baseUrl)
-	return baseUrl
+	log.Infof("Sending results to %s", baseURL)
+	return baseURL
 }
 
 // SetBaseAPIUrl only used for testing
-func SetBaseAPIUrl(baseurl string) {
-	baseAPIUrl = baseurl
+func SetBaseAPIUrl(baseURL string) {
+	baseAPIUrl = baseURL
 }
 
 func getJsonGet(userID string, endpoint string) (body []byte, err error) {
@@ -46,7 +47,7 @@ func getJsonGet(userID string, endpoint string) (body []byte, err error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := timeHttpClientDo(req)
+	resp, err := timeHTTPClientDo(req)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to GET err %v", err)
 	}
@@ -61,15 +62,15 @@ func getJsonGet(userID string, endpoint string) (body []byte, err error) {
 	return body, err
 }
 
-func timeHttpClientDo(req *http.Request) (resp *http.Response, err error) {
+func timeHTTPClientDo(req *http.Request) (resp *http.Response, err error) {
 	var issuedAt time.Time
-	if debugTimeHttpClient {
+	if debugTimeHTTPClient {
 		issuedAt = time.Now()
 	}
 
 	resp, err = httpClient.Do(req)
 
-	if debugTimeHttpClient {
+	if debugTimeHTTPClient {
 		apiDuration := time.Since(issuedAt)
 		log.Debugf("%v took %v", req.URL, apiDuration)
 	}
@@ -77,6 +78,7 @@ func timeHttpClientDo(req *http.Request) (resp *http.Response, err error) {
 	return
 }
 
+// InitWebSocket opens a websocket to the server
 func InitWebSocket() (ws *websocket.Conn, err error) {
 	origin := "http://localhost/"
 	url := "ws://" + baseAPIUrl
