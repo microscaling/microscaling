@@ -56,14 +56,13 @@ func PutJSON(url string, payload *bytes.Buffer) (status int, err error) {
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
-	defer resp.Body.Close()
-
 	if err != nil {
 		log.Errorf("API request failed %v", url, resp.StatusCode, err)
 		return -1, err
+	} else {
+		resp.Body.Close()
+		return resp.StatusCode, err
 	}
-
-	return resp.StatusCode, err
 }
 
 // InitWebSocket opens a websocket connection to the provided address.
