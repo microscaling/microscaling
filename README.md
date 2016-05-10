@@ -6,15 +6,13 @@ experiment with microscaling. Or visit [microscaling.com](https://microscaling.c
 [![Build Status](https://api.travis-ci.org/microscaling/microcaling.svg)](https://travis-ci.org/microscaling/microscaling) Go 1.4 1.5 1.6
 [![](https://badge.imagelayers.io/microscaling/microscaling:latest.svg)](https://imagelayers.io/?images=microscaling/microscaling:latest 'Get your own badge on imagelayers.io')
 
-## Important Note
-
-Microscaling Engine is under heavy development and is not intended for use in production yet. However running in labs and test systems is fine.
+Microscaling Engine is under development, so we're not making any promises about forward compatibility, and we wouldn't advise running it on production machines yet. But if you're keen to get it into production we'd love to hear from you.
 
 ## Schedulers
 
 Microscaling Engine will integrate with all the popular container schedulers. Currently we support
 
-* Docker API (for running as a single node with Docker Compose)
+* Docker API
 * Marathon 
 
 Support for more schedulers is coming soon. Let us know if there is a particular scheduler you wish us to support.
