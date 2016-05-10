@@ -22,20 +22,6 @@ var (
 
 // GetJSON makes a GET request to a REST API and returns the JSON response.
 func GetJSON(url string) (body []byte, err error) {
-	return getJSON(url)
-}
-
-// PutJSON makes a PUT request to a REST API and submits the JSON payload.
-func PutJSON(url string, payload *bytes.Buffer) (status int, err error) {
-	return putJSON(url, payload)
-}
-
-// InitWebSocket opens a websocket connection to the provided address.
-func InitWebSocket(apiAddress string) (ws *websocket.Conn, err error) {
-	return initWebSocket(apiAddress)
-}
-
-func getJSON(url string) (body []byte, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Errorf("Failed to build API GET request err %v", err)
@@ -59,7 +45,8 @@ func getJSON(url string) (body []byte, err error) {
 	return body, err
 }
 
-func putJSON(url string, payload *bytes.Buffer) (status int, err error) {
+// PutJSON makes a PUT request to a REST API and submits the JSON payload.
+func PutJSON(url string, payload *bytes.Buffer) (status int, err error) {
 	req, err := http.NewRequest("PUT", url, payload)
 	if err != nil {
 		log.Errorf("Failed to build PUT request err %v", err)
@@ -79,7 +66,8 @@ func putJSON(url string, payload *bytes.Buffer) (status int, err error) {
 	return resp.StatusCode, err
 }
 
-func initWebSocket(apiAddress string) (ws *websocket.Conn, err error) {
+// InitWebSocket opens a websocket connection to the provided address.
+func InitWebSocket(apiAddress string) (ws *websocket.Conn, err error) {
 	// TODO Set actual origin.
 	origin := "http://localhost/"
 	url := "ws://" + apiAddress
