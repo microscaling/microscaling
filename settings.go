@@ -8,7 +8,7 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/websocket"
 
-	"github.com/microscaling/microscaling/api"
+	"github.com/microscaling/microscaling/config"
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/engine"
 	"github.com/microscaling/microscaling/engine/localEngine"
@@ -25,6 +25,7 @@ type settings struct {
 	pullImages    bool
 	dockerHost    string
 	demandEngine  string
+	config        string
 }
 
 func initLogging() {
@@ -66,6 +67,7 @@ func getSettings() settings {
 	st.pullImages = (getEnvOrDefault("MSS_PULL_IMAGES", "true") == "true")
 	st.dockerHost = getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
 	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "SERVER")
+	st.config = getEnvOrDefault("MSS_CONFIG", "SERVER")
 	return st
 }
 
@@ -99,10 +101,23 @@ func getScheduler(st settings) (scheduler.Scheduler, error) {
 }
 
 func getTasks(st settings) (tasks *demand.Tasks, err error) {
+	var c config.Config
+
 	tasks = new(demand.Tasks)
 
 	// Get the tasks that have been configured by this user
-	t, maxContainers, err := api.GetApps(st.userID)
+	switch st.config {
+	case "FILE":
+		return nil, fmt.Errorf("Config file not yet supported")
+	case "SERVER":
+		c = config.NewServerConfig()
+	case "HARDCODED":
+		c = config.NewHardcodedConfig()
+	default:
+		return nil, fmt.Errorf("Bad value for MSS_CONFIG: %s", st.config)
+	}
+
+	t, maxContainers, err := c.GetApps(st.userID)
 	tasks.MaxContainers = maxContainers
 
 	// For now pass the whole environment to all containers.
