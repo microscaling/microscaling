@@ -57,7 +57,7 @@ func PutJSON(url string, payload *bytes.Buffer) (status int, err error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Errorf("API request failed %v", url, resp.StatusCode, err)
+		log.Errorf("API request to %s failed %v", url, err)
 		return -1, err
 	} else {
 		resp.Body.Close()
