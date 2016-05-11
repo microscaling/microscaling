@@ -81,6 +81,8 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 		case "Queue":
 			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
 			switch a.MetricType {
+			case "AzureQueue":
+				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
 			case "NSQ":
 				task.Metric = metric.NewNSQMetric(a.Config.TopicName, a.Config.ChannelName)
 			default:
