@@ -15,16 +15,19 @@ import (
 	"github.com/microscaling/microscaling/engine/serverEngine"
 	"github.com/microscaling/microscaling/scheduler"
 	"github.com/microscaling/microscaling/scheduler/docker"
+	"github.com/microscaling/microscaling/scheduler/marathon"
 	"github.com/microscaling/microscaling/scheduler/toy"
 )
 
 type settings struct {
-	schedulerType string
-	sendMetrics   bool
-	userID        string
-	pullImages    bool
-	dockerHost    string
-	demandEngine  string
+	schedulerType   string
+	sendMetrics     bool
+	microscalingAPI string
+	userID          string
+	pullImages      bool
+	dockerHost      string
+	demandEngine    string
+	marathonAPI     string
 }
 
 func initLogging() {
@@ -61,11 +64,13 @@ func initLogging() {
 func getSettings() settings {
 	var st settings
 	st.schedulerType = getEnvOrDefault("MSS_SCHEDULER", "DOCKER")
+	st.microscalingAPI = getEnvOrDefault("MSS_API_ADDRESS", "app.microscaling.com")
 	st.userID = getEnvOrDefault("MSS_USER_ID", "5k5gk")
 	st.sendMetrics = (getEnvOrDefault("MSS_SEND_METRICS_TO_API", "true") == "true")
 	st.pullImages = (getEnvOrDefault("MSS_PULL_IMAGES", "true") == "true")
 	st.dockerHost = getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
-	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "SERVER")
+	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "LOCAL")
+	st.marathonAPI = getEnvOrDefault("MSS_MARATHON_API", "http://localhost:8080")
 	return st
 }
 
@@ -76,12 +81,13 @@ func getScheduler(st settings) (scheduler.Scheduler, error) {
 	case "DOCKER":
 		log.Info("Scheduling with Docker remote API")
 		s = docker.NewScheduler(st.pullImages, st.dockerHost)
+	case "MARATHON":
+		log.Info("Scheduling with Mesos / Marathon")
+		s = marathon.NewScheduler(st.marathonAPI)
 	case "ECS":
 		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #MicroscaleECS if you'd like us to add this next!")
 	case "KUBERNETES":
 		return nil, fmt.Errorf("Scheduling with Kubernetes not yet supported. Tweet with hashtag #MicroscaleK8S if you'd like us to add this next!")
-	case "MESOS":
-		return nil, fmt.Errorf("Scheduling with Mesos / Marathon not yet supported. Tweet with hashtag #MicroscaleMesos if you'd like us to add this next!")
 	case "NOMAD":
 		return nil, fmt.Errorf("Scheduling with Nomad not yet supported. Tweet with hashtag #MicroscaleNomad if you'd like us to add this next!")
 	case "TOY":
@@ -102,7 +108,7 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 	tasks = new(demand.Tasks)
 
 	// Get the tasks that have been configured by this user
-	t, maxContainers, err := api.GetApps(st.userID)
+	t, maxContainers, err := api.GetApps(st.microscalingAPI, st.userID)
 	tasks.MaxContainers = maxContainers
 
 	// For now pass the whole environment to all containers.
