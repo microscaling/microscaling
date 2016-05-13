@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-var log = logging.MustGetLogger("mssmetric")
+var log = logging.MustGetLogger("mssutils")
 
 var (
 	httpClient = &http.Client{

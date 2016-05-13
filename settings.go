@@ -50,7 +50,7 @@ func initLogging() {
 	logBackend := logging.NewLogBackend(os.Stdout, "", 0)
 	logging.SetBackend(logBackend)
 
-	var components = []string{"mssengine", "mssagent", "mssapi", "mssdemand", "mssmetric", "mssscheduler", "msstarget"}
+	var components = []string{"mssagent", "mssapi", "mssdemand", "mssengine", "mssmetric", "mssscheduler", "msstarget", "mssutils"}
 
 	for _, component := range components {
 		if strings.Contains(logComponents, component) || strings.Contains(logComponents, "all") {

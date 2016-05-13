@@ -97,7 +97,7 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 			demandChanged = true
 			available -= delta
 			if t.Demand >= t.MaxContainers {
-				log.Error("*** Not enough capacity for %s ***", t.Name)
+				log.Errorf("*** Not enough capacity for %s ***", t.Name)
 				t.Demand = t.MaxContainers
 			} else {
 				log.Debugf("  [scale] Service %s scaling up %d", t.Name, delta)
