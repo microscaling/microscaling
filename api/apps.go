@@ -95,6 +95,7 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 	return
 }
 
+// GetApps retrives the app definitions from the server for a given userID
 func GetApps(apiAddress string, userID string) (tasks []*demand.Task, maxContainers int, err error) {
 	url := "http://" + apiAddress + "/apps/" + userID
 
