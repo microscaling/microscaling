@@ -43,19 +43,6 @@ var (
 	}
 )
 
-type marathonError struct {
-	e       error
-	blocked bool
-}
-
-func (e marathonError) Error() string {
-	if e.blocked {
-		return "Deployment blocked"
-	}
-
-	return e.e.Error()
-}
-
 // NewScheduler returns a pointer to the scheduler.
 func NewScheduler(marathonAPI string, demandUpdate chan struct{}) *MarathonScheduler {
 	return &MarathonScheduler{
@@ -114,15 +101,16 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	// Concatentate the two lists - scale down first to free up resources
 	tasksToScale := append(tooMany, tooFew...)
 	for _, task := range tasksToScale {
-		err = m.stopStartTask(task)
+		err, blocked := m.stopStartTask(task)
+		if blocked {
+			// Marathon can't make scale changes at the moment.
+			// Trigger a new scaling operation by signalling a demandUpdate after a backoff delay
+			err = m.backoff.Backoff(m.demandUpdate)
+			return err
+		}
+
 		if err != nil {
-			if merr, ok := err.(marathonError); ok && merr.blocked {
-				// Marathon can't make scale changes at the moment.
-				// Trigger a new scaling operation by signalling a demandUpdate after a backoff delay
-				err = m.backoff.Backoff(m.demandUpdate)
-			} else {
-				log.Errorf("Couldn't scale %s: %v ", task.Name, err)
-			}
+			log.Errorf("Couldn't scale %s: %v ", task.Name, err)
 			return err
 		}
 
@@ -175,12 +163,12 @@ func (m *MarathonScheduler) CountAllTasks(running *demand.Tasks) error {
 }
 
 // stopStartTask updates the number of running tasks using the Marathon API.
-func (m *MarathonScheduler) stopStartTask(task *demand.Task) (err error) {
+func (m *MarathonScheduler) stopStartTask(task *demand.Task) (err error, blocked bool) {
 
 	// Scale app using the Marathon REST API.
 	status, err := updateApp(m.baseMarathonURL, task.Name, task.Demand)
 	if err != nil {
-		return err
+		return err, blocked
 	}
 
 	switch status {
@@ -190,12 +178,12 @@ func (m *MarathonScheduler) stopStartTask(task *demand.Task) (err error) {
 	case 409:
 		// Deployment is locked and we need to back off
 		log.Debugf("Deployment locked")
-		err = &marathonError{err, true}
+		blocked = true
 	default:
 		err = fmt.Errorf("Error response code %d from Marathon API", status)
 	}
 
-	return err
+	return err, blocked
 }
 
 // Submit a post request to Marathon to match the requested number of the requested app
