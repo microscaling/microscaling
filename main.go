@@ -68,7 +68,10 @@ func main() {
 
 	st := getSettings()
 
-	s, err := getScheduler(st)
+	// Sending an empty struct on this channel triggers the scheduler to make updates
+	demandUpdate := make(chan struct{}, 1)
+
+	s, err := getScheduler(st, demandUpdate)
 	if err != nil {
 		log.Errorf("Failed to get scheduler: %v", err)
 		return
@@ -113,7 +116,6 @@ func main() {
 		return
 	}
 
-	demandUpdate := make(chan struct{}, 1)
 	de, err := getDemandEngine(st, ws)
 	if err != nil {
 		log.Errorf("Failed to get demand engine: %v", err)
@@ -159,6 +161,8 @@ func main() {
 	// When we're asked to close down, we don't want to handle demand updates any more
 	<-closedown
 	log.Info("Clean up when ready")
+	// Give the scheduler a chance to do any necessary cleanup
+	s.Cleanup()
 	// The demand engine is responsible for closing the demandUpdate channel so that we stop
 	// doing scaling operations
 	de.StopDemand(demandUpdate)

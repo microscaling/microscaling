@@ -345,3 +345,7 @@ func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 
 	return err
 }
+
+func (c *DockerScheduler) Cleanup() error {
+	return nil
+}
