@@ -4,6 +4,8 @@ import (
 	"math"
 	"os"
 	"strconv"
+
+	"github.com/microscaling/microscaling/utils"
 )
 
 // Target of keeping the number of items in a queue under a certain length
@@ -25,24 +27,8 @@ const queueAverageSamples int = 1
 
 func NewQueueLengthTarget(length int) Target {
 	// TODO!! Better ways to calculate these heuristics and/or pass them in
-	kUStr := os.Getenv("MSS_KU")
-	tUStr := os.Getenv("MSS_TU")
-	kU, err := strconv.ParseFloat(kUStr, 64)
-	if kUStr == "" || err != nil {
-		kU = 0.05
-	}
-
-	tU, err := strconv.ParseFloat(tUStr, 64)
-	if tUStr == "" || err != nil {
-		tU = 10.0
-	}
-
-	var velSamples int
-	velSamplesStr := os.Getenv("MSS_VEL_SAMPLES")
-	velSamples, err = strconv.Atoi(velSamplesStr)
-	if err != nil || velSamples == 0 {
-		velSamples = queueAverageSamples
-	}
+	kU := utils.EnvFl64("MSS_KU", 0.05)
+	tU := utils.EnvFl64("MSS_TU", 10.0)
 
 	// Ziegler-Nichols PID
 	// kP := 0.6 * kU
@@ -50,11 +36,18 @@ func NewQueueLengthTarget(length int) Target {
 	// kD := kP * tU / 8.0
 
 	// Ziegler-Nichols PD
-	kP := float64(0.8 * kU)
-	kD := float64(tU / 8.0)
-	kI := float64(0) // Seems like PD works better than PID, but this needs more testing
-	log.Debugf("[new ql] kU = %f, tU = %f", kU, tU)
+	kD := utils.EnvFl64("MSS_KD", float64(tU/8.0))
+	kP := utils.EnvFl64("MSS_KP", float64(0.8*kU))
+	kI := utils.EnvFl64("MSS_KI", float64(0))
+
 	log.Debugf("[new ql] kP = %f, kI = %f, kD = %f", kP, kI, kD)
+
+	var velSamples int
+	velSamplesStr := os.Getenv("MSS_VEL_SAMPLES")
+	velSamples, err := strconv.Atoi(velSamplesStr)
+	if err != nil || velSamples == 0 {
+		velSamples = queueAverageSamples
+	}
 
 	return &QueueLengthTarget{
 		length:     length,
