@@ -11,12 +11,12 @@ func NewRemainderTarget(maxContainers int) Target {
 }
 
 func (t *RemainderTarget) Meeting(current int) bool {
-	log.Debugf("[remainder] meeting: always false")
+	// log.Debugf("[remainder] meeting: always false")
 	return false
 }
 
 func (t *RemainderTarget) Exceeding(current int) bool {
-	log.Debugf("[remainder] exceeding: always false")
+	// log.Debugf("[remainder] exceeding: always false")
 	return false
 }
 
