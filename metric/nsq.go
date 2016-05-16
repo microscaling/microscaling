@@ -3,10 +3,9 @@ package metric
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"net/http"
 	"os"
-	"time"
+
+	"github.com/microscaling/microscaling/utils"
 )
 
 const constNSQStatsEndpoint string = "127.0.0.1:4151"
@@ -17,8 +16,9 @@ var _ Metric = (*NSQMetric)(nil)
 
 // NSQMetric stores the current value.
 type NSQMetric struct {
-	currentVal int
-	queueName  string
+	currentVal  int
+	topicName   string
+	channelName string
 }
 
 // StatsMessage from NSQ stats API.
@@ -44,10 +44,6 @@ type Channel struct {
 }
 
 var (
-	httpClient = &http.Client{
-		// TODO Make timeout configurable.
-		Timeout: 10 * time.Second,
-	}
 	nsqStatsEndpoint string
 	nsqInitialized   = false
 )
@@ -60,42 +56,19 @@ func NSQInit() {
 	}
 
 	nsqInitialized = true
+	return
 }
 
 // NewNSQMetric creates the metric.
-func NewNSQMetric(queueName string) *NSQMetric {
+func NewNSQMetric(topicName string, channelName string) *NSQMetric {
 	if !nsqInitialized {
 		NSQInit()
 	}
 
 	return &NSQMetric{
-		queueName: queueName,
+		topicName:   topicName,
+		channelName: channelName,
 	}
-}
-
-// Call NSQ Stats API to get the queue length.
-func getJSONGet(url string) (body []byte, err error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Errorf("Failed to build API GET request err %v", err)
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		log.Errorf("Failed to GET err %v", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Errorf("Http error %d: %s", resp.StatusCode, resp.Status)
-	}
-
-	body, err = ioutil.ReadAll(resp.Body)
-
-	return body, err
 }
 
 // UpdateCurrent sets the current queue length.
@@ -103,7 +76,7 @@ func (nsqm *NSQMetric) UpdateCurrent() {
 	var statsMessage StatsMessage
 
 	url := "http://" + nsqStatsEndpoint + constNSQStatsAPI
-	body, err := getJSONGet(url)
+	body, err := utils.GetJSON(url)
 	if err != nil {
 		log.Errorf("Error getting NSQ metric %v", err)
 	}
@@ -114,19 +87,17 @@ func (nsqm *NSQMetric) UpdateCurrent() {
 	}
 
 	// Loop through NSQ Channels and Metrics to find the correct value.
-	// Currently queue name is used for both the Topic and Channel.
-	// TODO May need to split these later.
 	for _, topic := range statsMessage.Data.Topics {
-		if topic.TopicName == nsqm.queueName {
+		if topic.TopicName == nsqm.topicName {
 			for _, channel := range topic.Channels {
-				if channel.ChannelName == nsqm.queueName {
+				if channel.ChannelName == nsqm.channelName {
 					nsqm.currentVal = channel.Depth
 				}
 			}
 		}
 	}
 
-	log.Debugf("Queue name %s length %d", nsqm.queueName, nsqm.currentVal)
+	log.Debugf("Topic: %s Channel: %s Length: %d", nsqm.topicName, nsqm.channelName, nsqm.currentVal)
 }
 
 // Current returns the queue length.

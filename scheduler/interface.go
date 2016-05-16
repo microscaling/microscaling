@@ -14,4 +14,7 @@ type Scheduler interface {
 
 	// CountAllTasks updates task.Running to tell us how many instances of each task are currently running
 	CountAllTasks(tasks *demand.Tasks) error
+
+	// Cleanup is called to give the scheduler a chance to clean up
+	Cleanup() error
 }
