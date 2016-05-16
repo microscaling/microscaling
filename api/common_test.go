@@ -6,17 +6,11 @@ import (
 	"testing"
 
 	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/utils"
 	"golang.org/x/net/websocket"
 )
 
 var serverAddr string
-
-func TestGetBaseUrl(t *testing.T) {
-	base := GetBaseAPIUrl()
-	if base != "app.microscaling.com" || base != baseAPIUrl {
-		t.Fatalf("Maybe MSS_API_ADDRESS is set: %v | %v", base, baseAPIUrl)
-	}
-}
 
 func testServer(ws *websocket.Conn) {
 	log.Debugf("Received something")
@@ -26,8 +20,7 @@ func TestInitWebSocket(t *testing.T) {
 	server := httptest.NewServer(websocket.Handler(testServer))
 	serverAddr = server.Listener.Addr().String()
 
-	baseAPIUrl = serverAddr
-	ws, err := InitWebSocket()
+	ws, err := utils.InitWebSocket(serverAddr)
 	if err != nil {
 		t.Fatal("dialing", err)
 	}

@@ -99,9 +99,8 @@ func TestGetApps(t *testing.T) {
 		server := DoTestGetJson(t, test.expUrl, test.success, test.json)
 		defer server.Close()
 
-		baseAPIUrl = strings.Replace(server.URL, "http://", "", 1)
-		returned_tasks, _, err := GetApps("hello")
-		baseAPIUrl = GetBaseAPIUrl()
+		baseAPIUrl := strings.Replace(server.URL, "http://", "", 1)
+		returned_tasks, _, err := GetApps(baseAPIUrl, "hello")
 
 		if test.success {
 			CheckReturnedTasks(t, test.tasks, returned_tasks)
