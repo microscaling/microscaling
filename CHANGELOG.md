@@ -1,3 +1,8 @@
+# 0.7.0
+
+- Add support for Marathon/Mesos as a scheduler
+- Add support for scaling to maintain the length of an Azure queue
+
 # 0.6.0
 
 - Supports scaling to maintain the length of an NSQ queue
