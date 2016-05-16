@@ -1,16 +1,37 @@
-# Microscaling-in-a-box
+# Microscaling Engine
 
-This simple demo runs on your own machine and makes it easy to experiment with microscaling and see containers running locally 
-on your machine. Full instructions for running the demo are at [app.microscaling.com](https://app.microscaling.com). 
+Our Microscaling Engine provides automation, resilience and efficiency for microservice architectures. You can use our [Microscaling-in-a-Box](https://app.microscaling.com) site to
+experiment with microscaling. Or visit [microscaling.com](https://microscaling.com) to find out more about our product and Microscaling Systems.
 
-[![Build Status](https://api.travis-ci.org/microscaling/microscaling.svg)](https://travis-ci.org/microscaling/microscaling) Go 1.4 1.5
+[![Build Status](https://api.travis-ci.org/microscaling/microcaling.svg)](https://travis-ci.org/microscaling/microscaling) Go 1.4 1.5 1.6
+[![](https://badge.imagelayers.io/microscaling/microscaling:latest.svg)](https://imagelayers.io/?images=microscaling/microscaling:latest 'Get your own badge on imagelayers.io')
+
+Microscaling Engine is under development, so we're not making any promises about forward compatibility, and we wouldn't advise running it on production machines yet. But if you're keen to get it into production we'd love to hear from you.
+
+## Schedulers
+
+Microscaling Engine will integrate with all the popular container schedulers. Currently we support
+
+* Docker API
+* Marathon 
+
+Support for more schedulers is coming soon. Let us know if there is a particular scheduler you wish us to support.
+
+## Metrics
+
+Currently we support scaling a queue to maintain a target length. Support for more metrics is coming soon.
+
+### Queue Types
+
+* [NSQ](http://nsq.io) - see this [blog post](http://blog.microscaling.com/2016/04/microscaling-with-nsq-queue.html) for more details.
+* Azure storage queues - this [blog post](http://blog.microscaling.com/2016/05/microscaling-marathon-with-dcos-on.html) describes using the Azure queue as the metric while running microscaled tasks on DC/OS.
+
+Support for more message queues is coming soon. Let us know if there is a particular queue you wish us to integrate with.
 
 ## Building and running from source
 
 The easiest way to run Microscaling-in-a-box is to [follow the instructions](http://app.microscaling.com). The `docker run` command 
 pulls the latest image of this code from [Docker hub](https://hub.docker.com/u/microscaling/microscaling). 
-
-[![](https://badge.imagelayers.io/microscaling/microscaling:latest.svg)](https://imagelayers.io/?images=microscaling/microscaling:latest 'Get your own badge on imagelayers.io')
 
 If you want to build and run your own version locally:
 
@@ -21,13 +42,9 @@ If you want to build and run your own version locally:
 `docker build -t <your-tag-name> .`
 - Specify `-it <your-tag-name>` instead of `-it microscaling/microscaling:latest` on `docker run` so that it picks up your version of the image
 
-## Roadmap
+## Licensing
 
-We've got lots of ideas for improvements - here are a few headlines:
-
-- We're planning to add support for a number of different schedulers. If there's one you'd particularly like to see us support, please let us know.
-- We can improve performance by parallelizing requests to the Docker remote API.
-- In this demo we simply randomize demand, but we'll add support for real-work demand models.
+Microscaling Engine is licensed under the Apache License, Version 2.0. See [LICENSE](https://github.com/microscaling/microscaling/blob/master/LICENSE) for the full license text.
 
 ## Contact Us
 
