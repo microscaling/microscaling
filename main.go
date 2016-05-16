@@ -36,7 +36,8 @@ import (
 	"github.com/microscaling/microscaling/utils"
 )
 
-const constGetMetricsTimeout = 500 // milliseconds - delay before we send read state (and optionally send on the metrics API)
+const constGetMetricsTimeout = 500  // milliseconds - read state from the scheduler this often
+const constSendMetricsTimeout = 500 // milliseconds - send on the metrics API this often
 
 var (
 	log = logging.MustGetLogger("mssagent")
@@ -147,16 +148,22 @@ func main() {
 			if err != nil {
 				log.Errorf("Failed to count containers. %v", err)
 			}
+		}
+	}()
 
-			if st.sendMetrics {
+	// Periodically send metrics to the server
+	sendMetricsTimeout := time.NewTicker(constSendMetricsTimeout * time.Millisecond)
+	if st.sendMetrics {
+		go func() {
+			for _ = range sendMetricsTimeout.C {
 				log.Debug("Sending metrics")
 				err = api.SendMetrics(ws, st.userID, tasks)
 				if err != nil {
 					log.Errorf("Failed to send metrics. %v", err)
 				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// When we're asked to close down, we don't want to handle demand updates any more
 	<-closedown
