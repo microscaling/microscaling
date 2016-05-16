@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/microscaling/microscaling/demand"
+	"github.com/microscaling/microscaling/utils"
 	"golang.org/x/net/websocket"
 )
 
@@ -113,8 +114,7 @@ func TestSendMetrics(t *testing.T) {
 		server := httptest.NewServer(websocket.Handler(testServerMetrics))
 		serverAddr = server.Listener.Addr().String()
 
-		baseAPIUrl = serverAddr
-		ws, err := InitWebSocket()
+		ws, err := utils.InitWebSocket(serverAddr)
 		if err != nil {
 			t.Fatal("dialing", err)
 		}

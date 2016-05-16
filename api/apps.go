@@ -6,6 +6,7 @@ import (
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/metric"
 	"github.com/microscaling/microscaling/target"
+	"github.com/microscaling/microscaling/utils"
 )
 
 type AppsMessage struct {
@@ -31,8 +32,10 @@ type DockerAppConfig struct {
 	Image           string `json:"image"`
 	Command         string `json:"command"`
 	PublishAllPorts bool   `json:"publishAllPorts"`
-	QueueName       string `json:"queueName"`
 	QueueLength     int    `json:"targetQueueLength"`
+	QueueName       string `json:"queueName"`
+	TopicName       string `json:"topicName"`
+	ChannelName     string `json:"channelName"`
 }
 
 type dockerAppConfig DockerAppConfig
@@ -78,8 +81,10 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 		case "Queue":
 			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
 			switch a.MetricType {
+			case "AzureQueue":
+				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
 			case "NSQ":
-				task.Metric = metric.NewNSQMetric(a.Config.QueueName)
+				task.Metric = metric.NewNSQMetric(a.Config.TopicName, a.Config.ChannelName)
 			default:
 				log.Errorf("Unexpected queue metricType %s", a.MetricType)
 			}
@@ -98,8 +103,10 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 	return
 }
 
-func GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
-	body, err := getJsonGet(userID, "/apps/")
+func GetApps(apiAddress string, userID string) (tasks []*demand.Task, maxContainers int, err error) {
+	url := "http://" + apiAddress + "/apps/" + userID
+
+	body, err := utils.GetJSON(url)
 	if err != nil {
 		log.Debugf("Failed to get /apps/: %v", err)
 		return nil, 0, err

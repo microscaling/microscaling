@@ -49,3 +49,5 @@ func (t *ToyScheduler) CountAllTasks(running *demand.Tasks) error {
 	}
 	return nil
 }
+
+func (t *ToyScheduler) Cleanup() error { return nil }
