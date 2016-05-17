@@ -24,7 +24,7 @@ const queueLengthExceedingPercent float64 = 0.7
 const queueAverageSamples int = 1
 
 // NewQueueLengthTarget creates a new target for queues
-func NewQueueLengthTarget(length int) Target {
+func NewQueueLengthTarget(length int) *QueueLengthTarget {
 	// TODO!! Better ways to calculate these heuristics and/or pass them in
 	kUStr := os.Getenv("MSS_KU")
 	tUStr := os.Getenv("MSS_TU")

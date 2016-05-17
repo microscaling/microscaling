@@ -112,7 +112,7 @@ func TestSendMetrics(t *testing.T) {
 
 	for testIndex = range tests {
 		server := httptest.NewServer(websocket.Handler(testServerMetrics))
-		serverAddr = server.Listener.Addr().String()
+		serverAddr := server.Listener.Addr().String()
 
 		ws, err := utils.InitWebSocket(serverAddr)
 		if err != nil {

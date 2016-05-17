@@ -6,7 +6,7 @@ type RemainderTarget struct {
 }
 
 // NewRemainderTarget creates a new remainder target
-func NewRemainderTarget(maxContainers int) Target {
+func NewRemainderTarget(maxContainers int) *RemainderTarget {
 	return &RemainderTarget{
 		maxContainers: maxContainers,
 	}

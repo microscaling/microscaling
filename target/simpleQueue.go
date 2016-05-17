@@ -8,7 +8,7 @@ type SimpleQueueLengthTarget struct {
 }
 
 // NewSimpleQueueLengthTarget creates a new target based on simply adding or removing one container if we're above or below target
-func NewSimpleQueueLengthTarget(length int) Target {
+func NewSimpleQueueLengthTarget(length int) *SimpleQueueLengthTarget {
 
 	return &SimpleQueueLengthTarget{
 		length:    length,
