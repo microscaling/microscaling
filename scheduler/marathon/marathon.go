@@ -101,7 +101,7 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	// Concatentate the two lists - scale down first to free up resources
 	tasksToScale := append(tooMany, tooFew...)
 	for _, task := range tasksToScale {
-		err, blocked := m.stopStartTask(task)
+		blocked, err := m.stopStartTask(task)
 		if blocked {
 			// Marathon can't make scale changes at the moment.
 			// Trigger a new scaling operation by signalling a demandUpdate after a backoff delay
@@ -163,12 +163,12 @@ func (m *MarathonScheduler) CountAllTasks(running *demand.Tasks) error {
 }
 
 // stopStartTask updates the number of running tasks using the Marathon API.
-func (m *MarathonScheduler) stopStartTask(task *demand.Task) (err error, blocked bool) {
+func (m *MarathonScheduler) stopStartTask(task *demand.Task) (blocked bool, err error) {
 
 	// Scale app using the Marathon REST API.
 	status, err := updateApp(m.baseMarathonURL, task.Name, task.Demand)
 	if err != nil {
-		return err, blocked
+		return blocked, err
 	}
 
 	switch status {
@@ -183,7 +183,7 @@ func (m *MarathonScheduler) stopStartTask(task *demand.Task) (err error, blocked
 		err = fmt.Errorf("Error response code %d from Marathon API", status)
 	}
 
-	return err, blocked
+	return blocked, err
 }
 
 // Submit a post request to Marathon to match the requested number of the requested app
@@ -217,6 +217,7 @@ func getBaseMarathonURL(marathonAPI string) string {
 	return marathonAPI + "/v2/"
 }
 
+// Cleanup gives the scheduler an opportunity to stop anything that needs to be stopped
 func (m *MarathonScheduler) Cleanup() error {
 	m.backoff.Stop()
 	return nil

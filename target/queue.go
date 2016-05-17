@@ -23,6 +23,7 @@ type QueueLengthTarget struct {
 const queueLengthExceedingPercent float64 = 0.7
 const queueAverageSamples int = 1
 
+// NewQueueLengthTarget creates a new target for queues
 func NewQueueLengthTarget(length int) Target {
 	// TODO!! Better ways to calculate these heuristics and/or pass them in
 	kUStr := os.Getenv("MSS_KU")
@@ -67,6 +68,7 @@ func NewQueueLengthTarget(length int) Target {
 	}
 }
 
+// Meeting returns true if the target is currently met
 func (t *QueueLengthTarget) Meeting(current int) bool {
 	meeting := (current <= t.length)
 	if !meeting {
@@ -75,6 +77,7 @@ func (t *QueueLengthTarget) Meeting(current int) bool {
 	return meeting
 }
 
+// Exceeding returns true if the target is currently exceeded
 func (t *QueueLengthTarget) Exceeding(current int) bool {
 	exceeding := (current <= t.minLength)
 	if exceeding {
@@ -83,7 +86,7 @@ func (t *QueueLengthTarget) Exceeding(current int) bool {
 	return exceeding
 }
 
-// Number of additional containers
+// Delta returns the nuumber of additional containers we should add (remove if negative) to try to attain the target
 func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 	var deltafloat float64
 	var currErr int

@@ -42,7 +42,7 @@ func (b *Backoff) Waiting() bool {
 	return b.waiting
 }
 
-// SetTimer calculates the duration and sets an appropriate timer. When it pops it will send on the channel.
+// Backoff calculates the duration and sets an appropriate timer. When it pops it will send on the channel.
 func (b *Backoff) Backoff(c chan struct{}) error {
 	b.Lock()
 	defer b.Unlock()
@@ -75,6 +75,7 @@ func (b *Backoff) Backoff(c chan struct{}) error {
 	return nil
 }
 
+// Stop a backoff timer and mark that we aren't waiting for it any more
 func (b *Backoff) Stop() {
 	b.Lock()
 	defer b.Unlock()

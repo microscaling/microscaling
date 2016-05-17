@@ -1,4 +1,4 @@
-// API between Microscaling agent and server
+// Package api defines API between Microscaling agent and server
 package api
 
 import (

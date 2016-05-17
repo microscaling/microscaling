@@ -59,10 +59,10 @@ func PutJSON(url string, payload *bytes.Buffer) (status int, err error) {
 	if err != nil {
 		log.Errorf("API request to %s failed %v", url, err)
 		return -1, err
-	} else {
-		resp.Body.Close()
-		return resp.StatusCode, err
 	}
+
+	resp.Body.Close()
+	return resp.StatusCode, err
 }
 
 // InitWebSocket opens a websocket connection to the provided address.
