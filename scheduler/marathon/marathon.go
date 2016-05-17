@@ -4,6 +4,7 @@ package marathon
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ var log = logging.MustGetLogger("mssscheduler")
 // MarathonScheduler holds Marathon API URL and a Backoff struct for each task.
 type MarathonScheduler struct {
 	baseMarathonURL string
+	demandUpdate    chan struct{}
 	backoff         *utils.Backoff
 }
 
@@ -42,9 +44,15 @@ var (
 )
 
 // NewScheduler returns a pointer to the scheduler.
-func NewScheduler(marathonAPI string) *MarathonScheduler {
+func NewScheduler(marathonAPI string, demandUpdate chan struct{}) *MarathonScheduler {
 	return &MarathonScheduler{
 		baseMarathonURL: getBaseMarathonURL(marathonAPI),
+		demandUpdate:    demandUpdate,
+		backoff: &utils.Backoff{
+			Min:    250 * time.Millisecond,
+			Max:    5 * time.Second,
+			Factor: 2,
+		},
 	}
 }
 
@@ -58,12 +66,6 @@ var _ scheduler.Scheduler = (*MarathonScheduler)(nil)
 // InitScheduler initializes the scheduler.
 func (m *MarathonScheduler) InitScheduler(task *demand.Task) (err error) {
 	log.Infof("Marathon initializing task %s", task.Name)
-
-	m.backoff = &utils.Backoff{
-		Min:    250 * time.Millisecond,
-		Max:    5 * time.Second,
-		Factor: 2,
-	}
 	return err
 }
 
@@ -73,6 +75,13 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	var tooMany []*demand.Task
 	var tooFew []*demand.Task
 	var err error
+
+	// Check we're not already backed off. This could easily happen if we get a demand update arrive while we are in the midst
+	// of a previous backoff.
+	if m.backoff.Waiting() {
+		log.Debug("Backoff timer still running")
+		return nil
+	}
 
 	tasks.Lock()
 	defer tasks.Unlock()
@@ -89,21 +98,24 @@ func (m *MarathonScheduler) StopStartTasks(tasks *demand.Tasks) error {
 		}
 	}
 
-	// Scale down first to free up resources
-	for _, task := range tooMany {
-		err = m.stopStartTask(task)
-		if err != nil {
-			log.Errorf("Couldn't stop %s: %v ", task.Name, err)
+	// Concatentate the two lists - scale down first to free up resources
+	tasksToScale := append(tooMany, tooFew...)
+	for _, task := range tasksToScale {
+		err, blocked := m.stopStartTask(task)
+		if blocked {
+			// Marathon can't make scale changes at the moment.
+			// Trigger a new scaling operation by signalling a demandUpdate after a backoff delay
+			err = m.backoff.Backoff(m.demandUpdate)
+			return err
 		}
-		log.Debugf("Now have %s: %d", task.Name, task.Requested)
-	}
 
-	// Now we can scale up
-	for _, task := range tooFew {
-		err = m.stopStartTask(task)
 		if err != nil {
-			log.Errorf("Couldn't start %s: %v ", task.Name, err)
+			log.Errorf("Couldn't scale %s: %v ", task.Name, err)
+			return err
 		}
+
+		// Clear any backoffs on success
+		m.backoff.Reset()
 		log.Debugf("Now have %s: %d", task.Name, task.Requested)
 	}
 
@@ -151,61 +163,27 @@ func (m *MarathonScheduler) CountAllTasks(running *demand.Tasks) error {
 }
 
 // stopStartTask updates the number of running tasks using the Marathon API.
-func (m *MarathonScheduler) stopStartTask(task *demand.Task) error {
-	var (
-		err    error
-		status int
-	)
+func (m *MarathonScheduler) stopStartTask(task *demand.Task) (err error, blocked bool) {
 
-	// Get the backoff.
-	b := m.backoff
-
-	// Function called by AfterFunc once the backoff duration has expired.
-	f := func() {
-		log.Debugf("Cleared wait for task %s", task.Name)
-		b.Clear()
+	// Scale app using the Marathon REST API.
+	status, err := updateApp(m.baseMarathonURL, task.Name, task.Demand)
+	if err != nil {
+		return err, blocked
 	}
 
-	// Keep attempting to scale app until successful.
-	for task.Requested != task.Demand {
-		// Don't scale the app while waiting for the backoff duration.
-		if b.Waiting() == true {
-			log.Debugf("Waiting 250ms for task %s", task.Name)
-			time.Sleep(250 * time.Millisecond)
-
-		} else {
-			// Scale app using the Marathon REST API.
-			status, err = updateApp(m.baseMarathonURL, task.Name, task.Demand)
-
-			if status >= 200 && status <= 299 {
-				// Update was successful so set the requested count.
-				task.Requested = task.Demand
-
-				// Reset attempts since the deployment is no longer locked.
-				if b.Attempt() > 0 {
-					log.Infof("Task: %s succeeded set attempts to 0", task.Name)
-					b.Reset()
-				}
-			} else {
-				// Clear waiting flag and break loop if the maximum attempts is reached.
-				if b.MaxAttempts() {
-					log.Debugf("Max attempts reached for task %s", task.Name)
-					b.Clear()
-					break
-
-				} else {
-					// Update failed so back off and attempt again.
-					dur := b.Duration(b.Attempt())
-					log.Infof("Task: %s failed to scale backing off for %s", task.Name, dur.String())
-
-					timer := time.AfterFunc(dur, f)
-					defer timer.Stop()
-				}
-			}
-		}
+	switch status {
+	case 200:
+		// Update was successful
+		task.Requested = task.Demand
+	case 409:
+		// Deployment is locked and we need to back off
+		log.Debugf("Deployment locked")
+		blocked = true
+	default:
+		err = fmt.Errorf("Error response code %d from Marathon API", status)
 	}
 
-	return err
+	return err, blocked
 }
 
 // Submit a post request to Marathon to match the requested number of the requested app
@@ -237,4 +215,9 @@ func updateApp(marathonURL string, taskName string, demand int) (status int, err
 // getBaseMarathonURL returns the base API path.
 func getBaseMarathonURL(marathonAPI string) string {
 	return marathonAPI + "/v2/"
+}
+
+func (m *MarathonScheduler) Cleanup() error {
+	m.backoff.Stop()
+	return nil
 }

@@ -24,6 +24,7 @@ Currently we support scaling a queue to maintain a target length. Support for mo
 ### Queue Types
 
 * [NSQ](http://nsq.io) - see this [blog post](http://blog.microscaling.com/2016/04/microscaling-with-nsq-queue.html) for more details.
+* Azure storage queues - this [blog post](http://blog.microscaling.com/2016/05/microscaling-marathon-with-dcos-on.html) describes using the Azure queue as the metric while running microscaled tasks on DC/OS.
 
 Support for more message queues is coming soon. Let us know if there is a particular queue you wish us to integrate with.
 

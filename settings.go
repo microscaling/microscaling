@@ -74,7 +74,7 @@ func getSettings() settings {
 	return st
 }
 
-func getScheduler(st settings) (scheduler.Scheduler, error) {
+func getScheduler(st settings, demandUpdate chan struct{}) (scheduler.Scheduler, error) {
 	var s scheduler.Scheduler
 
 	switch st.schedulerType {
@@ -83,7 +83,7 @@ func getScheduler(st settings) (scheduler.Scheduler, error) {
 		s = docker.NewScheduler(st.pullImages, st.dockerHost)
 	case "MARATHON":
 		log.Info("Scheduling with Mesos / Marathon")
-		s = marathon.NewScheduler(st.marathonAPI)
+		s = marathon.NewScheduler(st.marathonAPI, demandUpdate)
 	case "ECS":
 		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #MicroscaleECS if you'd like us to add this next!")
 	case "KUBERNETES":

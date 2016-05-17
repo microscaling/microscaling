@@ -2,75 +2,86 @@
 package utils
 
 import (
+	"fmt"
 	"math"
+	"sync"
 	"time"
 )
 
 // Backoff holds the number of attempts as well as the min and max backoff delays.
 type Backoff struct {
-	attempt, Factor      int
-	maxAttempts, waiting bool
-	Min, Max             time.Duration
-}
-
-// Duration sets the waiting flag, calculates the backoff delay and increments
-// the attempts count.
-func (b *Backoff) Duration(attempt int) time.Duration {
-	b.waiting = true
-
-	d := b.CalcDuration(b.attempt)
-	b.attempt++
-
-	return d
-}
-
-// CalcDuration calculates the backoff delay and caps it at the maximum delay.
-func (b *Backoff) CalcDuration(attempt int) time.Duration {
-	// Default to sensible values when not configured.
-	if b.Min == 0 {
-		b.Min = 100 * time.Millisecond
-	}
-	if b.Max == 0 {
-		b.Max = 10 * time.Second
-	}
-	if b.Factor == 0 {
-		b.Factor = 2
-	}
-
-	// Calculate the wait duration.
-	duration := float64(b.Min) * math.Pow(float64(b.Factor), float64(attempt))
-
-	// Cap it at the maximum value.
-	if duration > float64(b.Max) {
-		b.maxAttempts = true
-		return b.Max
-	}
-
-	return time.Duration(duration)
+	sync.RWMutex
+	attempt, Factor int
+	waiting         bool
+	Min, Max        time.Duration
+	Timer           *time.Timer
 }
 
 // Reset clears the number of attempts once the API call has succeeded.
 func (b *Backoff) Reset() {
+	b.Lock()
+	defer b.Unlock()
+
+	if b.attempt > 0 {
+		log.Debugf("Backoff succeeded after %d attempts", b.attempt)
+	}
+
+	if b.waiting {
+		log.Errorf("Backoff waiting flag is unexpectedly set")
+	}
+
 	b.attempt = 0
 }
 
 // Waiting flag is true while waiting for the backoff duration. Prevents
 // any scaling actions.
 func (b *Backoff) Waiting() bool {
+	b.RLock()
+	defer b.RUnlock()
+
 	return b.waiting
 }
 
-// Clear the waiting flag after the backoff duration.
-func (b *Backoff) Clear() {
-	b.waiting = false
+// SetTimer calculates the duration and sets an appropriate timer. When it pops it will send on the channel.
+func (b *Backoff) Backoff(c chan struct{}) error {
+	b.Lock()
+	defer b.Unlock()
+
+	if b.waiting {
+		return fmt.Errorf("Already backing off")
+	}
+
+	multiplier := math.Pow(float64(b.Factor), float64(b.attempt))
+	duration := time.Duration(float64(b.Min) * multiplier)
+	log.Debugf("Backing off for %s", duration)
+
+	// Check whether we've reached the max backoff duration
+	if duration > b.Max {
+		return fmt.Errorf("Exceeded max backoff attempts")
+	}
+
+	b.waiting = true
+	b.attempt++
+	b.Timer = time.NewTimer(duration)
+	go func() {
+		<-b.Timer.C
+		log.Debug("Backff expired")
+		b.Lock()
+		defer b.Unlock()
+		b.waiting = false
+		c <- struct{}{}
+	}()
+
+	return nil
 }
 
-// Attempt returns the number of times the API call has failed.
-func (b *Backoff) Attempt() int {
-	return b.attempt
-}
+func (b *Backoff) Stop() {
+	b.Lock()
+	defer b.Unlock()
 
-// MaxAttempts returns true when the wait duration has reached the maximum value.
-func (b *Backoff) MaxAttempts() bool {
-	return b.maxAttempts
+	if b.waiting {
+		b.Timer.Stop()
+		b.waiting = false
+	}
+	return
 }

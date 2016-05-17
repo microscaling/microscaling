@@ -128,5 +128,6 @@ func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 
 	// Round to the nearest integer
 	delta = int(math.Floor(deltafloat + 0.5))
+	log.Debugf("[ql] => delta %d", delta)
 	return
 }
