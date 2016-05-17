@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -21,7 +23,7 @@ func TestGetAppsDecode(t *testing.T) {
 	}
 
 	// var response string = `"apps": [{"name":"priority1","appType":"Docker","config":{"image":"force12io/priority-1:latest","command":"/run.sh"}},{"name":"priority2","type":"Docker","config":{"image":"force12io/priority-2:latest","command":"/run.sh"}}]`
-	var response string = `{"apps" : [{"name":"priority1", "config":{"image":"microscaling/priority-1:latest","command":"/run.sh"}},{"name":"priority2","appType":"Docker","config":{"image":"microscaling/priority-2:latest","command":"/run.sh"}}]}`
+	var response = `{"apps" : [{"name":"priority1", "config":{"image":"microscaling/priority-1:latest","command":"/run.sh"}},{"name":"priority2","appType":"Docker","config":{"image":"microscaling/priority-2:latest","command":"/run.sh"}}]}`
 	var b = []byte(response)
 
 	var a AppsMessage
@@ -52,13 +54,13 @@ func TestGetAppsDecode(t *testing.T) {
 
 func TestGetApps(t *testing.T) {
 	tests := []struct {
-		expUrl  string
+		expURL  string
 		json    string
 		success bool
 		tasks   map[string]demand.Task
 	}{
 		{
-			expUrl: "/apps/hello",
+			expURL: "/apps/hello",
 			json: `{"apps": [
 			      {
 			          "name": "priority1",
@@ -88,7 +90,7 @@ func TestGetApps(t *testing.T) {
 			},
 		},
 		{
-			expUrl:  "/apps/hello",
+			expURL:  "/apps/hello",
 			json:    "",
 			success: false,
 			tasks:   map[string]demand.Task{},
@@ -96,15 +98,14 @@ func TestGetApps(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		server := DoTestGetJson(t, test.expUrl, test.success, test.json)
+		server := DoTestGetJSON(t, test.expURL, test.success, test.json)
 		defer server.Close()
 
-		baseAPIUrl = strings.Replace(server.URL, "http://", "", 1)
-		returned_tasks, _, err := GetApps("hello")
-		baseAPIUrl = GetBaseAPIUrl()
+		baseAPIUrl := strings.Replace(server.URL, "http://", "", 1)
+		returnedTasks, _, err := GetApps(baseAPIUrl, "hello")
 
 		if test.success {
-			CheckReturnedTasks(t, test.tasks, returned_tasks)
+			CheckReturnedTasks(t, test.tasks, returnedTasks)
 
 			if err != nil {
 				t.Fatalf("Unexpected error %v", err)
@@ -114,6 +115,57 @@ func TestGetApps(t *testing.T) {
 			if err == nil {
 				t.Fatalf("Expected an error")
 			}
+		}
+	}
+}
+
+// Utility for checking GET requests
+func DoTestGetJSON(t *testing.T, expURL string, success bool, testJSON string) (server *httptest.Server) {
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != expURL {
+			t.Fatalf("Expected %s, have %s", expURL, r.URL.Path)
+		}
+
+		if r.Method != "GET" {
+			t.Fatalf("expected GET, have %s", r.Method)
+		}
+
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Fatalf("Content type not as expected, have %s", r.Header.Get("Content-Type"))
+		}
+
+		if success {
+			w.Write([]byte(testJSON))
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	}))
+
+	return server
+}
+
+// Utility for checking that tasks are updated to be what we expect
+func CheckReturnedTasks(t *testing.T, tasks map[string]demand.Task, returnedTasks []*demand.Task) {
+	for _, rt := range returnedTasks {
+		tt, ok := tasks[rt.Name]
+		if !ok {
+			t.Fatalf("Unexpected app name %v", rt.Name)
+		}
+
+		if tt.Image != rt.Image {
+			t.Fatalf("Image: expected %s got %s", tt.Image, rt.Image)
+		}
+		if tt.Command != rt.Command {
+			t.Fatalf("Command: expected %s got %s", tt.Command, rt.Command)
+		}
+		if tt.Demand != rt.Demand {
+			t.Fatalf("Demand: expected %s got %s", tt.Demand, rt.Demand)
+		}
+		if tt.Requested != rt.Requested {
+			t.Fatalf("Requested: expected %s got %s", tt.Requested, rt.Requested)
+		}
+		if tt.Running != rt.Running {
+			t.Fatalf("Requested: expected %s got %s", tt.Requested, rt.Requested)
 		}
 	}
 }

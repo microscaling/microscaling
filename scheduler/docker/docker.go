@@ -1,4 +1,4 @@
-// Schedule using docker remote API
+// Package docker integrates with the Docker Remote API https://docs.docker.com/reference/api/docker_remote_api_v1.20/
 package docker
 
 import (
@@ -22,6 +22,8 @@ type dockerContainer struct {
 	updated bool
 }
 
+// DockerScheduler stores information and state we need for communicating with Docker remote API
+// We keep track of each container so that we have their identities to stop them when we need to
 type DockerScheduler struct {
 	client         *docker.Client
 	pullImages     bool
@@ -29,6 +31,7 @@ type DockerScheduler struct {
 	sync.Mutex
 }
 
+// NewScheduler creates a new interface to the Docker remote API
 func NewScheduler(pullImages bool, dockerHost string) *DockerScheduler {
 	client, err := docker.NewClient(dockerHost)
 	if err != nil {
@@ -48,6 +51,7 @@ var _ scheduler.Scheduler = (*DockerScheduler)(nil)
 
 var scaling sync.WaitGroup
 
+// InitScheduler gets the images for each task
 func (c *DockerScheduler) InitScheduler(task *demand.Task) (err error) {
 	log.Infof("Docker initializing task %s", task.Name)
 
@@ -76,11 +80,11 @@ func (c *DockerScheduler) InitScheduler(task *demand.Task) (err error) {
 
 // startTask creates the container and then starts it
 func (c *DockerScheduler) startTask(task *demand.Task) {
-	var labels map[string]string = map[string]string{
+	var labels = map[string]string{
 		labelMap: task.Name,
 	}
 
-	var cmds []string = strings.Fields(task.Command)
+	var cmds = strings.Fields(task.Command)
 
 	createOpts := docker.CreateContainerOptions{
 		Config: &docker.Config{
@@ -135,7 +139,7 @@ func (c *DockerScheduler) startTask(task *demand.Task) {
 
 // stopTask kills the last container we know about of this type
 func (c *DockerScheduler) stopTask(task *demand.Task) error {
-	var err error = nil
+	var err error
 
 	// Kill a currently-running container of this type
 	c.Lock()
@@ -185,12 +189,12 @@ func (c *DockerScheduler) stopTask(task *demand.Task) error {
 	return nil
 }
 
+// StopStartTasks creates containers if there aren't enough of them, and stop them if there are too many
 func (c *DockerScheduler) StopStartTasks(tasks *demand.Tasks) error {
-	// Create containers if there aren't enough of them, and stop them if there are too many
-	var too_many []*demand.Task
-	var too_few []*demand.Task
+	var tooMany []*demand.Task
+	var tooFew []*demand.Task
 	var diff int
-	var err error = nil
+	var err error
 
 	tasks.Lock()
 	defer tasks.Unlock()
@@ -200,17 +204,17 @@ func (c *DockerScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	for _, task := range tasks.Tasks {
 		if task.Demand > task.Requested && task.Requested == task.Running {
 			// There aren't enough of these containers yet
-			too_few = append(too_few, task)
+			tooFew = append(tooFew, task)
 		}
 
 		if task.Demand < task.Requested && task.Requested == task.Running {
 			// There aren't enough of these containers yet
-			too_many = append(too_many, task)
+			tooMany = append(tooMany, task)
 		}
 	}
 
 	// Scale down first to free up resources
-	for _, task := range too_many {
+	for _, task := range tooMany {
 		diff = task.Requested - task.Demand
 		log.Infof("Stop %d of task %s", diff, task.Name)
 		for i := 0; i < diff; i++ {
@@ -218,17 +222,17 @@ func (c *DockerScheduler) StopStartTasks(tasks *demand.Tasks) error {
 			if err != nil {
 				log.Errorf("Couldn't stop %s: %v ", task.Name, err)
 			}
-			task.Requested -= 1
+			task.Requested--
 		}
 	}
 
 	// Now we can scale up
-	for _, task := range too_few {
+	for _, task := range tooFew {
 		diff = task.Demand - task.Requested
 		log.Infof("Start %d of task %s", diff, task.Name)
 		for i := 0; i < diff; i++ {
 			c.startTask(task)
-			task.Requested += 1
+			task.Requested++
 		}
 	}
 
@@ -254,6 +258,7 @@ func statusToState(status string) string {
 	return "unknown"
 }
 
+// CountAllTasks checks how many of each task are running
 func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 	// Docker Remote API https://docs.docker.com/reference/api/docker_remote_api_v1.20/
 	// get /containers/json
@@ -344,4 +349,9 @@ func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 	}
 
 	return err
+}
+
+// Cleanup gives the scheduler an opportunity to stop anything that needs to be stopped
+func (c *DockerScheduler) Cleanup() error {
+	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"github.com/microscaling/microscaling/demand"
 )
 
-func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
+func scalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 	delta := 0
 	demandChanged = false
 
@@ -69,7 +69,7 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 				freedCapacity := available
 				for index > p+1 && freedCapacity < delta {
 					// Kill off lower priority services if we need to
-					index -= 1
+					index--
 					lowerPriorityService := tasks.Tasks[index]
 					if lowerPriorityService.Priority > t.Priority {
 						log.Debugf("  [scale] looking for capacity from %s: running %d requested %d demand %d", lowerPriorityService.Name, lowerPriorityService.Running, lowerPriorityService.Requested, lowerPriorityService.Demand)
@@ -97,7 +97,7 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 			demandChanged = true
 			available -= delta
 			if t.Demand >= t.MaxContainers {
-				log.Error("*** Not enough capacity for %s ***", t.Name)
+				log.Errorf("  [scale ] Limiting %s to its configured max %d", t.Name, t.MaxContainers)
 				t.Demand = t.MaxContainers
 			} else {
 				log.Debugf("  [scale] Service %s scaling up %d", t.Name, delta)

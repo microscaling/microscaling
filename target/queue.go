@@ -8,7 +8,7 @@ import (
 	"github.com/microscaling/microscaling/utils"
 )
 
-// Target of keeping the number of items in a queue under a certain length
+// QueueLengthTarget is where we ant to keep the number of items in a queue under a certain length
 type QueueLengthTarget struct {
 	length     int
 	minLength  int
@@ -25,7 +25,8 @@ type QueueLengthTarget struct {
 const queueLengthExceedingPercent float64 = 0.7
 const queueAverageSamples int = 1
 
-func NewQueueLengthTarget(length int) Target {
+// NewQueueLengthTarget creates a new target for queues
+func NewQueueLengthTarget(length int) *QueueLengthTarget {
 	// TODO!! Better ways to calculate these heuristics and/or pass them in
 	kU := utils.EnvFl64("MSS_KU", 0.05)
 	tU := utils.EnvFl64("MSS_TU", 10.0)
@@ -60,6 +61,7 @@ func NewQueueLengthTarget(length int) Target {
 	}
 }
 
+// Meeting returns true if the target is currently met
 func (t *QueueLengthTarget) Meeting(current int) bool {
 	meeting := (current <= t.length)
 	if !meeting {
@@ -68,6 +70,7 @@ func (t *QueueLengthTarget) Meeting(current int) bool {
 	return meeting
 }
 
+// Exceeding returns true if the target is currently exceeded
 func (t *QueueLengthTarget) Exceeding(current int) bool {
 	exceeding := (current <= t.minLength)
 	if exceeding {
@@ -76,7 +79,7 @@ func (t *QueueLengthTarget) Exceeding(current int) bool {
 	return exceeding
 }
 
-// Number of additional containers
+// Delta returns the nuumber of additional containers we should add (remove if negative) to try to attain the target
 func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 	var deltafloat float64
 	var currErr int
@@ -121,5 +124,6 @@ func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 
 	// Round to the nearest integer
 	delta = int(math.Floor(deltafloat + 0.5))
+	log.Debugf("[ql] => delta %d", delta)
 	return
 }

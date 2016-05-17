@@ -10,6 +10,7 @@ import (
 	"github.com/microscaling/microscaling/engine"
 )
 
+// ServerEngine retrieves demand from the server where it has been calculated
 type ServerEngine struct {
 	ws        *websocket.Conn
 	closedown chan struct{}
@@ -20,6 +21,7 @@ var _ engine.Engine = (*ServerEngine)(nil)
 
 var log = logging.MustGetLogger("mssengine")
 
+// NewEngine initializes a new ServerEngine
 func NewEngine(ws *websocket.Conn) *ServerEngine {
 	de := ServerEngine{
 		ws:        ws,
@@ -46,11 +48,11 @@ func updateTasks(dp api.DemandPayload, tasks *demand.Tasks) (demandChanged bool)
 	return demandChanged
 }
 
+// GetDemand collects the metrics, calculates demand, and sends demandUpdate messages on the API
 func (de *ServerEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}) {
-	// In this engine the Server collects the metrics, calculates demand, and sends demandUpdate messages on the API	api.Listen(de.ws, tasks, demandUpdate)
 	var demandChanged bool
 	var dp api.DemandPayload
-	var closedown bool = false
+	var closedown = false
 	for {
 		select {
 		// We can't just close the websocket on closedown as we (may) still want to send metrics on it
@@ -78,6 +80,7 @@ func (de *ServerEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{
 	}
 }
 
+// StopDemand should be called when we want to shut down. We signal the ServerEngine to close the websocket.
 func (de *ServerEngine) StopDemand(demandUpdate chan struct{}) {
 	log.Debug("[server] stop receiving demand")
 	de.closedown <- struct{}{}

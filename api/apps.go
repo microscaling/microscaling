@@ -6,14 +6,17 @@ import (
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/metric"
 	"github.com/microscaling/microscaling/target"
+	"github.com/microscaling/microscaling/utils"
 )
 
+// AppsMessage is the json that arrives from /apps/<userID>
 type AppsMessage struct {
 	UserID        string           `json:"name"`
 	MaxContainers int              `json:"maxContainers"`
 	Apps          []AppDescription `json:"apps"`
 }
 
+// AppDescription is the json describing an individual app
 type AppDescription struct {
 	Name              string          `json:"name"`
 	Priority          int             `json:"priority"` // 1 is the highest, 0 means it's not scalable
@@ -26,24 +29,16 @@ type AppDescription struct {
 	Config            DockerAppConfig `json:"config"`
 }
 
+// DockerAppConfig is the json describing parameters that need to be passed into Docker when starting this app
 // TODO!! This is not really just Docker-specific as we have some target info in here too
 type DockerAppConfig struct {
 	Image           string `json:"image"`
 	Command         string `json:"command"`
 	PublishAllPorts bool   `json:"publishAllPorts"`
-	QueueName       string `json:"queueName"`
 	QueueLength     int    `json:"targetQueueLength"`
-}
-
-type dockerAppConfig DockerAppConfig
-
-func (d *DockerAppConfig) UnmarshalJSON(b []byte) (err error) {
-	c := dockerAppConfig{}
-	err = json.Unmarshal(b, &c)
-	if err == nil {
-		*d = DockerAppConfig(c)
-	}
-	return
+	QueueName       string `json:"queueName"`
+	TopicName       string `json:"topicName"`
+	ChannelName     string `json:"channelName"`
 }
 
 func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err error) {
@@ -78,8 +73,10 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 		case "Queue":
 			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
 			switch a.MetricType {
+			case "AzureQueue":
+				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
 			case "NSQ":
-				task.Metric = metric.NewNSQMetric(a.Config.QueueName)
+				task.Metric = metric.NewNSQMetric(a.Config.TopicName, a.Config.ChannelName)
 			default:
 				log.Errorf("Unexpected queue metricType %s", a.MetricType)
 			}
@@ -98,8 +95,11 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 	return
 }
 
-func GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
-	body, err := getJsonGet(userID, "/apps/")
+// GetApps retrives the app definitions from the server for a given userID
+func GetApps(apiAddress string, userID string) (tasks []*demand.Task, maxContainers int, err error) {
+	url := "http://" + apiAddress + "/apps/" + userID
+
+	body, err := utils.GetJSON(url)
 	if err != nil {
 		log.Debugf("Failed to get /apps/: %v", err)
 		return nil, 0, err
