@@ -20,6 +20,7 @@ type QueueLengthTarget struct {
 	kI         float64
 	kD         float64
 	startCount int
+	useIFactor bool
 }
 
 const queueLengthExceedingPercent float64 = 0.7
@@ -58,6 +59,7 @@ func NewQueueLengthTarget(length int) *QueueLengthTarget {
 		kD:         kD,
 		vel:        make([]int, velSamples+1),
 		velSamples: velSamples,
+		useIFactor: false,
 	}
 }
 
@@ -87,6 +89,18 @@ func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 	currErr = currentLength - t.length
 	t.cumErr = t.cumErr + currErr
 
+	// We only start using kI once we have hit or passed the target, to prevent it being unnecessarily large if we start
+	// with lots of items on the queue
+	kI := t.kI
+	if !t.useIFactor {
+		lastErr := t.lastLength - t.length
+		if (currErr == 0) || (currErr > 0 && lastErr < 0) || (currErr < 0 && lastErr > 0) {
+			t.useIFactor = true
+		} else {
+			kI = 0
+		}
+	}
+
 	var aveVel float64
 	// Store the new value at the end of the array (this is one more than we need), but only average over the right number of samples
 	t.vel[t.velSamples] = currentLength - t.lastLength
@@ -99,25 +113,25 @@ func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 
 	// There is a point beyond which there is no point letting cumErr grow, because our max containers can't
 	// necessarily keep up (and also a question of symmetry, since a queue length can't go below 0?)
-	if t.cumErr > 10*t.length {
-		t.cumErr = 10 * t.length
-	}
-	if t.cumErr < -10*t.length {
-		t.cumErr = -10 * t.length
-	}
+	// if t.cumErr > 10*t.length {
+	// 	t.cumErr = 10 * t.length
+	// }
+	// if t.cumErr < -10*t.length {
+	// 	t.cumErr = -10 * t.length
+	// }
 
 	t.lastLength = currentLength
 
 	// To start with, velocity isn't valid
 	if t.startCount < t.velSamples {
 		log.Debugf("[ql] err %d, cumErr %d", currErr, t.cumErr)
-		log.Debugf("[ql] err * kp %f, cumErr * kI %f", t.kP*float64(currErr), t.kI*float64(t.cumErr))
-		deltafloat = t.kP*float64(currErr) + t.kI*float64(t.cumErr)
+		log.Debugf("[ql] err * kp %f, cumErr * kI %f", t.kP*float64(currErr), kI*float64(t.cumErr))
+		deltafloat = t.kP*float64(currErr) + kI*float64(t.cumErr)
 		t.startCount = t.startCount + 1
 	} else {
 		log.Debugf("[ql] err %d, cumErr %d, vel %f", currErr, t.cumErr, aveVel)
-		log.Debugf("[ql] err * kp %f, cumErr * kI %f, vel * kd %f", t.kP*float64(currErr), t.kI*float64(t.cumErr), t.kD*float64(aveVel))
-		deltafloat = t.kP*float64(currErr) + t.kI*float64(t.cumErr) + t.kD*float64(aveVel)
+		log.Debugf("[ql] err * kp %f, cumErr * kI %f, vel * kd %f", t.kP*float64(currErr), kI*float64(t.cumErr), t.kD*float64(aveVel))
+		deltafloat = t.kP*float64(currErr) + kI*float64(t.cumErr) + t.kD*float64(aveVel)
 	}
 
 	log.Debugf("[ql] => deltaf %f", deltafloat)
