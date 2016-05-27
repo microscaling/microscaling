@@ -31,7 +31,7 @@ func (c *HardcodedConfig) GetApps(userID string) (tasks []*demand.Task, maxConta
 		PublishAllPorts: true,
 		NetworkMode:     "host",
 		Target:          target.NewQueueLengthTarget(5),
-		Metric:          metric.NewNSQMetric("mssdemo"),
+		Metric:          metric.NewNSQMetric("mssdemotopic", "mssdemochannel"),
 	}
 
 	tasks = append(tasks, &task)

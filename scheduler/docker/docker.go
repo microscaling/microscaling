@@ -350,3 +350,8 @@ func (c *DockerScheduler) CountAllTasks(running *demand.Tasks) error {
 
 	return err
 }
+
+// Cleanup gives the scheduler an opportunity to stop anything that needs to be stopped
+func (c *DockerScheduler) Cleanup() error {
+	return nil
+}

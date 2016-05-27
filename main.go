@@ -33,9 +33,11 @@ import (
 	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/scheduler"
+	"github.com/microscaling/microscaling/utils"
 )
 
-const constGetMetricsTimeout = 500 // milliseconds - delay before we send read state (and optionally send on the metrics API)
+const constGetMetricsTimeout = 500  // milliseconds - read state from the scheduler this often
+const constSendMetricsTimeout = 500 // milliseconds - send on the metrics API this often
 
 var (
 	log = logging.MustGetLogger("mssagent")
@@ -67,7 +69,10 @@ func main() {
 
 	st := getSettings()
 
-	s, err := getScheduler(st)
+	// Sending an empty struct on this channel triggers the scheduler to make updates
+	demandUpdate := make(chan struct{}, 1)
+
+	s, err := getScheduler(st, demandUpdate)
 	if err != nil {
 		log.Errorf("Failed to get scheduler: %v", err)
 		return
@@ -106,13 +111,12 @@ func main() {
 	signal.Notify(closedown, syscall.SIGTERM)
 
 	// Open a web socket to the server TODO!! This won't always be necessary if we're not sending metrics & calculating demand locally
-	ws, err := api.InitWebSocket()
+	ws, err := utils.InitWebSocket(st.microscalingAPI)
 	if err != nil {
 		log.Errorf("Failed to open web socket: %v", err)
 		return
 	}
 
-	demandUpdate := make(chan struct{}, 1)
 	de, err := getDemandEngine(st, ws)
 	if err != nil {
 		log.Errorf("Failed to get demand engine: %v", err)
@@ -144,20 +148,28 @@ func main() {
 			if err != nil {
 				log.Errorf("Failed to count containers. %v", err)
 			}
+		}
+	}()
 
-			if st.sendMetrics {
+	// Periodically send metrics to the server
+	sendMetricsTimeout := time.NewTicker(constSendMetricsTimeout * time.Millisecond)
+	if st.sendMetrics {
+		go func() {
+			for _ = range sendMetricsTimeout.C {
 				log.Debug("Sending metrics")
 				err = api.SendMetrics(ws, st.userID, tasks)
 				if err != nil {
 					log.Errorf("Failed to send metrics. %v", err)
 				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// When we're asked to close down, we don't want to handle demand updates any more
 	<-closedown
 	log.Info("Clean up when ready")
+	// Give the scheduler a chance to do any necessary cleanup
+	s.Cleanup()
 	// The demand engine is responsible for closing the demandUpdate channel so that we stop
 	// doing scaling operations
 	de.StopDemand(demandUpdate)

@@ -27,6 +27,7 @@ func NewEngine() *LocalEngine {
 	return &de
 }
 
+// GetDemand calculates demand for each task
 func (de *LocalEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}) {
 	var gettingMetrics sync.WaitGroup
 
@@ -41,12 +42,12 @@ func (de *LocalEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}
 				gettingMetrics.Add(1)
 				defer gettingMetrics.Done()
 				task.Metric.UpdateCurrent()
-			}
+			}()
 		}
 
 		gettingMetrics.Wait()
 
-		demandChanged := ScalingCalculation(tasks)
+		demandChanged := scalingCalculation(tasks)
 
 		tasks.Unlock()
 		if demandChanged {

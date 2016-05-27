@@ -40,7 +40,7 @@ func TestInitScheduler(t *testing.T) {
 	for _, test := range tests {
 		os.Setenv("MSS_SCHEDULER", test.sched)
 		st := getSettings()
-		_, err = getScheduler(st)
+		_, err = getScheduler(st, nil)
 		if err != nil && test.pass {
 			t.Fatalf("Should have been able to create %s", test.sched)
 		}

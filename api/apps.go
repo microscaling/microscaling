@@ -6,6 +6,7 @@ import (
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/metric"
 	"github.com/microscaling/microscaling/target"
+	"github.com/microscaling/microscaling/utils"
 )
 
 // AppsMessage is the json that arrives from /apps/<userID>
@@ -34,19 +35,10 @@ type DockerAppConfig struct {
 	Image           string `json:"image"`
 	Command         string `json:"command"`
 	PublishAllPorts bool   `json:"publishAllPorts"`
-	QueueName       string `json:"queueName"`
 	QueueLength     int    `json:"targetQueueLength"`
-}
-
-type dockerAppConfig DockerAppConfig
-
-func (d *DockerAppConfig) UnmarshalJSON(b []byte) (err error) {
-	c := dockerAppConfig{}
-	err = json.Unmarshal(b, &c)
-	if err == nil {
-		*d = DockerAppConfig(c)
-	}
-	return
+	QueueName       string `json:"queueName"`
+	TopicName       string `json:"topicName"`
+	ChannelName     string `json:"channelName"`
 }
 
 func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err error) {
@@ -81,8 +73,10 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 		case "Queue":
 			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
 			switch a.MetricType {
+			case "AzureQueue":
+				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
 			case "NSQ":
-				task.Metric = metric.NewNSQMetric(a.Config.QueueName)
+				task.Metric = metric.NewNSQMetric(a.Config.TopicName, a.Config.ChannelName)
 			default:
 				log.Errorf("Unexpected queue metricType %s", a.MetricType)
 			}
@@ -102,8 +96,10 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 }
 
 // GetApps retrives the app definitions from the server for a given userID
-func GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
-	body, err := getJsonGet(userID, "/apps/")
+func GetApps(apiAddress string, userID string) (tasks []*demand.Task, maxContainers int, err error) {
+	url := "http://" + apiAddress + "/apps/" + userID
+
+	body, err := utils.GetJSON(url)
 	if err != nil {
 		log.Debugf("Failed to get /apps/: %v", err)
 		return nil, 0, err

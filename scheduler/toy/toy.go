@@ -10,9 +10,11 @@ import (
 
 var log = logging.MustGetLogger("mssscheduler")
 
+// ToyScheduler is a mock scheduler that does nothing
 type ToyScheduler struct {
 }
 
+// NewScheduler creates a new ToyScheduler
 func NewScheduler() *ToyScheduler {
 	toy := ToyScheduler{}
 	return &toy
@@ -21,12 +23,13 @@ func NewScheduler() *ToyScheduler {
 // compile-time assert that we implement the right interface
 var _ scheduler.Scheduler = (*ToyScheduler)(nil)
 
+// InitScheduler initializes the scheduler
 func (t *ToyScheduler) InitScheduler(task *demand.Task) error {
 	log.Infof("Toy scheduler initialized task %s with %d initial demand", task.Name, task.Demand)
 	return nil
 }
 
-// StopStartNTasks asks the scheduler to bring the number of running tasks up to task.Demand.
+// StopStartTasks asks the scheduler to bring the number of running tasks up to task.Demand.
 func (t *ToyScheduler) StopStartTasks(tasks *demand.Tasks) error {
 	tasks.Lock()
 	defer tasks.Unlock()
@@ -49,3 +52,6 @@ func (t *ToyScheduler) CountAllTasks(running *demand.Tasks) error {
 	}
 	return nil
 }
+
+// Cleanup gives the scheduler an opportunity to stop anything that needs to be stopped
+func (t *ToyScheduler) Cleanup() error { return nil }

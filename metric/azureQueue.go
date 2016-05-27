@@ -7,7 +7,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/storage"
 )
 
-// compile-time assert that we implement the right interface
+// compiletime assert that we implement the right interface
 var _ Metric = (*AzureQueueMetric)(nil)
 
 var azureAccountName string
@@ -56,7 +56,7 @@ func NewAzureQueueMetric(queueName string) *AzureQueueMetric {
 	}
 }
 
-// UpdateCurrent reads the value of the current queue length and stores the value in the metric
+// UpdateCurrent calls the Azure Storage API to get the queue length and stores the value in the metric.
 func (aqm *AzureQueueMetric) UpdateCurrent() {
 	metadata, err := azureQueueClient.GetMetadata(aqm.azureQueueName)
 	if err != nil {

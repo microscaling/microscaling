@@ -4,7 +4,7 @@ import (
 	"github.com/microscaling/microscaling/demand"
 )
 
-func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
+func scalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 	delta := 0
 	demandChanged = false
 
@@ -97,7 +97,7 @@ func ScalingCalculation(tasks *demand.Tasks) (demandChanged bool) {
 			demandChanged = true
 			available -= delta
 			if t.Demand >= t.MaxContainers {
-				log.Error("*** Not enough capacity for %s ***", t.Name)
+				log.Errorf("  [scale ] Limiting %s to its configured max %d", t.Name, t.MaxContainers)
 				t.Demand = t.MaxContainers
 			} else {
 				log.Debugf("  [scale] Service %s scaling up %d", t.Name, delta)
