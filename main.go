@@ -128,7 +128,6 @@ func main() {
 	// Handle demand updates
 	go func() {
 		for range demandUpdate {
-			log.Debug("Demand update")
 			err = s.StopStartTasks(tasks)
 			if err != nil {
 				log.Errorf("Failed to stop / start tasks. %v", err)
@@ -156,7 +155,6 @@ func main() {
 	if st.sendMetrics {
 		go func() {
 			for _ = range sendMetricsTimeout.C {
-				log.Debug("Sending metrics")
 				err = api.SendMetrics(ws, st.userID, tasks)
 				if err != nil {
 					log.Errorf("Failed to send metrics. %v", err)

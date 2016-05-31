@@ -6,8 +6,9 @@ import (
 	"github.com/microscaling/microscaling/demand"
 )
 
+// Engine determines what the demand should be for each task
 type Engine interface {
-	// Engine is responsible for setting up the new Demand in tasks. If demand has changed, send on demandUpdate
+	// GetDemand is responsible for setting up the new Demand in tasks. If demand has changed, send on demandUpdate
 	GetDemand(tasks *demand.Tasks, demandUpdate chan struct{})
 
 	// When the engine has cleaned itself up, it must close this demandUpdate channel

@@ -1,16 +1,14 @@
 package target
 
-// Target of keeping the number of items in a queue under a certain length
+// SimpleQueueLengthTarget aims to keep the number of items in a queue under a certain length
 // This version tends to oscillate too much, so we prefer the version that uses a PD controller (queue.go)
 type SimpleQueueLengthTarget struct {
 	length    int
 	minLength int
 }
 
-// TODO!! For now just use the queue version
-// const queueLengthExceedingPercent float64 = 0.7
-
-func NewSimpleQueueLengthTarget(length int) Target {
+// NewSimpleQueueLengthTarget creates a new target based on simply adding or removing one container if we're above or below target
+func NewSimpleQueueLengthTarget(length int) *SimpleQueueLengthTarget {
 
 	return &SimpleQueueLengthTarget{
 		length:    length,
@@ -18,6 +16,7 @@ func NewSimpleQueueLengthTarget(length int) Target {
 	}
 }
 
+// Meeting returns true if the target is currently met
 func (t *SimpleQueueLengthTarget) Meeting(current int) bool {
 	meeting := (current <= t.length)
 	if !meeting {
@@ -26,6 +25,7 @@ func (t *SimpleQueueLengthTarget) Meeting(current int) bool {
 	return meeting
 }
 
+// Exceeding returns true if the target is currently exceeded
 func (t *SimpleQueueLengthTarget) Exceeding(current int) bool {
 	exceeding := (current <= t.minLength)
 	if exceeding {
@@ -34,7 +34,7 @@ func (t *SimpleQueueLengthTarget) Exceeding(current int) bool {
 	return exceeding
 }
 
-// Number of additional containers
+// Delta returns the nuumber of additional containers we should add (remove if negative) to try to attain the target
 func (t *SimpleQueueLengthTarget) Delta(currentLength int) (delta int) {
 
 	// Simply increment by one if we're over the target, and decrement if we're under

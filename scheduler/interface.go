@@ -1,10 +1,11 @@
-// scheduler defines the interface for scheduling models
+// Package scheduler defines the interface with schedulers & orchestration systems
 package scheduler
 
 import (
 	"github.com/microscaling/microscaling/demand"
 )
 
+// Scheduler is the interface to schedulers / orchestration systems
 type Scheduler interface {
 	// InitScheduler creates and starts the app identified by appId
 	InitScheduler(task *demand.Task) error

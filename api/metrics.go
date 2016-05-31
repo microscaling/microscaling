@@ -1,4 +1,3 @@
-// API between Microscaling agent and server
 package api
 
 import (
@@ -10,10 +9,27 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-// sendMetrics sends the current state of tasks to the API
+type metricsPayload struct {
+	User    string  `json:"user"`
+	Metrics metrics `json:"metrics"`
+}
+
+type metrics struct {
+	Tasks     []taskMetrics `json:"tasks"`
+	CreatedAt int64         `json:"createdAt"`
+}
+
+type taskMetrics struct {
+	App          string `json:"app"`
+	RunningCount int    `json:"runningCount"`
+	PendingCount int    `json:"pendingCount"`
+	Metric       int    `json:"metric,omitempty"`
+}
+
+// SendMetrics sends the current state of tasks to the API
 func SendMetrics(ws *websocket.Conn, userID string, tasks *demand.Tasks) error {
-	var err error = nil
-	var index int = 0
+	var err error
+	var index int
 
 	metrics := metrics{
 		Tasks:     make([]taskMetrics, len(tasks.Tasks)),
@@ -42,6 +58,7 @@ func SendMetrics(ws *websocket.Conn, userID string, tasks *demand.Tasks) error {
 		return fmt.Errorf("Failed to encode API json. %v", err)
 	}
 
+	log.Debug("Sending metrics message")
 	_, err = ws.Write(b)
 	if err != nil {
 		return fmt.Errorf("Failed to send metrics: %v", err)

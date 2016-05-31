@@ -1,6 +1,7 @@
 package localEngine
 
 import (
+	"sync"
 	"time"
 
 	"github.com/op/go-logging"
@@ -11,6 +12,7 @@ import (
 
 const constGetDemandSleep = 500
 
+// LocalEngine calculates demand locally
 type LocalEngine struct {
 }
 
@@ -19,12 +21,15 @@ var _ engine.Engine = (*LocalEngine)(nil)
 
 var log = logging.MustGetLogger("mssengine")
 
+// NewEngine initializes the local engine
 func NewEngine() *LocalEngine {
 	de := LocalEngine{}
 	return &de
 }
 
+// GetDemand calculates demand for each task
 func (de *LocalEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}) {
+	var gettingMetrics sync.WaitGroup
 
 	// In this we need to collect the metrics, calculate demand, and trigger a demand update
 	demandTimeout := time.NewTicker(constGetDemandSleep * time.Millisecond)
@@ -33,10 +38,17 @@ func (de *LocalEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}
 		log.Debug("Getting demand")
 
 		for _, task := range tasks.Tasks {
-			task.Metric.UpdateCurrent()
+			gettingMetrics.Add(1)
+			go func(task *demand.Task) {
+				defer gettingMetrics.Done()
+				log.Debugf("Getting metric for %s", task.Name)
+				task.Metric.UpdateCurrent()
+			}(task)
 		}
 
-		demandChanged := ScalingCalculation(tasks)
+		gettingMetrics.Wait()
+
+		demandChanged := scalingCalculation(tasks)
 
 		tasks.Unlock()
 		if demandChanged {
@@ -45,6 +57,7 @@ func (de *LocalEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}
 	}
 }
 
+// StopDemand is called when we want to shut down
 func (de *LocalEngine) StopDemand(demandUpdate chan struct{}) {
 	close(demandUpdate)
 }

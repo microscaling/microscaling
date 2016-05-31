@@ -8,7 +8,7 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/websocket"
 
-	"github.com/microscaling/microscaling/api"
+	"github.com/microscaling/microscaling/config"
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/engine"
 	"github.com/microscaling/microscaling/engine/localEngine"
@@ -28,6 +28,7 @@ type settings struct {
 	dockerHost      string
 	demandEngine    string
 	marathonAPI     string
+	config          string
 }
 
 func initLogging() {
@@ -50,7 +51,7 @@ func initLogging() {
 	logBackend := logging.NewLogBackend(os.Stdout, "", 0)
 	logging.SetBackend(logBackend)
 
-	var components = []string{"mssagent", "mssapi", "mssdemand", "mssengine", "mssmetric", "mssscheduler", "msstarget", "mssutils"}
+	var components = []string{"mssagent", "mssapi", "mssconfig", "mssdemand", "mssengine", "mssmetric", "mssscheduler", "msstarget", "mssutils"}
 
 	for _, component := range components {
 		if strings.Contains(logComponents, component) || strings.Contains(logComponents, "all") {
@@ -71,6 +72,7 @@ func getSettings() settings {
 	st.dockerHost = getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
 	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "LOCAL")
 	st.marathonAPI = getEnvOrDefault("MSS_MARATHON_API", "http://localhost:8080")
+	st.config = getEnvOrDefault("MSS_CONFIG", "SERVER")
 	return st
 }
 
@@ -105,10 +107,23 @@ func getScheduler(st settings, demandUpdate chan struct{}) (scheduler.Scheduler,
 }
 
 func getTasks(st settings) (tasks *demand.Tasks, err error) {
+	var c config.Config
+
 	tasks = new(demand.Tasks)
 
 	// Get the tasks that have been configured by this user
-	t, maxContainers, err := api.GetApps(st.microscalingAPI, st.userID)
+	switch st.config {
+	case "FILE":
+		return nil, fmt.Errorf("Config file not yet supported")
+	case "SERVER":
+		c = config.NewServerConfig(st.microscalingAPI)
+	case "HARDCODED":
+		c = config.NewHardcodedConfig()
+	default:
+		return nil, fmt.Errorf("Bad value for MSS_CONFIG: %s", st.config)
+	}
+
+	t, maxContainers, err := c.GetApps(st.userID)
 	tasks.MaxContainers = maxContainers
 
 	// For now pass the whole environment to all containers.
@@ -116,6 +131,7 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 
 	for _, task := range t {
 		task.Env = globalEnv
+		log.Debugf("%+v", task)
 	}
 
 	tasks.Tasks = t

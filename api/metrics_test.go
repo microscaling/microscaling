@@ -10,14 +10,14 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-var global_t *testing.T
+var globalT *testing.T
 
 var tests = []struct {
-	testJson  string
-	expDemand []TaskDemand
+	testJSON  string
+	expDemand []taskDemand
 }{
 	{
-		testJson: `{
+		testJSON: `{
 			   "demand": {
 			       "tasks": [
 			           {
@@ -31,7 +31,7 @@ var tests = []struct {
 			       ]
 			   }
 			}`,
-		expDemand: []TaskDemand{
+		expDemand: []taskDemand{
 			{
 				App:         "priority2",
 				DemandCount: 3,
@@ -66,7 +66,7 @@ var mtests = []struct {
 	},
 }
 
-var currentTest int = 0
+var currentTest int
 
 func testServerMetrics(ws *websocket.Conn) {
 	var b []byte
@@ -79,7 +79,7 @@ func testServerMetrics(ws *websocket.Conn) {
 	test := mtests[currentTest]
 
 	if m.User != test.expMetrics.User {
-		global_t.Fatalf("Unexpected user")
+		globalT.Fatalf("Unexpected user")
 	}
 
 	for _, v := range m.Metrics.Tasks {
@@ -90,13 +90,13 @@ func testServerMetrics(ws *websocket.Conn) {
 				if v.PendingCount != vv.PendingCount || v.RunningCount != vv.RunningCount {
 					log.Debugf("%#v", test.expMetrics.Metrics.Tasks)
 					log.Debugf("%#v", m.Metrics.Tasks)
-					global_t.Fatalf("Unexpected values")
+					globalT.Fatalf("Unexpected values")
 				}
 			}
 		}
 
 		if !appFound {
-			global_t.Fatalf("Received unexpected metric for %s", v.App)
+			globalT.Fatalf("Received unexpected metric for %s", v.App)
 		}
 	}
 }
@@ -108,11 +108,11 @@ func TestSendMetrics(t *testing.T) {
 	tasks.Tasks[0] = &demand.Task{Name: "priority1", Demand: 8, Requested: 3, Running: 4}
 	tasks.Tasks[1] = &demand.Task{Name: "priority2", Demand: 2, Requested: 7, Running: 5}
 
-	global_t = t
+	globalT = t
 
-	for testIndex, _ = range tests {
+	for testIndex = range tests {
 		server := httptest.NewServer(websocket.Handler(testServerMetrics))
-		serverAddr = server.Listener.Addr().String()
+		serverAddr := server.Listener.Addr().String()
 
 		ws, err := utils.InitWebSocket(serverAddr)
 		if err != nil {

@@ -4,9 +4,11 @@ import (
 	"math"
 	"os"
 	"strconv"
+
+	"github.com/microscaling/microscaling/utils"
 )
 
-// Target of keeping the number of items in a queue under a certain length
+// QueueLengthTarget is where we ant to keep the number of items in a queue under a certain length
 type QueueLengthTarget struct {
 	length     int
 	minLength  int
@@ -18,31 +20,17 @@ type QueueLengthTarget struct {
 	kI         float64
 	kD         float64
 	startCount int
+	useIFactor bool
 }
 
 const queueLengthExceedingPercent float64 = 0.7
 const queueAverageSamples int = 1
 
-func NewQueueLengthTarget(length int) Target {
+// NewQueueLengthTarget creates a new target for queues
+func NewQueueLengthTarget(length int) *QueueLengthTarget {
 	// TODO!! Better ways to calculate these heuristics and/or pass them in
-	kUStr := os.Getenv("MSS_KU")
-	tUStr := os.Getenv("MSS_TU")
-	kU, err := strconv.ParseFloat(kUStr, 64)
-	if kUStr == "" || err != nil {
-		kU = 0.05
-	}
-
-	tU, err := strconv.ParseFloat(tUStr, 64)
-	if tUStr == "" || err != nil {
-		tU = 10.0
-	}
-
-	var velSamples int
-	velSamplesStr := os.Getenv("MSS_VEL_SAMPLES")
-	velSamples, err = strconv.Atoi(velSamplesStr)
-	if err != nil || velSamples == 0 {
-		velSamples = queueAverageSamples
-	}
+	kU := utils.EnvFl64("MSS_KU", 0.05)
+	tU := utils.EnvFl64("MSS_TU", 10.0)
 
 	// Ziegler-Nichols PID
 	// kP := 0.6 * kU
@@ -50,11 +38,18 @@ func NewQueueLengthTarget(length int) Target {
 	// kD := kP * tU / 8.0
 
 	// Ziegler-Nichols PD
-	kP := float64(0.8 * kU)
-	kD := float64(tU / 8.0)
-	kI := float64(0) // Seems like PD works better than PID, but this needs more testing
-	log.Debugf("[new ql] kU = %f, tU = %f", kU, tU)
+	kD := utils.EnvFl64("MSS_KD", float64(tU/8.0))
+	kP := utils.EnvFl64("MSS_KP", float64(0.8*kU))
+	kI := utils.EnvFl64("MSS_KI", float64(0))
+
 	log.Debugf("[new ql] kP = %f, kI = %f, kD = %f", kP, kI, kD)
+
+	var velSamples int
+	velSamplesStr := os.Getenv("MSS_VEL_SAMPLES")
+	velSamples, err := strconv.Atoi(velSamplesStr)
+	if err != nil || velSamples == 0 {
+		velSamples = queueAverageSamples
+	}
 
 	return &QueueLengthTarget{
 		length:     length,
@@ -64,9 +59,11 @@ func NewQueueLengthTarget(length int) Target {
 		kD:         kD,
 		vel:        make([]int, velSamples+1),
 		velSamples: velSamples,
+		useIFactor: false,
 	}
 }
 
+// Meeting returns true if the target is currently met
 func (t *QueueLengthTarget) Meeting(current int) bool {
 	meeting := (current <= t.length)
 	if !meeting {
@@ -75,6 +72,7 @@ func (t *QueueLengthTarget) Meeting(current int) bool {
 	return meeting
 }
 
+// Exceeding returns true if the target is currently exceeded
 func (t *QueueLengthTarget) Exceeding(current int) bool {
 	exceeding := (current <= t.minLength)
 	if exceeding {
@@ -83,13 +81,25 @@ func (t *QueueLengthTarget) Exceeding(current int) bool {
 	return exceeding
 }
 
-// Number of additional containers
+// Delta returns the nuumber of additional containers we should add (remove if negative) to try to attain the target
 func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 	var deltafloat float64
 	var currErr int
 
 	currErr = currentLength - t.length
 	t.cumErr = t.cumErr + currErr
+
+	// We only start using kI once we have hit or passed the target, to prevent it being unnecessarily large if we start
+	// with lots of items on the queue
+	kI := t.kI
+	if !t.useIFactor {
+		lastErr := t.lastLength - t.length
+		if (currErr == 0) || (currErr > 0 && lastErr < 0) || (currErr < 0 && lastErr > 0) {
+			t.useIFactor = true
+		} else {
+			kI = 0
+		}
+	}
 
 	var aveVel float64
 	// Store the new value at the end of the array (this is one more than we need), but only average over the right number of samples
@@ -103,25 +113,25 @@ func (t *QueueLengthTarget) Delta(currentLength int) (delta int) {
 
 	// There is a point beyond which there is no point letting cumErr grow, because our max containers can't
 	// necessarily keep up (and also a question of symmetry, since a queue length can't go below 0?)
-	if t.cumErr > 10*t.length {
-		t.cumErr = 10 * t.length
-	}
-	if t.cumErr < -10*t.length {
-		t.cumErr = -10 * t.length
-	}
+	// if t.cumErr > 10*t.length {
+	// 	t.cumErr = 10 * t.length
+	// }
+	// if t.cumErr < -10*t.length {
+	// 	t.cumErr = -10 * t.length
+	// }
 
 	t.lastLength = currentLength
 
 	// To start with, velocity isn't valid
 	if t.startCount < t.velSamples {
 		log.Debugf("[ql] err %d, cumErr %d", currErr, t.cumErr)
-		log.Debugf("[ql] err * kp %f, cumErr * kI %f", t.kP*float64(currErr), t.kI*float64(t.cumErr))
-		deltafloat = t.kP*float64(currErr) + t.kI*float64(t.cumErr)
+		log.Debugf("[ql] err * kp %f, cumErr * kI %f", t.kP*float64(currErr), kI*float64(t.cumErr))
+		deltafloat = t.kP*float64(currErr) + kI*float64(t.cumErr)
 		t.startCount = t.startCount + 1
 	} else {
 		log.Debugf("[ql] err %d, cumErr %d, vel %f", currErr, t.cumErr, aveVel)
-		log.Debugf("[ql] err * kp %f, cumErr * kI %f, vel * kd %f", t.kP*float64(currErr), t.kI*float64(t.cumErr), t.kD*float64(aveVel))
-		deltafloat = t.kP*float64(currErr) + t.kI*float64(t.cumErr) + t.kD*float64(aveVel)
+		log.Debugf("[ql] err * kp %f, cumErr * kI %f, vel * kd %f", t.kP*float64(currErr), kI*float64(t.cumErr), t.kD*float64(aveVel))
+		deltafloat = t.kP*float64(currErr) + kI*float64(t.cumErr) + t.kD*float64(aveVel)
 	}
 
 	log.Debugf("[ql] => deltaf %f", deltafloat)
