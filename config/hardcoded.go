@@ -20,9 +20,9 @@ func NewHardcodedConfig() *HardcodedConfig {
 // GetApps returns hardcoded task config
 func (c *HardcodedConfig) GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
 
-	task := demand.Task{
+	task := &demand.Task{
 		Name:            "consumer",
-		Image:           "microscaling/consumer-demo:latest",
+		Image:           "microscaling/queue-demo:latest",
 		Priority:        1,
 		MinContainers:   1,
 		MaxContainers:   10,
@@ -30,14 +30,14 @@ func (c *HardcodedConfig) GetApps(userID string) (tasks []*demand.Task, maxConta
 		IsScalable:      true,
 		PublishAllPorts: true,
 		NetworkMode:     "host",
-		Target:          target.NewQueueLengthTarget(5),
-		Metric:          metric.NewNSQMetric("mssdemotopic", "mssdemochannel"),
+		Target:          target.NewQueueLengthTarget(50),
+		Metric:          metric.NewNSQMetric("microscaling-demo", "microscaling-demo"),
 	}
 
-	tasks = append(tasks, &task)
+	tasks = append(tasks, task)
 
-	task = demand.Task{
-		Name:            "background",
+	task = &demand.Task{
+		Name:            "remainder",
 		Image:           "microscaling/priority-2:latest",
 		Priority:        2,
 		MinContainers:   1,
@@ -50,7 +50,7 @@ func (c *HardcodedConfig) GetApps(userID string) (tasks []*demand.Task, maxConta
 		Metric:          metric.NewNullMetric(),
 	}
 
-	tasks = append(tasks, &task)
+	tasks = append(tasks, task)
 
 	maxContainers = 10
 
