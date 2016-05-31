@@ -3,7 +3,7 @@
 Our Microscaling Engine provides automation, resilience and efficiency for microservice architectures. You can use our [Microscaling-in-a-Box](https://app.microscaling.com) site to
 experiment with microscaling. Or visit [microscaling.com](https://microscaling.com) to find out more about our product and Microscaling Systems.
 
-[![Build Status](https://api.travis-ci.org/microscaling/microcaling.svg)](https://travis-ci.org/microscaling/microscaling) Go 1.4 1.5 1.6
+[![Build Status](https://travis-ci.org/microscaling/microscaling.svg?branch=master)](https://travis-ci.org/microscaling/microscaling) Go 1.4 1.5 1.6
 [![](https://badge.imagelayers.io/microscaling/microscaling:latest.svg)](https://imagelayers.io/?images=microscaling/microscaling:latest 'Get your own badge on imagelayers.io')
 
 Microscaling Engine is under development, so we're not making any promises about forward compatibility, and we wouldn't advise running it on production machines yet. But if you're keen to get it into production we'd love to hear from you.
@@ -45,6 +45,10 @@ If you want to build and run your own version locally:
 ## Licensing
 
 Microscaling Engine is licensed under the Apache License, Version 2.0. See [LICENSE](https://github.com/microscaling/microscaling/blob/master/LICENSE) for the full license text.
+
+## Contributing
+
+We'd love to get contributions from you! Please see [CONTRIBUTING.md](https://github.com/microscaling/microscaling/blob/master/CONTRIBUTING.md) for more details.
 
 ## Contact Us
 
