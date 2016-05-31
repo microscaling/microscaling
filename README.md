@@ -46,6 +46,10 @@ If you want to build and run your own version locally:
 
 Microscaling Engine is licensed under the Apache License, Version 2.0. See [LICENSE](https://github.com/microscaling/microscaling/blob/master/LICENSE) for the full license text.
 
+## Contributing
+
+We'd love to get contributions from you! Please see [CONTRIBUTING.md](https://github.com/microscaling/microscaling/blob/master/CONTRIBUTING.md) for more details.
+
 ## Contact Us
 
 We'd love to hear from you at [hello@microscaling.com](mailto:hello@microscaling.com) or on Twitter at [@microscaling](http://twitter.com/microscaling). 
