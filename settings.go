@@ -131,6 +131,7 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 
 	for _, task := range t {
 		task.Env = globalEnv
+		log.Debugf("%+v", task)
 	}
 
 	tasks.Tasks = t
