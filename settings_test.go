@@ -49,3 +49,33 @@ func TestInitScheduler(t *testing.T) {
 		}
 	}
 }
+
+func TestInitConfig(t *testing.T) {
+	tests := []struct {
+		config string
+		pass   bool
+	}{
+		{config: "FILE", pass: false},
+		// {config: "SERVER", pass: true}, Need to mock out the server for this test
+		{config: "HARDCODED", pass: true},
+		{config: "Blah", pass: false},
+	}
+
+	for _, test := range tests {
+		os.Setenv("MSS_CONFIG", test.config)
+		st := getSettings()
+		tasks, err := getTasks(st)
+		if err != nil && test.pass {
+			t.Fatalf("Should have been able to create %s", test.config)
+		}
+		if err == nil && !test.pass {
+			t.Fatalf("Should not have been able to create %s", test.config)
+		}
+		if test.config == "HARDCODED" {
+			if len(tasks.Tasks) != 2 {
+				t.Fatal("Expected two hardcoded tasks")
+			}
+		}
+	}
+
+}
