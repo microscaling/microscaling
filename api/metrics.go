@@ -58,6 +58,7 @@ func SendMetrics(ws *websocket.Conn, userID string, tasks *demand.Tasks) error {
 		return fmt.Errorf("Failed to encode API json. %v", err)
 	}
 
+	log.Debug("Sending metrics message")
 	_, err = ws.Write(b)
 	if err != nil {
 		return fmt.Errorf("Failed to send metrics: %v", err)

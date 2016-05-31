@@ -38,11 +38,12 @@ func (de *LocalEngine) GetDemand(tasks *demand.Tasks, demandUpdate chan struct{}
 		log.Debug("Getting demand")
 
 		for _, task := range tasks.Tasks {
-			go func() {
-				gettingMetrics.Add(1)
+			gettingMetrics.Add(1)
+			go func(task *demand.Task) {
 				defer gettingMetrics.Done()
+				log.Debugf("Getting metric for %s", task.Name)
 				task.Metric.UpdateCurrent()
-			}()
+			}(task)
 		}
 
 		gettingMetrics.Wait()
