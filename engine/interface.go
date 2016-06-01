@@ -1,3 +1,4 @@
+// Package engine defines engines that calculate (or retrieve) what the demand for each task is
 package engine
 
 import (
