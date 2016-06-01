@@ -30,7 +30,6 @@ import (
 
 	"github.com/op/go-logging"
 
-	"github.com/microscaling/microscaling/api"
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/scheduler"
 	"github.com/microscaling/microscaling/utils"
@@ -150,14 +149,17 @@ func main() {
 		}
 	}()
 
-	// Periodically send metrics to the server
-	sendMetricsTimeout := time.NewTicker(constSendMetricsTimeout * time.Millisecond)
-	if st.sendMetrics {
+	// Periodically send metrics to any monitors
+	monitors := getMonitors(st, ws)
+	if len(monitors) > 0 {
+		sendMetricsTimeout := time.NewTicker(constSendMetricsTimeout * time.Millisecond)
 		go func() {
 			for _ = range sendMetricsTimeout.C {
-				err = api.SendMetrics(ws, st.userID, tasks)
-				if err != nil {
-					log.Errorf("Failed to send metrics. %v", err)
+				for _, m := range monitors {
+					err = m.SendMetrics(tasks)
+					if err != nil {
+						log.Errorf("Failed to send metrics. %v", err)
+					}
 				}
 			}
 		}()

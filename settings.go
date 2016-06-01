@@ -13,6 +13,7 @@ import (
 	"github.com/microscaling/microscaling/engine"
 	"github.com/microscaling/microscaling/engine/localEngine"
 	"github.com/microscaling/microscaling/engine/serverEngine"
+	"github.com/microscaling/microscaling/monitor"
 	"github.com/microscaling/microscaling/scheduler"
 	"github.com/microscaling/microscaling/scheduler/docker"
 	"github.com/microscaling/microscaling/scheduler/marathon"
@@ -22,6 +23,7 @@ import (
 type settings struct {
 	schedulerType   string
 	sendMetrics     bool
+	monitorTypes    string
 	microscalingAPI string
 	userID          string
 	pullImages      bool
@@ -68,6 +70,7 @@ func getSettings() settings {
 	st.microscalingAPI = getEnvOrDefault("MSS_API_ADDRESS", "app.microscaling.com")
 	st.userID = getEnvOrDefault("MSS_USER_ID", "5k5gk")
 	st.sendMetrics = (getEnvOrDefault("MSS_SEND_METRICS_TO_API", "true") == "true")
+	st.monitorTypes = getEnvOrDefault("MSS_MONITOR", "SERVER")
 	st.pullImages = (getEnvOrDefault("MSS_PULL_IMAGES", "true") == "true")
 	st.dockerHost = getEnvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
 	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "LOCAL")
@@ -155,6 +158,17 @@ func getDemandEngine(st settings, ws *websocket.Conn) (e engine.Engine, err erro
 		return nil, fmt.Errorf("Bad value for MSS_DEMAND_ENGINE: %s", st.demandEngine)
 	}
 	return e, nil
+}
+
+func getMonitors(st settings, ws *websocket.Conn) (m []monitor.Monitor) {
+	// Monitor is where we send results & output. There might be more than one so we return a list
+	if strings.Contains(st.monitorTypes, "SERVER") {
+		log.Info("Server is a monitor")
+		ms := monitor.NewServerMonitor(ws, st.userID)
+		m = append(m, ms)
+	}
+
+	return
 }
 
 func getEnvOrDefault(name string, defaultValue string) string {
