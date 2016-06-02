@@ -28,19 +28,18 @@ Currently we support scaling a queue to maintain a target length. Support for mo
 
 Support for more message queues is coming soon. Let us know if there is a particular queue you wish us to integrate with.
 
-## Building and running from source
+## Running
 
-The easiest way to run Microscaling-in-a-box is to [follow the instructions](http://app.microscaling.com). The `docker run` command 
-pulls the latest image of this code from [Docker hub](https://hub.docker.com/u/microscaling/microscaling). 
+The easiest way to run Microscaling-in-a-box is to [follow the instructions](http://app.microscaling.com). The `docker run` command
+pulls the latest image of this code from [Docker hub](https://hub.docker.com/u/microscaling/microscaling).
+
+## Building from source
 
 If you want to build and run your own version locally:
 
 - Clone this repo
-- Build the code as a linux executable (since it runs inside a linux container): 
-`GOOS=linux go build -o microscaling .`
-- Build your own version of the container image, and give it a tag:
-`docker build -t <your-tag-name> .`
-- Specify `-it <your-tag-name>` instead of `-it microscaling/microscaling:latest` on `docker run` so that it picks up your version of the image
+- Build your own version of the Docker image `DOCKER_IMAGE=<your-image> make`
+- Specify `-it <your-image>` instead of `-it microscaling/microscaling:latest` on `docker run` so that it picks up your version of the image
 
 ## Licensing
 
