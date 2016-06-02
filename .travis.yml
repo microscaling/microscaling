@@ -14,3 +14,5 @@ services:
 
 before_install:
   - docker pull microscaling/priority-1:latest
+
+install: make get-deps

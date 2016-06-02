@@ -9,6 +9,9 @@ default: test
 test:
 	go test -v ./...
 
+get-deps:
+	go get -t -v ./...
+
 build:
 	# Compile for Linux
 	GOOS=linux go build -o microscaling
