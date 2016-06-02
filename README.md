@@ -38,7 +38,7 @@ pulls the latest image of this code from [Docker hub](https://hub.docker.com/u/m
 If you want to build and run your own version locally:
 
 - Clone this repo
-- Build your own version of the Docker image `DOCKER_IMAGE=<your-image> make`
+- Build your own version of the Docker image `DOCKER_IMAGE=<your-image> make build`
 - Specify `-it <your-image>` instead of `-it microscaling/microscaling:latest` on `docker run` so that it picks up your version of the image
 
 ## Licensing

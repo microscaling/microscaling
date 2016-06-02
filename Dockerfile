@@ -21,7 +21,6 @@ ARG BUILD_DATE
 
 # Metadata
 LABEL com.microscaling.url="https://microscaling.com" \
-      com.microscaling.version=$VERSION \
       com.microscaling.license="Apache-2.0" \
       com.microscaling.vcs-type="git" \
       com.microscaling.vcs-url=$VCS_URL \
