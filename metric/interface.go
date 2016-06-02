@@ -1,3 +1,4 @@
+// Package metric defines things that we measure to determine how well a task is performing
 package metric
 
 import (
