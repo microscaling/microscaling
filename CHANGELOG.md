@@ -1,3 +1,9 @@
+# 0.7.1
+
+- Add monitors package allowing metrics to be sent to multiple locations.
+- Add a Makefile with targets for building and releasing the Docker image.
+- Add metadata labels with dynamic values populated by the Makefile.
+
 # 0.7.0
 
 - Add support for Marathon/Mesos as a scheduler
