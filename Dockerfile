@@ -20,8 +20,9 @@ ARG VCS_REF
 ARG BUILD_DATE
 
 # Metadata
-LABEL com.microscaling.url="https://microscaling.com" \
+LABEL com.microscaling.vendor="Microscaling Systems" \
       com.microscaling.license="Apache-2.0" \
+      com.microscaling.url="https://microscaling.com" \
       com.microscaling.vcs-type="git" \
       com.microscaling.vcs-url=$VCS_URL \
       com.microscaling.vcs-ref=$VCS_REF \
