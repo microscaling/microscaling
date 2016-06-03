@@ -8,8 +8,25 @@ RUN apk update && \
     apk add $BUILD_PACKAGES && \
     rm -rf /var/cache/apk/*
 
-# needs to be built for Linux:
-# GOOS=linux go build -o microscaling .
-ADD microscaling /
+# Add binary and Dockerfile
+COPY microscaling Dockerfile /
+
 RUN chmod +x /microscaling
-ENTRYPOINT ["/microscaling"]
+
+# Metadata params
+ARG VERSION
+ARG VCS_URL
+ARG VCS_REF
+ARG BUILD_DATE
+
+# Metadata
+LABEL com.microscaling.vendor="Microscaling Systems" \
+      com.microscaling.license="Apache-2.0" \
+      com.microscaling.url="https://microscaling.com" \
+      com.microscaling.vcs-type="git" \
+      com.microscaling.vcs-url=$VCS_URL \
+      com.microscaling.vcs-ref=$VCS_REF \
+      com.microscaling.build-date=$BUILD_DATE \
+      com.microscaling.dockerfile="/Dockerfile"
+
+CMD ["/microscaling"]
