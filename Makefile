@@ -10,14 +10,40 @@ release: docker_build docker_push output
 DOCKER_IMAGE ?= microscaling/microscaling
 
 # Get the latest commit.
-GIT_COMMIT = `git rev-parse --short HEAD` 
+GIT_COMMIT = $(shell git rev-parse --short HEAD) 
 
+# Get the version number from the code
+CODE_VERSION = $(shell cat VERSION)
+
+# Find out if the working directory is clean
+GIT_NOT_CLEAN_CHECK = $(shell git status --porcelain)
+ifneq (x$(GIT_NOT_CLEAN_CHECK), x)
+DOCKER_TAG_SUFFIX = "-dirty"
+endif
+
+# If we're releasing to Docker Hub, and we're going to mark it with the latest tag, it should exactly match a version release
 ifeq ($(MAKECMDGOALS),release)
 # Use the version number as the release tag.
-DOCKER_TAG = `cat VERSION`
+DOCKER_TAG = $(CODE_VERSION)
+
+ifndef CODE_VERSION
+$(error You need to create a VERSION file to build a release)
+endif
+
+# See what commit is tagged to match the version
+VERSION_COMMIT = $(shell git show-ref --tags $(CODE_VERSION) -s --abbrev=7)
+ifneq ($(VERSION_COMMIT), $(GIT_COMMIT))
+$(error echo You are trying to push a build based on commit $(GIT_COMMIT) but the tagged release version is $(VERSION_COMMIT))
+endif
+
+# Don't push to Docker Hub if this isn't a clean repo
+ifneq (x$(GIT_NOT_CLEAN_CHECK), x)
+$(error echo You are trying to release a build based on a dirty repo)
+endif
+
 else
-# Add the commit ref for development builds.
-DOCKER_TAG = `cat VERSION`-$(GIT_COMMIT)
+# Add the commit ref for development builds. Mark as dirty if the working directory isn't clean
+DOCKER_TAG = $(strip $(CODE_VERSION))-$(strip $(GIT_COMMIT))$(strip $(DOCKER_TAG_SUFFIX))
 endif
 
 test:
