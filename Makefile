@@ -10,10 +10,10 @@ release: docker_build docker_push output
 DOCKER_IMAGE ?= microscaling/microscaling
 
 # Get the latest commit.
-GIT_COMMIT = $(shell git rev-parse --short HEAD) 
+GIT_COMMIT = $(strip $(shell git rev-parse --short HEAD))
 
 # Get the version number from the code
-CODE_VERSION = $(shell cat VERSION)
+CODE_VERSION = $(strip $(shell cat VERSION))
 
 # Find out if the working directory is clean
 GIT_NOT_CLEAN_CHECK = $(shell git status --porcelain)
@@ -31,7 +31,7 @@ $(error You need to create a VERSION file to build a release)
 endif
 
 # See what commit is tagged to match the version
-VERSION_COMMIT = $(shell git show-ref --tags $(CODE_VERSION) -s --abbrev=7)
+VERSION_COMMIT = $(strip $(shell git show-ref --tags $(CODE_VERSION) -s --abbrev=7))
 ifneq ($(VERSION_COMMIT), $(GIT_COMMIT))
 $(error echo You are trying to push a build based on commit $(GIT_COMMIT) but the tagged release version is $(VERSION_COMMIT))
 endif
@@ -43,7 +43,7 @@ endif
 
 else
 # Add the commit ref for development builds. Mark as dirty if the working directory isn't clean
-DOCKER_TAG = $(strip $(CODE_VERSION))-$(strip $(GIT_COMMIT))$(strip $(DOCKER_TAG_SUFFIX))
+DOCKER_TAG = $(CODE_VERSION)-$(GIT_COMMIT)$(DOCKER_TAG_SUFFIX)
 endif
 
 test:
