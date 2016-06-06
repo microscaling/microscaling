@@ -6,8 +6,9 @@ build: docker_build output
 # Build and push Docker image
 release: docker_build docker_push output
 
-# Image can be overidden with an env var.
+# Image and binary can be overidden with env vars.
 DOCKER_IMAGE ?= microscaling/microscaling
+BINARY ?= microscaling
 
 # Get the latest commit.
 GIT_COMMIT = $(strip $(shell git rev-parse --short HEAD))
@@ -46,16 +47,19 @@ else
 DOCKER_TAG = $(CODE_VERSION)-$(GIT_COMMIT)$(DOCKER_TAG_SUFFIX)
 endif
 
+SOURCES := $(shell find . -name '*.go')
+
 test:
 	go test -v ./...
 
 get-deps:
 	go get -t -v ./...
 
-docker_build:
+$(BINARY): $(SOURCES)
 	# Compile for Linux
-	GOOS=linux go build -o microscaling
+	GOOS=linux go build -o $(BINARY)	
 
+docker_build: $(BINARY)
 	# Build Docker image
 	docker build \
   --build-arg VCS_URL=`git config --get remote.origin.url` \
