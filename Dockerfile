@@ -20,13 +20,13 @@ ARG VCS_REF
 ARG BUILD_DATE
 
 # Metadata
-LABEL com.microscaling.vendor="Microscaling Systems" \
-      com.microscaling.license="Apache-2.0" \
-      com.microscaling.url="https://microscaling.com" \
-      com.microscaling.vcs-type="git" \
-      com.microscaling.vcs-url=$VCS_URL \
-      com.microscaling.vcs-ref=$VCS_REF \
-      com.microscaling.build-date=$BUILD_DATE \
-      com.microscaling.dockerfile="/Dockerfile"
+LABEL org.label-schema.vendor="Microscaling Systems" \
+      org.label-schema.license="Apache-2.0" \
+      org.label-schema.url="https://microscaling.com" \
+      org.label-schema.vcs-type="git" \
+      org.label-schema.vcs-url=$VCS_URL \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.dockerfile="/Dockerfile"
 
 CMD ["/microscaling"]
