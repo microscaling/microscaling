@@ -1,3 +1,7 @@
+# 0.7.2
+
+- Docker Labels changed from com.microscaling to org.label-schema
+
 # 0.7.1
 
 - Add monitors package allowing metrics to be sent to multiple locations.
