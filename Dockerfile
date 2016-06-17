@@ -27,6 +27,6 @@ LABEL org.label-schema.vendor="Microscaling Systems" \
       org.label-schema.vcs-url=$VCS_URL \
       org.label-schema.vcs-ref=$VCS_REF \
       org.label-schema.build-date=$BUILD_DATE \
-      org.label-schema.dockerfile="/Dockerfile"
+      org.label-schema.docker.dockerfile="/Dockerfile"
 
 CMD ["/microscaling"]
