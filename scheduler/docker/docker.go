@@ -95,11 +95,10 @@ func (c *DockerScheduler) startTask(task *demand.Task) {
 			Labels:       labels,
 			Env:          task.Env,
 		},
-	}
-
-	hostConfig := docker.HostConfig{
-		PublishAllPorts: task.PublishAllPorts,
-		NetworkMode:     task.NetworkMode,
+		HostConfig: &docker.HostConfig{
+			PublishAllPorts: task.PublishAllPorts,
+			NetworkMode:     task.NetworkMode,
+		},
 	}
 
 	go func() {
@@ -122,8 +121,8 @@ func (c *DockerScheduler) startTask(task *demand.Task) {
 		c.Unlock()
 		log.Debugf("[created] task %s ID %s", task.Name, containerID)
 
-		// Start it
-		err = c.client.StartContainer(containerID, &hostConfig)
+		// Start it but passing nil for the HostConfig as this option was removed in Docker 1.12.
+		err = c.client.StartContainer(containerID, nil)
 		if err != nil {
 			log.Errorf("Couldn't start container ID %s for task %s: %v", containerID, task.Name, err)
 			return
