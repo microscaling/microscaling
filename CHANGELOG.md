@@ -1,3 +1,7 @@
+# 0.7.3
+
+- Fix issue #26 starting containers with Docker 1.12.
+
 # 0.7.2
 
 - Docker Labels changed from com.microscaling to org.label-schema
