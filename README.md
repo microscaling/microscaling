@@ -4,8 +4,8 @@ Our Microscaling Engine provides automation, resilience and efficiency for micro
 experiment with microscaling. Or visit [microscaling.com](https://microscaling.com) to find out more about our product and Microscaling Systems.
 
 ### Docker Image
+[![](https://images.microbadger.com/badges/image/microscaling/microscaling.svg)](http://microbadger.com/#/images/microscaling/microscaling "Get your own image badge on microbadger.com")
 [![](https://images.microbadger.com/badges/version/microscaling/microscaling.svg)](http://microbadger.com/#/images/microscaling/microscaling "Get your own version badge on microbadger.com")
-[![](https://badge.imagelayers.io/microscaling/microscaling:latest.svg)](https://imagelayers.io/?images=microscaling/microscaling:latest 'Get your own badge on imagelayers.io') 
 
 ### Build
 [![Build Status](https://travis-ci.org/microscaling/microscaling.svg?branch=master)](https://travis-ci.org/microscaling/microscaling) 
