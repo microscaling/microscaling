@@ -3,9 +3,13 @@
 Our Microscaling Engine provides automation, resilience and efficiency for microservice architectures. You can use our [Microscaling-in-a-Box](https://app.microscaling.com) site to
 experiment with microscaling. Or visit [microscaling.com](https://microscaling.com) to find out more about our product and Microscaling Systems.
 
+### Docker Image
 [![](https://images.microbadger.com/badges/image/microscaling/microscaling.svg)](http://microbadger.com/images/microscaling/microscaling "Get your own image badge on microbadger.com") [![](https://images.microbadger.com/badges/version/microscaling/microscaling.svg)](http://microbadger.com/images/microscaling/microscaling "Get your own version badge on microbadger.com") [![](https://images.microbadger.com/badges/commit/microscaling/microscaling.svg)](http://microbadger.com/images/microscaling/microscaling "Get your own commit badge on microbadger.com") [![](https://images.microbadger.com/badges/license/microscaling/microscaling.svg)](http://microbadger.com/images/microscaling/microscaling "Get your own license badge on microbadger.com")
 
-Go 1.4 1.5 1.6 [![Build Status](https://travis-ci.org/microscaling/microscaling.svg?branch=master)](https://travis-ci.org/microscaling/microscaling)
+### Build
+[![Build Status](https://travis-ci.org/microscaling/microscaling.svg?branch=master)](https://travis-ci.org/microscaling/microscaling) 
+
+Go 1.4 1.5 1.6 
 
 Microscaling Engine is under development, so we're not making any promises about forward compatibility, and we wouldn't advise running it on production machines yet. But if you're keen to get it into production we'd love to hear from you.
 
