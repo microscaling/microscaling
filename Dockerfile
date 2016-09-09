@@ -1,4 +1,4 @@
-FROM alpine:3.3
+FROM alpine:3.4
 MAINTAINER Ross Fairbanks "ross@microscaling.com"
 
 ENV BUILD_PACKAGES ca-certificates
@@ -14,19 +14,22 @@ COPY microscaling Dockerfile /
 RUN chmod +x /microscaling
 
 # Metadata params
+ARG BUILD_DATE
 ARG VERSION
 ARG VCS_URL
 ARG VCS_REF
-ARG BUILD_DATE
 
 # Metadata
-LABEL org.label-schema.vendor="Microscaling Systems" \
-      org.label-schema.license="Apache-2.0" \
+LABEL org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.name="Microscaling Engine" \
+      org.label-schema.description="Our Microscaling Engine provides automation, resilience and efficiency for microservice architectures. Experiment with microscaling at app.microscaling.com."
       org.label-schema.url="https://microscaling.com" \
-      org.label-schema.vcs-type="git" \
       org.label-schema.vcs-url=$VCS_URL \
       org.label-schema.vcs-ref=$VCS_REF \
-      org.label-schema.build-date=$BUILD_DATE \
-      org.label-schema.docker.dockerfile="/Dockerfile"
+      org.label-schema.vendor="Microscaling Systems" \
+      org.label-schema.version=$VERSION \
+      org.label-schema.schema-version="1.0" \
+      com.microscaling.docker.dockerfile="/Dockerfile" \
+      com.microscaling.license="Apache-2.0" \
 
 CMD ["/microscaling"]
