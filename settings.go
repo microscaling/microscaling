@@ -122,6 +122,8 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 		c = config.NewServerConfig(st.microscalingAPI)
 	case "HARDCODED":
 		c = config.NewHardcodedConfig()
+	case "LABEL":
+		c = config.NewLabelConfig(st.microscalingAPI)
 	default:
 		return nil, fmt.Errorf("Bad value for MSS_CONFIG: %s", st.config)
 	}
