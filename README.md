@@ -9,7 +9,7 @@ experiment with microscaling. Or visit [microscaling.com](https://microscaling.c
 ### Build
 [![Build Status](https://travis-ci.org/microscaling/microscaling.svg?branch=master)](https://travis-ci.org/microscaling/microscaling) 
 
-Go 1.4 1.5 1.6 
+Go 1.6 & 1.7
 
 Microscaling Engine is under development, so we're not making any promises about forward compatibility, and we wouldn't advise running it on production machines yet. But if you're keen to get it into production we'd love to hear from you.
 
@@ -38,6 +38,18 @@ Support for more message queues is coming soon. Let us know if there is a partic
 
 The easiest way to run Microscaling-in-a-box is to [follow the instructions](http://app.microscaling.com). The `docker run` command
 pulls the latest image of this code from [Docker hub](https://hub.docker.com/u/microscaling/microscaling).
+
+## Running with label-based config
+
+Get scaling parameters from your image metadata by configuring them with the following labels:
+- com.microscaling.is-scalable
+- com.microscaling.priority
+- com.microscaling.max-delta
+- com.microscaling.min-containers
+- com.microscaling.max-containers
+
+Download the compose file and add the following environment variable to the environment settings for the microscaling image:
+```MSS_CONFIG=LABEL```
 
 ## Building from source
 
