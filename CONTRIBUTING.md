@@ -20,7 +20,16 @@ follow so that we can keep on top of things.
 Commited code must pass:
 
 * [gofmt](https://golang.org/cmd/gofmt)
-* [go test](https://golang.org/cmd/go/#hdr-Test_packages)
+* [go test](https://golang.org/cmd/go/#hdr-Test_packages) use make to run all non vendor tests
+
+```
+$ make
+```
+
+## Dependencies
+
+* [Godep](https://github.com/tools/godep) is used for managing dependencies
+* [go install](https://golang.org/cmd/go/#hdr-Compile_and_install_packages_and_dependencies) compiles dependencies to speed up ttests
 
 ## Submitting Changes
 
