@@ -38,6 +38,18 @@ Support for more message queues is coming soon. Let us know if there is a partic
 The easiest way to run Microscaling-in-a-box is to [follow the instructions](http://app.microscaling.com). The `docker run` command
 pulls the latest image of this code from [Docker hub](https://hub.docker.com/u/microscaling/microscaling).
 
+## Running with label-based config
+
+Get scaling parameters from your image metadata by configuring them with the following labels:
+- com.microscaling.is-scalable
+- com.microscaling.priority
+- com.microscaling.max-delta
+- com.microscaling.min-containers
+- com.microscaling.max-containers
+
+Download the compose file and add the following environment variable to the environment settings for the microscaling image:
+```MSS_CONFIG=LABEL```
+
 ## Building from source
 
 If you want to build and run your own version locally:
