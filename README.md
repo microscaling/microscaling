@@ -48,7 +48,9 @@ Get scaling parameters from your image metadata by configuring them with the fol
 - com.microscaling.max-containers
 
 Download the compose file and add the following environment variable to the environment settings for the microscaling image:
-```MSS_CONFIG=LABEL```
+```
+MSS_CONFIG=LABEL
+```
 
 ## Building from source
 
