@@ -19,6 +19,7 @@ Microscaling Engine will integrate with all the popular container schedulers. Cu
 
 * Docker API
 * Marathon 
+* Kubernetes
 
 Support for more schedulers is coming soon. Let us know if there is a particular scheduler you wish us to support.
 
