@@ -1,0 +1,20 @@
+# Dummy kube_config file for unit tests
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: cmVtb3ZlZA==
+    server: https://api.k8s.example.com
+  name: k8s.example.com
+contexts:
+- context:
+    cluster: k8s.example.com
+    user: k8s.example.com
+  name: k8s.example.com
+current-context: k8s.example.com
+kind: Config
+preferences: {}
+users:
+- name: k8s.example.com-basic-auth
+  user:
+    password: removed
+    username: admin
