@@ -39,6 +39,7 @@ type DockerAppConfig struct {
 	QueueName       string `json:"queueName"`
 	TopicName       string `json:"topicName"`
 	ChannelName     string `json:"channelName"`
+	QueueURL        string `json:"queueURL"`
 }
 
 func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err error) {
@@ -77,6 +78,15 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
 			case "NSQ":
 				task.Metric = metric.NewNSQMetric(a.Config.TopicName, a.Config.ChannelName)
+			case "SQS":
+				metric, err := metric.NewSQSMetric(a.Config.QueueURL)
+				if err != nil {
+					log.Errorf("Failed to create SQS metric: %v", err)
+					return tasks, maxContainers, err
+				}
+
+				task.Metric = metric
+
 			default:
 				log.Errorf("Unexpected queue metricType %s", a.MetricType)
 			}
