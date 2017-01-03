@@ -1,3 +1,7 @@
+# 0.8.0
+
+- Get scaling parameters for an image from its labels using the MicroBadger API
+
 # 0.7.3
 
 - Fix issue #26 starting containers with Docker 1.12.
