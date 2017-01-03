@@ -210,5 +210,6 @@ func (k *KubernetesScheduler) countTasks(taskName string) (count int, err error)
 
 // Cleanup gives the scheduler an opportunity to stop anything that needs to be stopped
 func (k *KubernetesScheduler) Cleanup() error {
+	k.backoff.Stop()
 	return nil
 }
