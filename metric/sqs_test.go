@@ -26,15 +26,15 @@ func (m mockedQueueAttributes) GetQueueAttributes(in *sqs.GetQueueAttributesInpu
 
 func TestUpdateCurrent(t *testing.T) {
 	queueURL := "https://sqs.us-east-1.amazonaws.com/1234567890/microscaling-test"
-
-	cases := make([]sqsTest, 2)
-	cases[0] = sqsTest{
-		Resp:     getQueueAttributes(0),
-		Expected: 0,
-	}
-	cases[1] = sqsTest{
-		Resp:     getQueueAttributes(42),
-		Expected: 42,
+	cases := []sqsTest{
+		sqsTest{
+			Resp:     getQueueAttributes(0),
+			Expected: 0,
+		},
+		sqsTest{
+			Resp:     getQueueAttributes(42),
+			Expected: 42,
+		},
 	}
 
 	for i, c := range cases {
