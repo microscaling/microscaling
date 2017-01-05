@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -53,11 +55,16 @@ func TestGetAppsDecode(t *testing.T) {
 }
 
 func TestGetApps(t *testing.T) {
+	// Needed to create SQS metric
+	os.Setenv("AWS_REGION", "us-east-1")
+
 	tests := []struct {
-		expURL  string
-		json    string
-		success bool
-		tasks   map[string]demand.Task
+		expURL      string
+		json        string
+		success     bool
+		tasks       map[string]demand.Task
+		metricTypes map[string]string
+		targetTypes map[string]string
 	}{
 		{
 			expURL: "/apps/hello",
@@ -65,16 +72,23 @@ func TestGetApps(t *testing.T) {
 			      {
 			          "name": "priority1",
 			          "appType": "Docker",
+			          "ruleType": "Queue",
+			          "metricType": "NSQ",
 			          "config": {
-			              "image": "firstimage"
+			              "image": "firstimage",
+			              "topicName": "test",
+			              "channelName": "test"
 			          }
 			      },
 			      {
 			          "name": "priority2",
 			          "appType": "Docker",
+			          "ruleType": "SimpleQueue",
+			          "metricType": "SQS",
 			          "config": {
 			              "image": "anotherimage",
-			              "command": "do this"
+			              "command": "do this",
+			              "queueURL": "https://sqs.us-east-1.amazonaws.com/12345/test"
 			          }
 			      }
 			]}`,
@@ -87,6 +101,14 @@ func TestGetApps(t *testing.T) {
 					Image:   "anotherimage",
 					Command: "do this",
 				},
+			},
+			metricTypes: map[string]string{
+				"priority1": "*metric.NSQMetric",
+				"priority2": "*metric.SQSMetric",
+			},
+			targetTypes: map[string]string{
+				"priority1": "*target.QueueLengthTarget",
+				"priority2": "*target.SimpleQueueLengthTarget",
 			},
 		},
 		{
@@ -106,6 +128,8 @@ func TestGetApps(t *testing.T) {
 
 		if test.success {
 			CheckReturnedTasks(t, test.tasks, returnedTasks)
+			CheckMetricTypes(t, test.metricTypes, returnedTasks)
+			CheckTargetTypes(t, test.targetTypes, returnedTasks)
 
 			if err != nil {
 				t.Fatalf("Unexpected error %v", err)
@@ -166,6 +190,28 @@ func CheckReturnedTasks(t *testing.T, tasks map[string]demand.Task, returnedTask
 		}
 		if tt.Running != rt.Running {
 			t.Fatalf("Requested: expected %s got %s", tt.Requested, rt.Requested)
+		}
+	}
+}
+
+// CheckMetricTypes checks the correct scaling metric was selected
+func CheckMetricTypes(t *testing.T, metricTypes map[string]string, returnedTasks []*demand.Task) {
+	for _, rt := range returnedTasks {
+		typeName := reflect.TypeOf(rt.Metric).String()
+
+		if typeName != metricTypes[rt.Name] {
+			t.Fatalf("MetricType: expected %s got %s", metricTypes[rt.Name], typeName)
+		}
+	}
+}
+
+// CheckTargetTypes checks the correct scaling target was selected
+func CheckTargetTypes(t *testing.T, targetTypes map[string]string, returnedTasks []*demand.Task) {
+	for _, rt := range returnedTasks {
+		typeName := reflect.TypeOf(rt.Target).String()
+
+		if typeName != targetTypes[rt.Name] {
+			t.Fatalf("TargetType: expected %s got %t", targetTypes[rt.Name], typeName)
 		}
 	}
 }

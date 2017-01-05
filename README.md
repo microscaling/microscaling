@@ -27,6 +27,11 @@ Support for more schedulers is coming soon. Let us know if there is a particular
 
 Currently we support scaling a queue to maintain a target length. Support for more metrics is coming soon.
 
+2 queue scaling algorithms are available.
+
+* Queue - designed for high volume queues and uses control theory to prevent oscillation.
+* SimpleQueue  - simpler algorith that can produce better results on lower volume queues.
+
 ### Queue Types
 
 * [NSQ](http://nsq.io) - see this [blog post](http://blog.microscaling.com/2016/04/microscaling-with-nsq-queue.html) for more details.
