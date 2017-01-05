@@ -34,6 +34,7 @@ Currently we support scaling a queue to maintain a target length. Support for mo
 
 ### Queue Types
 
+* [SQS](https://aws.amazon.com/sqs/) - blog post with more details coming soon.
 * [NSQ](http://nsq.io) - see this [blog post](http://blog.microscaling.com/2016/04/microscaling-with-nsq-queue.html) for more details.
 * Azure storage queues - this [blog post](http://blog.microscaling.com/2016/05/microscaling-marathon-with-dcos-on.html) describes using the Azure queue as the metric while running microscaled tasks on DC/OS.
 
