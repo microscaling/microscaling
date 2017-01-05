@@ -30,7 +30,7 @@ func TestInitScheduler(t *testing.T) {
 		{sched: "COMPOSE", pass: false},
 		{sched: "DOCKER", pass: true},
 		{sched: "ECS", pass: false},
-		{sched: "KUBERNETES", pass: false},
+		{sched: "KUBERNETES", pass: true},
 		{sched: "MESOS", pass: false},
 		{sched: "NOMAD", pass: false},
 		{sched: "TOY", pass: true},

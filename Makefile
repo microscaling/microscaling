@@ -50,7 +50,7 @@ endif
 SOURCES := $(shell find . -name '*.go')
 
 test:
-	go test -v ./...
+	go test $(shell go list ./... | grep -v /vendor/)
 
 get-deps:
 	go get -t -v ./...

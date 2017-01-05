@@ -16,6 +16,7 @@ import (
 	"github.com/microscaling/microscaling/monitor"
 	"github.com/microscaling/microscaling/scheduler"
 	"github.com/microscaling/microscaling/scheduler/docker"
+	"github.com/microscaling/microscaling/scheduler/kubernetes"
 	"github.com/microscaling/microscaling/scheduler/marathon"
 	"github.com/microscaling/microscaling/scheduler/toy"
 )
@@ -31,6 +32,8 @@ type settings struct {
 	demandEngine    string
 	marathonAPI     string
 	config          string
+	kubeConfig      string
+	kubeNamespace   string
 }
 
 func initLogging() {
@@ -76,6 +79,9 @@ func getSettings() settings {
 	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "LOCAL")
 	st.marathonAPI = getEnvOrDefault("MSS_MARATHON_API", "http://localhost:8080")
 	st.config = getEnvOrDefault("MSS_CONFIG", "SERVER")
+	// To run locally set kube config location. Otherwise uses the built in cluster config.
+	st.kubeConfig = getEnvOrDefault("MSS_KUBE_CONFIG", "")
+	st.kubeNamespace = getEnvOrDefault("MSS_KUBE_NAMESPACE", "default")
 	return st
 }
 
@@ -92,7 +98,8 @@ func getScheduler(st settings, demandUpdate chan struct{}) (scheduler.Scheduler,
 	case "ECS":
 		return nil, fmt.Errorf("Scheduling with ECS not yet supported. Tweet with hashtag #MicroscaleECS if you'd like us to add this next!")
 	case "KUBERNETES":
-		return nil, fmt.Errorf("Scheduling with Kubernetes not yet supported. Tweet with hashtag #MicroscaleK8S if you'd like us to add this next!")
+		log.Info("Scheduling with Kubernetes")
+		s = kubernetes.NewScheduler(st.kubeConfig, st.kubeNamespace, demandUpdate)
 	case "NOMAD":
 		return nil, fmt.Errorf("Scheduling with Nomad not yet supported. Tweet with hashtag #MicroscaleNomad if you'd like us to add this next!")
 	case "TOY":
