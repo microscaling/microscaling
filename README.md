@@ -29,8 +29,8 @@ Currently we support scaling a queue to maintain a target length. Support for mo
 
 2 queue scaling algorithms are available.
 
-* Queue - designed for high volume queues and uses control theory to prevent oscillation.
-* SimpleQueue  - simpler algorith that can produce better results on lower volume queues.
+* SimpleQueue - scales containers up or down by one according to whether the queue is too long or too short.
+* Queue - uses control theory to prevent oscillation.
 
 ### Queue Types
 
