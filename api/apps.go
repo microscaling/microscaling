@@ -73,6 +73,14 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 		switch a.RuleType {
 		case "Queue":
 			task.Target = target.NewQueueLengthTarget(a.Config.QueueLength)
+		case "SimpleQueue":
+			task.Target = target.NewSimpleQueueLengthTarget(a.Config.QueueLength)
+		default:
+			task.Target = target.NewRemainderTarget(a.MaxContainers)
+			task.Metric = metric.NewNullMetric()
+		}
+
+		if a.RuleType == "Queue" || a.RuleType == "SimpleQueue" {
 			switch a.MetricType {
 			case "AzureQueue":
 				task.Metric = metric.NewAzureQueueMetric(a.Config.QueueName)
@@ -90,9 +98,6 @@ func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err er
 			default:
 				log.Errorf("Unexpected queue metricType %s", a.MetricType)
 			}
-		default:
-			task.Target = target.NewRemainderTarget(a.MaxContainers)
-			task.Metric = metric.NewNullMetric()
 		}
 
 		tasks = append(tasks, &task)
