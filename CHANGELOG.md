@@ -1,3 +1,9 @@
+# 0.9.0
+
+- Add support for Kubernetes as a scheduler.
+- Add support for SQS as a metric.
+- Allow choosing either the SimpleQueue or Queue scaling algorithms.
+
 # 0.8.0
 
 - Get scaling parameters for an image from its labels using the MicroBadger API
