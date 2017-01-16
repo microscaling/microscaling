@@ -9,8 +9,6 @@ import (
 
 	"k8s.io/client-go/1.5/kubernetes"
 	"k8s.io/client-go/1.5/pkg/api"
-	"k8s.io/client-go/1.5/rest"
-	"k8s.io/client-go/1.5/tools/clientcmd"
 
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/scheduler"
@@ -43,24 +41,7 @@ type deployment struct {
 // NewScheduler returns a pointer to the scheduler. Creates k8s clientset from the provided kube
 // config or when running as a pod uses the in cluster config.
 func NewScheduler(kubeConfig string, namespace string, demandUpdate chan struct{}) *KubernetesScheduler {
-	var config *rest.Config
-	var err error
-
-	if kubeConfig != "" {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
-		if err != nil {
-			log.Errorf("Error creating Kubernetes config: %v", err)
-			return nil
-		}
-	} else {
-		config, err = rest.InClusterConfig()
-		if err != nil {
-			log.Errorf("Error getting Kubernetes config: %v", err)
-			return nil
-		}
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := utils.NewKubeClientset(kubeConfig, namespace)
 	if err != nil {
 		log.Errorf("Error creating Kubernetes clientset: %v", err)
 		return nil

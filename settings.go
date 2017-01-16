@@ -130,7 +130,16 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 	case "HARDCODED":
 		c = config.NewHardcodedConfig()
 	case "LABEL":
-		c = config.NewLabelConfig(st.microscalingAPI)
+		switch st.schedulerType {
+		case "DOCKER":
+			// Gets labels for the configured image from the MicroBadger API
+			c = config.NewLabelConfig(st.microscalingAPI)
+		case "KUBERNETES":
+			// Gets the image from the k8s deployment and the labels from the MicroBadger API
+			c = config.NewKubeLabelConfig(st.microscalingAPI, st.kubeConfig, st.kubeNamespace)
+		default:
+			return nil, fmt.Errorf("Label config not supported for scheduler: %s", st.config)
+		}
 	default:
 		return nil, fmt.Errorf("Bad value for MSS_CONFIG: %s", st.config)
 	}
