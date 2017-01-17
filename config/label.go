@@ -15,6 +15,12 @@ import (
 // LabelConfig is used when we retrieve get image config from the Microscaling server and then
 // get label config from MicroBadger APIs
 type LabelConfig struct {
+	APIAddress string
+}
+
+// KubeLabelConfig is used when we retrieve get image config from the Microscaling server and then
+// get label config from MicroBadger APIs
+type KubeLabelConfig struct {
 	APIAddress    string
 	KubeConfig    string
 	KubeNamespace string
@@ -30,9 +36,9 @@ func NewLabelConfig(APIAddress string) *LabelConfig {
 	}
 }
 
-// NewKubeLabelConfig gets a new LabelConfig for Kubernetes
-func NewKubeLabelConfig(APIAddress string, KubeConfig string, KubeNamespace string) *LabelConfig {
-	return &LabelConfig{
+// NewKubeLabelConfig gets a new KubeLabelConfig
+func NewKubeLabelConfig(APIAddress string, KubeConfig string, KubeNamespace string) *KubeLabelConfig {
+	return &KubeLabelConfig{
 		APIAddress:    APIAddress,
 		KubeConfig:    KubeConfig,
 		KubeNamespace: KubeNamespace,
@@ -43,12 +49,25 @@ func NewKubeLabelConfig(APIAddress string, KubeConfig string, KubeNamespace stri
 func (l *LabelConfig) GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
 	tasks, maxContainers, err = api.GetApps(l.APIAddress, userID)
 	for _, task := range tasks {
-		if l.KubeNamespace != "" {
-			task.Image, err = l.getImageFromKubeDeployment(task.Name)
-			if err != nil {
-				log.Errorf("Failed to get image for deployment %s: %v", task.Image, err)
-				return
-			}
+		labels, err := microbadger.GetLabels(task.Image)
+		if err != nil {
+			log.Errorf("Failed to get labels for %s: %v", task.Image, err)
+		} else {
+			parseLabels(task, labels)
+		}
+	}
+	return
+}
+
+// GetApps retrieves task config from the server using the API, gets the Docker image from the Kubernetes deployments
+// API and then gets scaling parameters from labels using MicroBadger
+func (kl *KubeLabelConfig) GetApps(userID string) (tasks []*demand.Task, maxContainers int, err error) {
+	tasks, maxContainers, err = api.GetApps(kl.APIAddress, userID)
+	for _, task := range tasks {
+		task.Image, err = kl.getImageFromKubeDeployment(task.Name)
+		if err != nil {
+			log.Errorf("Failed to get image for deployment %s: %v", task.Image, err)
+			return
 		}
 
 		labels, err := microbadger.GetLabels(task.Image)
@@ -111,14 +130,14 @@ func parseIntLabel(labels map[string]string, key string) (intVal int, err error)
 	return
 }
 
-func (l *LabelConfig) getImageFromKubeDeployment(appName string) (imageName string, err error) {
-	clientset, err := utils.NewKubeClientset(l.KubeConfig, l.KubeNamespace)
+func (kl *KubeLabelConfig) getImageFromKubeDeployment(appName string) (imageName string, err error) {
+	clientset, err := utils.NewKubeClientset(kl.KubeConfig, kl.KubeNamespace)
 	if err != nil {
 		log.Errorf("Error creating Kubernetes clientset: %v", err)
 		return
 	}
 
-	d, err := clientset.Extensions().Deployments(l.KubeNamespace).Get(appName)
+	d, err := clientset.Extensions().Deployments(kl.KubeNamespace).Get(appName)
 	if err != nil {
 		log.Errorf("Error getting deployment %s: %v", appName, err)
 		return
