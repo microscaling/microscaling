@@ -1,3 +1,7 @@
+# 0.9.1
+
+- Add support for using the MicroBadger API to get scaling parameter labels on Kubernetes.
+
 # 0.9.0
 
 - Add support for Kubernetes as a scheduler.
