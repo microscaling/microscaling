@@ -35,7 +35,7 @@ func TestGetAppsDecode(t *testing.T) {
 	}
 
 	var apps []*demand.Task
-	apps, _, _ = appsFromResponse(b)
+	apps, _, _ = AppsFromData(b)
 
 	var p1, p2 *demand.Task
 	for _, task := range apps {
