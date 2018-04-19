@@ -183,13 +183,13 @@ func CheckReturnedTasks(t *testing.T, tasks map[string]demand.Task, returnedTask
 			t.Fatalf("Command: expected %s got %s", tt.Command, rt.Command)
 		}
 		if tt.Demand != rt.Demand {
-			t.Fatalf("Demand: expected %s got %s", tt.Demand, rt.Demand)
+			t.Fatalf("Demand: expected %d got %d", tt.Demand, rt.Demand)
 		}
 		if tt.Requested != rt.Requested {
-			t.Fatalf("Requested: expected %s got %s", tt.Requested, rt.Requested)
+			t.Fatalf("Requested: expected %d got %d", tt.Requested, rt.Requested)
 		}
 		if tt.Running != rt.Running {
-			t.Fatalf("Requested: expected %s got %s", tt.Requested, rt.Requested)
+			t.Fatalf("Requested: expected %d got %d", tt.Requested, rt.Requested)
 		}
 	}
 }
@@ -211,7 +211,7 @@ func CheckTargetTypes(t *testing.T, targetTypes map[string]string, returnedTasks
 		typeName := reflect.TypeOf(rt.Target).String()
 
 		if typeName != targetTypes[rt.Name] {
-			t.Fatalf("TargetType: expected %s got %t", targetTypes[rt.Name], typeName)
+			t.Fatalf("TargetType: expected %s got %s", targetTypes[rt.Name], typeName)
 		}
 	}
 }
