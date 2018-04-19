@@ -34,6 +34,7 @@ type settings struct {
 	config          string
 	kubeConfig      string
 	kubeNamespace   string
+	configData      string
 }
 
 func initLogging() {
@@ -79,6 +80,7 @@ func getSettings() settings {
 	st.demandEngine = getEnvOrDefault("MSS_DEMAND_ENGINE", "LOCAL")
 	st.marathonAPI = getEnvOrDefault("MSS_MARATHON_API", "http://localhost:8080")
 	st.config = getEnvOrDefault("MSS_CONFIG", "SERVER")
+	st.configData = getEnvOrDefault("MSS_CONFIG_DATA", "")
 	// To run locally set kube config location. Otherwise uses the built in cluster config.
 	st.kubeConfig = getEnvOrDefault("MSS_KUBE_CONFIG", "")
 	st.kubeNamespace = getEnvOrDefault("MSS_KUBE_NAMESPACE", "default")
@@ -140,6 +142,8 @@ func getTasks(st settings) (tasks *demand.Tasks, err error) {
 		default:
 			return nil, fmt.Errorf("Label config not supported for scheduler: %s", st.config)
 		}
+	case "ENVVAR":
+		c = config.NewEnvVarConfig(st.configData)
 	default:
 		return nil, fmt.Errorf("Bad value for MSS_CONFIG: %s", st.config)
 	}
