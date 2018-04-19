@@ -1,4 +1,4 @@
-FROM alpine:3.4
+FROM alpine:3.7
 MAINTAINER Ross Fairbanks "ross@microscaling.com"
 
 ENV BUILD_PACKAGES ca-certificates
