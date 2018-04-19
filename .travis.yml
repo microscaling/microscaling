@@ -2,8 +2,7 @@ language: go
 sudo: required
 
 go:
-  - 1.6
-  - 1.7
+  - 1.10
 
 env:
   - DOCKER_HOST=unix:///var/run/docker.sock
