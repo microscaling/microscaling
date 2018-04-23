@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/op/go-logging"
+	"golang.org/x/net/websocket"
 
 	"github.com/microscaling/microscaling/demand"
 	"github.com/microscaling/microscaling/scheduler"
@@ -109,11 +110,15 @@ func main() {
 	signal.Notify(closedown, os.Interrupt)
 	signal.Notify(closedown, syscall.SIGTERM)
 
-	// Open a web socket to the server TODO!! This won't always be necessary if we're not sending metrics & calculating demand locally
-	ws, err := utils.InitWebSocket(st.microscalingAPI)
-	if err != nil {
-		log.Errorf("Failed to open web socket: %v", err)
-		return
+	var ws *websocket.Conn
+
+	// Open a web socket to the server if needed.
+	if st.demandEngine != "LOCAL" && st.monitorTypes != "none" {
+		ws, err = utils.InitWebSocket(st.microscalingAPI)
+		if err != nil {
+			log.Errorf("Failed to open web socket: %v", err)
+			return
+		}
 	}
 
 	de, err := getDemandEngine(st, ws)

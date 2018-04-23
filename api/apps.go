@@ -42,7 +42,8 @@ type DockerAppConfig struct {
 	QueueURL        string `json:"queueURL"`
 }
 
-func appsFromResponse(b []byte) (tasks []*demand.Task, maxContainers int, err error) {
+// AppsFromData converts apps data from json into tasks.
+func AppsFromData(b []byte) (tasks []*demand.Task, maxContainers int, err error) {
 	var appsMessage AppsMessage
 
 	err = json.Unmarshal(b, &appsMessage)
@@ -120,6 +121,6 @@ func GetApps(apiAddress string, userID string) (tasks []*demand.Task, maxContain
 		return nil, 0, err
 	}
 
-	tasks, maxContainers, err = appsFromResponse(body)
+	tasks, maxContainers, err = AppsFromData(body)
 	return
 }

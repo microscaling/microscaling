@@ -30,9 +30,9 @@ func TestToyScheduler(t *testing.T) {
 	}
 
 	err = m.CountAllTasks(&tasks)
-	for name, task := range tasks.Tasks {
+	for _, task := range tasks.Tasks {
 		if task.Running != task.Requested || task.Running != task.Demand {
-			t.Fatalf("Task %s running is not what was requested or demanded", name)
+			t.Fatalf("Task %s running is not what was requested or demanded", task.Name)
 		}
 		log.Debugf("after counting: demand %d, requested %d, running %d", task.Demand, task.Requested, task.Running)
 

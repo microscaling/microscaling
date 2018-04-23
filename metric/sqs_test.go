@@ -46,7 +46,7 @@ func TestUpdateCurrent(t *testing.T) {
 		m.UpdateCurrent()
 
 		if m.Current() != c.Expected {
-			t.Errorf("Test %d: expected count %d but was %d", i, c.Expected, m.Current)
+			t.Errorf("Test %d: expected count %d but was %d", i, c.Expected, m.Current())
 		}
 	}
 }
